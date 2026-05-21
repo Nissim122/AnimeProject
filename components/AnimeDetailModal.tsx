@@ -94,6 +94,15 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
                   const isSelected = season.id === selectedId
                   const isTracked = trackedIds.has(season.id)
 
+                  const allPrevKnown = seasons.slice(0, idx).every(s => s.episodes != null)
+                  const offset = allPrevKnown
+                    ? seasons.slice(0, idx).reduce((sum, s) => sum + s.episodes!, 0)
+                    : 0
+                  const episodeFrom = allPrevKnown ? offset + 1 : 1
+                  const episodeTo = season.episodes != null
+                    ? (allPrevKnown ? offset + season.episodes : season.episodes)
+                    : null
+
                   return (
                     <button
                       key={season.id}
@@ -123,9 +132,9 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
                           {season.seasonYear && (
                             <p className="text-gray-500 text-xs">{season.seasonYear}</p>
                           )}
-                          {season.episodes != null && (
+                          {episodeTo != null && (
                             <p className="text-gray-500 text-xs">
-                              פרקים 1–{season.episodes}
+                              פרקים {episodeFrom}–{episodeTo}
                             </p>
                           )}
                         </div>

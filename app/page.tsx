@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
-import type { AnimeResult } from '@/lib/anilist'
+import type { AnimeResult, RelationNode } from '@/lib/anilist'
 
 interface TrackedItem {
   id: number
@@ -32,6 +32,7 @@ let toastId = 0
 
 export default function Home() {
   const [tracked, setTracked] = useState<TrackedItem[]>([])
+  const [nextSeasons, setNextSeasons] = useState<Record<number, RelationNode | null> | undefined>()
   const [toasts, setToasts] = useState<Toast[]>([])
   const [checking, setChecking] = useState(false)
 
