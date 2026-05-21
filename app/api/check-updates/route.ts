@@ -57,15 +57,27 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
     result.checked++
     try {
       const knownIds = new Set(anime.knownSequels.map((s) => s.sequelAnilistId))
-
-      // Fix: also check known sequels for new children (multi-generation chains: S1→S2 known, S3 new)
-      const idsToCheck = [anime.anilistId, ...knownIds]
       const allSequels: RelationNode[] = []
       const seenSequelIds = new Set<number>()
 
-      for (const parentId of idsToCheck) {
-        await delay(700) // AniList rate limit protection
-        const sequels = await getAnimeSequels(parentId)
+      // Check the tracked anime itself — if it's RELEASING, include it as a candidate
+      await delay(700)
+      const { status: selfStatus, startDate: selfStartDate, sequels: directSequels } = await getAnimeStatusWithSequels(anime.anilistId)
+      seenSequelIds.add(anime.anilistId)
+      if (selfStatus === 'RELEASING') {
+        allSequels.push({ id: anime.anilistId, format: 'TV', title: { romaji: anime.title }, status: 'RELEASING', startDate: selfStartDate })
+      }
+      for (const s of directSequels) {
+        if (!seenSequelIds.has(s.id)) {
+          seenSequelIds.add(s.id)
+          allSequels.push(s)
+        }
+      }
+
+      // Also traverse known sequels for multi-generation chains (S1→S2 known, S3 new)
+      for (const knownId of knownIds) {
+        await delay(700)
+        const sequels = await getAnimeSequels(knownId)
         for (const s of sequels) {
           if (!seenSequelIds.has(s.id)) {
             seenSequelIds.add(s.id)
