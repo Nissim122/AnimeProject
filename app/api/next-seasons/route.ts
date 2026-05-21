@@ -11,22 +11,25 @@ export async function GET(req: NextRequest) {
     .map(Number)
     .filter((n) => !isNaN(n) && n > 0)
 
+  const trackedSet = new Set(idList)
+
   const entries = await Promise.all(
     idList.map(async (id) => {
       try {
         const { status, startDate, sequels } = await getAnimeStatusWithSequels(id)
+
         const upcoming = pickUpcoming(sequels)
-        if (upcoming) return [id, upcoming] as const
+        const next: RelationNode | null = upcoming ?? (
+          status === 'RELEASING'
+            ? { id, format: 'TV', title: { romaji: '' }, status: 'RELEASING', startDate }
+            : null
+        )
 
-        // The tracked season itself is currently airing — show it as releasing
-        if (status === 'RELEASING') {
-          const self: RelationNode = { id, format: 'TV', title: { romaji: '' }, status: 'RELEASING', startDate }
-          return [id, self] as const
-        }
+        const available = pickAvailable(sequels, trackedSet)
 
-        return [id, null] as const
+        return [id, { next, available }] as const
       } catch {
-        return [id, null] as const
+        return [id, { next: null, available: null }] as const
       }
     })
   )
@@ -50,4 +53,14 @@ function pickUpcoming(sequels: RelationNode[]): RelationNode | null {
     const bd = b.startDate.day ?? 99
     return ad - bd
   })[0]
+}
+
+function pickAvailable(sequels: RelationNode[], trackedSet: Set<number>): RelationNode | null {
+  const finished = sequels.filter(
+    (s) => s.status === 'FINISHED' && !trackedSet.has(s.id)
+  )
+  if (finished.length === 0) return null
+  return finished.sort(
+    (a, b) => (a.startDate.year ?? 0) - (b.startDate.year ?? 0)
+  )[0]
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import type { RelationNode } from '@/lib/anilist'
+import type { AnimeSeasonInfo } from '@/app/page'
 
 interface TrackedItem {
   id: number
@@ -13,7 +14,8 @@ interface TrackedItem {
 interface Props {
   items: TrackedItem[]
   onRemove: (anilistId: number) => void
-  nextSeasons?: Record<number, RelationNode | null>
+  seasonInfo?: Record<number, AnimeSeasonInfo>
+  onOpenSequel?: (sequel: RelationNode) => void
 }
 
 const MONTHS_HE = [
@@ -39,10 +41,15 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
   )
 }
 
-type Category = 'releasing' | 'upcoming' | 'unknown'
+type Category = 'available' | 'releasing' | 'upcoming' | 'unknown'
 
-function categorize(anilistId: number, nextSeasons?: Record<number, RelationNode | null>): Category {
-  const sequel = nextSeasons?.[anilistId]
+function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
+  const info = seasonInfo?.[anilistId]
+  if (!info) return 'unknown'
+
+  if (info.available) return 'available'
+
+  const sequel = info.next
   if (!sequel) return 'unknown'
 
   if (sequel.status === 'RELEASING') return 'releasing'
@@ -51,13 +58,27 @@ function categorize(anilistId: number, nextSeasons?: Record<number, RelationNode
   const { year, month } = sequel.startDate
   if (year === now.getFullYear() && month === now.getMonth() + 1) return 'releasing'
 
-  // sequel exists (even without a known date → "בקרוב") — not "unknown"
   return 'upcoming'
 }
 
-function AnimeCard({ item, sequel, onRemove }: { item: TrackedItem; sequel: RelationNode | null | undefined; onRemove: (id: number) => void }) {
+function AnimeCard({
+  item,
+  info,
+  onRemove,
+  onOpenSequel,
+}: {
+  item: TrackedItem
+  info: AnimeSeasonInfo | undefined
+  onRemove: (id: number) => void
+  onOpenSequel?: (sequel: RelationNode) => void
+}) {
+  const availableSequel = info?.available ?? null
+  const nextSequel = info?.next ?? null
+
   return (
-    <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 flex flex-col">
+    <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${
+      availableSequel ? 'border-violet-600' : 'border-gray-700'
+    }`}>
       {item.coverImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -79,7 +100,21 @@ function AnimeCard({ item, sequel, onRemove }: { item: TrackedItem; sequel: Rela
         <p className="text-gray-500 text-xs">
           {new Date(item.trackedAt).toLocaleDateString('he-IL')}
         </p>
-        {sequel && <NextSeasonBadge sequel={sequel} />}
+        {availableSequel ? (
+          <p className="text-violet-400 text-xs font-medium leading-tight line-clamp-2">
+            📺 {availableSequel.title.romaji}
+          </p>
+        ) : (
+          nextSequel && <NextSeasonBadge sequel={nextSequel} />
+        )}
+        {availableSequel && onOpenSequel && (
+          <button
+            onClick={() => onOpenSequel(availableSequel)}
+            className="text-xs bg-violet-700 hover:bg-violet-600 text-white rounded-lg py-1.5 font-medium transition-colors"
+          >
+            סמן שראיתי
+          </button>
+        )}
         <button
           onClick={() => onRemove(item.anilistId)}
           className="mt-auto text-xs text-red-400 hover:text-red-300 transition-colors py-1"
@@ -92,14 +127,15 @@ function AnimeCard({ item, sequel, onRemove }: { item: TrackedItem; sequel: Rela
 }
 
 const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
-  releasing: { label: '🟢 יוצא עכשיו', color: 'text-green-400' },
-  upcoming:  { label: '📅 עונה הבאה בדרך', color: 'text-amber-400' },
+  available: { label: '📺 המשך זמין לצפייה', color: 'text-violet-400' },
+  releasing: { label: '🟢 יוצא עכשיו',        color: 'text-green-400' },
+  upcoming:  { label: '📅 עונה הבאה בדרך',     color: 'text-amber-400' },
   unknown:   { label: '❓ אין מידע על עונה הבאה', color: 'text-gray-400' },
 }
 
-const CATEGORY_ORDER: Category[] = ['releasing', 'upcoming', 'unknown']
+const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'upcoming', 'unknown']
 
-export default function TrackedList({ items, onRemove, nextSeasons }: Props) {
+export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel }: Props) {
   if (items.length === 0) {
     return (
       <p className="text-gray-500 text-center py-8">
@@ -108,9 +144,9 @@ export default function TrackedList({ items, onRemove, nextSeasons }: Props) {
     )
   }
 
-  const groups: Record<Category, TrackedItem[]> = { releasing: [], upcoming: [], unknown: [] }
+  const groups: Record<Category, TrackedItem[]> = { available: [], releasing: [], upcoming: [], unknown: [] }
   for (const item of items) {
-    groups[categorize(item.anilistId, nextSeasons)].push(item)
+    groups[categorize(item.anilistId, seasonInfo)].push(item)
   }
 
   return (
@@ -127,8 +163,9 @@ export default function TrackedList({ items, onRemove, nextSeasons }: Props) {
                 <AnimeCard
                   key={item.id}
                   item={item}
-                  sequel={nextSeasons?.[item.anilistId]}
+                  info={seasonInfo?.[item.anilistId]}
                   onRemove={onRemove}
+                  onOpenSequel={onOpenSequel}
                 />
               ))}
             </div>

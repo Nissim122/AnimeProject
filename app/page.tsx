@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
+import AnimeDetailModal from '@/components/AnimeDetailModal'
 import type { AnimeResult, RelationNode } from '@/lib/anilist'
 
 interface TrackedItem {
@@ -28,11 +29,17 @@ interface Toast {
   type: ToastType
 }
 
+export interface AnimeSeasonInfo {
+  next: RelationNode | null
+  available: RelationNode | null
+}
+
 let toastId = 0
 
 export default function Home() {
   const [tracked, setTracked] = useState<TrackedItem[]>([])
-  const [nextSeasons, setNextSeasons] = useState<Record<number, RelationNode | null> | undefined>()
+  const [seasonInfo, setSeasonInfo] = useState<Record<number, AnimeSeasonInfo> | undefined>()
+  const [modalAnime, setModalAnime] = useState<AnimeResult | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [checking, setChecking] = useState(false)
 
@@ -53,10 +60,10 @@ export default function Home() {
         const ids = items.map((t) => t.anilistId).join(',')
         fetch(`/api/next-seasons?ids=${ids}`)
           .then((r) => r.json())
-          .then((d) => setNextSeasons(d))
+          .then((d) => setSeasonInfo(d))
           .catch(() => {})
       } else {
-        setNextSeasons({})
+        setSeasonInfo({})
       }
     } catch (err) {
       console.error('[loadTracked]', err)
@@ -70,8 +77,6 @@ export default function Home() {
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
 
   async function handleTrack(anime: AnimeResult, seriesIds?: number[]) {
-    // Remove any other season from the same series that is already tracked.
-    // This prevents the sequel-checker from alerting about already-watched seasons.
     if (seriesIds && seriesIds.length > 0) {
       const toRemove = seriesIds.filter((id) => id !== anime.id && trackedIds.has(id))
       await Promise.all(
@@ -106,6 +111,21 @@ export default function Home() {
     } else {
       addToast('שגיאה בהסרה', 'error')
     }
+  }
+
+  function handleOpenSequel(sequel: RelationNode) {
+    const fakeAnime: AnimeResult = {
+      id: sequel.id,
+      title: { romaji: sequel.title.romaji, english: null },
+      coverImage: { large: '' },
+      status: sequel.status,
+      seasonYear: sequel.startDate.year,
+      season: null,
+      format: sequel.format,
+      popularity: null,
+      episodes: null,
+    }
+    setModalAnime(fakeAnime)
   }
 
   async function handleCheckUpdates() {
@@ -163,8 +183,23 @@ export default function Home() {
             📋 במעקב ({tracked.length})
           </h2>
         </div>
-        <TrackedList items={tracked} onRemove={handleRemove} nextSeasons={nextSeasons} />
+        <TrackedList
+          items={tracked}
+          onRemove={handleRemove}
+          seasonInfo={seasonInfo}
+          onOpenSequel={handleOpenSequel}
+        />
       </section>
+
+      {/* Modal for available sequel */}
+      {modalAnime && (
+        <AnimeDetailModal
+          anime={modalAnime}
+          trackedIds={trackedIds}
+          onTrack={handleTrack}
+          onClose={() => setModalAnime(null)}
+        />
+      )}
 
       {/* Toasts */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
