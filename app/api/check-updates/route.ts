@@ -94,15 +94,19 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
         }
       }
 
-      // Collect FINISHED sequels not yet tracked (available/unwatched)
-      for (const s of directSequels) {
-        if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
-          seenAvailableIds.add(s.id)
-          availableUnwatched.push({ parentTitle: anime.title, sequelTitle: s.title.romaji })
+      // Traverse known sequels for multi-generation chains (S1→S2 known, S3 new)
+      // Also collect FINISHED sequels not yet tracked across the full chain
+      const collectAvailable = (sequels: RelationNode[], label: string) => {
+        for (const s of sequels) {
+          if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
+            seenAvailableIds.add(s.id)
+            availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji })
+          }
         }
       }
 
-      // Traverse known sequels for multi-generation chains (S1→S2 known, S3 new)
+      collectAvailable(directSequels, anime.title)
+
       for (const knownId of knownIds) {
         await delay(700)
         const sequels = await getAnimeSequels(knownId)
@@ -112,6 +116,7 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
             allSequels.push(s)
           }
         }
+        collectAvailable(sequels, anime.title)
       }
 
       // Queue notifications
@@ -124,7 +129,7 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
 
         const shouldNotifyMonthStart =
           qualifiesForMonthStart &&
-          (sequel.status === 'RELEASING' || !(await hasSentNotification(sequel.id, 'MONTH_START')))
+          !(await hasSentNotification(sequel.id, 'MONTH_START'))
 
         if (shouldNotifyMonthStart) {
           queue.push({ anime, sequel, type: 'MONTH_START' })
@@ -164,15 +169,13 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
         availableUnwatched: availableUnwatched.length > 0 ? availableUnwatched : undefined,
       })
       if (sent) {
-        if (sequel.status !== 'RELEASING') {
-          try {
-            await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
-          } catch (recordErr) {
-            console.error(
-              `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`,
-              recordErr
-            )
-          }
+        try {
+          await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
+        } catch (recordErr) {
+          console.error(
+            `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`,
+            recordErr
+          )
         }
         result.notified++
         result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
