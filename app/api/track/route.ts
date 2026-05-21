@@ -22,7 +22,13 @@ export async function POST(req: NextRequest) {
     }
 
     const anime = await prisma.trackedAnime.create({
-      data: { anilistId, title, coverImage, totalEpisodes: totalEpisodes ?? null },
+      data: {
+        anilistId,
+        title,
+        coverImage,
+        totalEpisodes: totalEpisodes ?? null,
+        watchedEpisodes: totalEpisodes ?? 0,
+      },
     })
 
     // Save currently known sequels so we don't notify for them later

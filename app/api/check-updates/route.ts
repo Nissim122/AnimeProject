@@ -146,6 +146,7 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
 
   // Phase 2: send emails with full available/unwatched context
   for (const { anime, sequel, type } of queue) {
+    try {
     if (type === 'MONTH_START') {
       const allSeasons = await getAllSeasons(anime.anilistId)
       const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
@@ -194,6 +195,10 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
         result.notified++
         result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'DAY_BEFORE' })
       }
+    }
+    } catch (err) {
+      console.error(`[check-updates] Error sending notification for ${sequel.title.romaji}:`, err)
+      result.errors++
     }
   }
 

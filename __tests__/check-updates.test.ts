@@ -26,18 +26,22 @@ const {
   mockFindUnique,
   mockCreate,
   mockGetAnimeSequels,
+  mockGetAnimeStatusWithSequels,
   mockGetAllSeasons,
   mockSendMonthStartEmail,
   mockSendDayBeforeEmail,
+  mockSendAvailableSeasonsEmail,
 } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
   mockUpsert: vi.fn(),
   mockFindUnique: vi.fn(),
   mockCreate: vi.fn(),
   mockGetAnimeSequels: vi.fn(),
+  mockGetAnimeStatusWithSequels: vi.fn(),
   mockGetAllSeasons: vi.fn(),
   mockSendMonthStartEmail: vi.fn(),
   mockSendDayBeforeEmail: vi.fn(),
+  mockSendAvailableSeasonsEmail: vi.fn(),
 }))
 
 // ─────────────────────────────────────────────
@@ -57,6 +61,7 @@ vi.mock('@/lib/prisma', () => ({
 
 vi.mock('@/lib/anilist', () => ({
   getAnimeSequels: mockGetAnimeSequels,
+  getAnimeStatusWithSequels: mockGetAnimeStatusWithSequels,
   getAllSeasons: mockGetAllSeasons,
   delay: vi.fn().mockResolvedValue(undefined),
 }))
@@ -64,6 +69,7 @@ vi.mock('@/lib/anilist', () => ({
 vi.mock('@/lib/mailer', () => ({
   sendMonthStartEmail: mockSendMonthStartEmail,
   sendDayBeforeEmail: mockSendDayBeforeEmail,
+  sendAvailableSeasonsEmail: mockSendAvailableSeasonsEmail,
 }))
 
 vi.mock('@/lib/translate', () => ({
@@ -137,9 +143,15 @@ beforeEach(() => {
   mockCreate.mockResolvedValue({})
   mockFindUnique.mockResolvedValue(null)           // no prior notifications by default
   mockGetAnimeSequels.mockResolvedValue([])
+  mockGetAnimeStatusWithSequels.mockResolvedValue({
+    status: 'FINISHED',
+    startDate: { year: null, month: null, day: null },
+    sequels: [],
+  })
   mockGetAllSeasons.mockResolvedValue(FAKE_ALL_SEASONS)
   mockSendMonthStartEmail.mockResolvedValue(true)
   mockSendDayBeforeEmail.mockResolvedValue(true)
+  mockSendAvailableSeasonsEmail.mockResolvedValue(false)
 })
 
 // ═════════════════════════════════════════════
@@ -149,7 +161,7 @@ describe('MONTH_START notifications', () => {
   it('sends email for a RELEASING sequel (first time)', async () => {
     const s = makeSequel(200, 'RELEASING', { year: 2024, month: 1, day: 7 })
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     const result = await runUpdateCheck()
 
