@@ -128,7 +128,7 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
     const media = data?.data?.Media
     if (!media) continue
 
-    if (media.format === 'TV' || media.format === 'TV_SHORT') {
+    if (media.format === 'TV' || media.format === 'TV_SHORT' || media.format === 'MOVIE') {
       results.push({
         id: media.id,
         title: media.title,

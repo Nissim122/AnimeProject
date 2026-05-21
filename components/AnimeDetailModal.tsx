@@ -98,13 +98,16 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
                   const title = season.title.english ?? season.title.romaji
                   const isSelected = season.id === selectedId
                   const isTracked = trackedIds.has(season.id)
+                  const isMovie = season.format === 'MOVIE'
 
-                  const allPrevKnown = seasons.slice(0, idx).every(s => s.episodes != null)
+                  const tvSeasonNumber = seasons.slice(0, idx + 1).filter(s => s.format !== 'MOVIE').length
+                  const prevNonMovies = seasons.slice(0, idx).filter(s => s.format !== 'MOVIE')
+                  const allPrevKnown = prevNonMovies.every(s => s.episodes != null)
                   const offset = allPrevKnown
-                    ? seasons.slice(0, idx).reduce((sum, s) => sum + s.episodes!, 0)
+                    ? prevNonMovies.reduce((sum, s) => sum + s.episodes!, 0)
                     : 0
                   const episodeFrom = allPrevKnown ? offset + 1 : 1
-                  const episodeTo = season.episodes != null
+                  const episodeTo = !isMovie && season.episodes != null
                     ? (allPrevKnown ? offset + season.episodes : season.episodes)
                     : null
 
@@ -131,15 +134,17 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
                         </div>
                       )}
                       <div className="flex-1 min-w-0 text-right">
-                        <p className="text-white text-sm font-semibold">עונה {idx + 1}</p>
+                        <p className="text-white text-sm font-semibold">
+                          {isMovie ? 'סרט' : `עונה ${tvSeasonNumber}`}
+                        </p>
                         <p className="text-gray-400 text-xs truncate">{title}</p>
                         <div className="flex items-center gap-2 justify-end flex-wrap">
                           {season.seasonYear && (
                             <p className="text-gray-500 text-xs">{season.seasonYear}</p>
                           )}
-                          {season.status === 'RELEASING' ? (
+                          {!isMovie && season.status === 'RELEASING' ? (
                             <p className="text-green-400 text-xs">ממשיך לצאת...</p>
-                          ) : episodeTo != null && (
+                          ) : !isMovie && episodeTo != null && (
                             <p className="text-gray-500 text-xs">
                               פרקים {episodeFrom}–{episodeTo}
                             </p>
@@ -165,7 +170,12 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
         {/* Footer */}
         <div className="px-5 py-4 border-t border-gray-700 flex items-center justify-between gap-3">
           <p className="text-gray-400 text-sm">
-            {!loading && selectedIndex >= 0 && `נבחרה: עונה ${selectedIndex + 1}`}
+            {!loading && selectedIndex >= 0 && (() => {
+            const sel = seasons[selectedIndex]
+            if (sel?.format === 'MOVIE') return 'נבחר: סרט'
+            const tvNum = seasons.slice(0, selectedIndex + 1).filter(s => s.format !== 'MOVIE').length
+            return `נבחרה: עונה ${tvNum}`
+          })()}
           </p>
           <button
             onClick={handleTrack}
