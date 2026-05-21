@@ -234,11 +234,79 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
 const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'completed', 'unknown']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick, onUpdateEpisodes }: Props) {
+  const [filter, setFilter] = useState<FilterOption>('all')
+  const [sort, setSort] = useState<SortOption>('date')
+
   if (items.length === 0) {
     return (
       <p className="text-gray-500 text-center py-8">
         עדיין לא עוקב אחרי אנימות. חפש ולחץ &quot;סיימתי את העונה&quot;!
       </p>
+    )
+  }
+
+  function renderGrid(list: TrackedItem[]) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {list.map((item) => (
+          <AnimeCard
+            key={item.id}
+            item={item}
+            info={seasonInfo?.[item.anilistId]}
+            onRemove={onRemove}
+            onOpenSequel={onOpenSequel}
+            onCardClick={onCardClick}
+            onUpdateEpisodes={onUpdateEpisodes}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  const controls = (
+    <div className="flex flex-wrap justify-between items-center gap-2 mb-5">
+      <div className="flex gap-1 flex-wrap">
+        {(['all', 'airing', 'upcoming', 'finished'] as FilterOption[]).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              filter === f ? 'bg-pink-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+            }`}
+          >
+            {FILTER_LABELS[f]}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-gray-500 text-xs">מיון:</span>
+        {(['date', 'name'] as SortOption[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setSort(s)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              sort === s ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+            }`}
+          >
+            {SORT_LABELS[s]}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  if (filter !== 'all') {
+    const filtered = sortItems(
+      items.filter((item) => categoryToFilter(categorize(item.anilistId, seasonInfo)) === filter),
+      sort,
+    )
+    return (
+      <div className="flex flex-col">
+        {controls}
+        {filtered.length === 0
+          ? <p className="text-gray-500 text-center py-8">אין אנימות בקטגוריה זו</p>
+          : renderGrid(filtered)}
+      </div>
     )
   }
 
@@ -249,26 +317,15 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
 
   return (
     <div className="flex flex-col gap-8">
+      {controls}
       {CATEGORY_ORDER.map((cat) => {
-        const group = groups[cat]
+        const group = sortItems(groups[cat], sort)
         if (group.length === 0) return null
         const { label, color } = SECTION_CONFIG[cat]
         return (
           <section key={cat}>
             <h3 className={`text-sm font-semibold mb-3 ${color}`}>{label} ({group.length})</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {group.map((item) => (
-                <AnimeCard
-                  key={item.id}
-                  item={item}
-                  info={seasonInfo?.[item.anilistId]}
-                  onRemove={onRemove}
-                  onOpenSequel={onOpenSequel}
-                  onCardClick={onCardClick}
-                  onUpdateEpisodes={onUpdateEpisodes}
-                />
-              ))}
-            </div>
+            {renderGrid(group)}
           </section>
         )
       })}
