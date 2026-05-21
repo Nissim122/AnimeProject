@@ -53,6 +53,15 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
     timerRef.current = setTimeout(() => search(val), 700)
   }
 
+  function handleClear() {
+    abortRef.current?.abort()
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setQuery('')
+    setResults([])
+    setSearchError(false)
+    setLoading(false)
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="relative">
@@ -68,6 +77,15 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-400 animate-pulse text-sm">
             מחפש...
           </span>
+        )}
+        {query && !loading && (
+          <button
+            onClick={handleClear}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+            aria-label="נקה חיפוש"
+          >
+            ✕
+          </button>
         )}
       </div>
 
