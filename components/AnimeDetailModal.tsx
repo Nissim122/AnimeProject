@@ -132,7 +132,9 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
                           {season.seasonYear && (
                             <p className="text-gray-500 text-xs">{season.seasonYear}</p>
                           )}
-                          {episodeTo != null && (
+                          {season.status === 'RELEASING' ? (
+                            <p className="text-green-400 text-xs">ממשיך לצאת...</p>
+                          ) : episodeTo != null && (
                             <p className="text-gray-500 text-xs">
                               פרקים {episodeFrom}–{episodeTo}
                             </p>
