@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
             trackedAnimeId: anime.id,
             sequelAnilistId: s.id,
           })),
-          skipDuplicates: true,
         })
       }
     } catch (err) {

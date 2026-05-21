@@ -42,9 +42,14 @@ export default function Home() {
   }, [])
 
   const loadTracked = useCallback(async () => {
-    const res = await fetch('/api/tracked')
-    const data = await res.json()
-    setTracked(data.tracked ?? [])
+    try {
+      const res = await fetch('/api/tracked')
+      if (!res.ok) throw new Error(`status ${res.status}`)
+      const data = await res.json()
+      setTracked(data.tracked ?? [])
+    } catch (err) {
+      console.error('[loadTracked]', err)
+    }
   }, [])
 
   useEffect(() => {
@@ -53,7 +58,16 @@ export default function Home() {
 
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
 
-  async function handleTrack(anime: AnimeResult) {
+  async function handleTrack(anime: AnimeResult, seriesIds?: number[]) {
+    // Remove any other season from the same series that is already tracked.
+    // This prevents the sequel-checker from alerting about already-watched seasons.
+    if (seriesIds && seriesIds.length > 0) {
+      const toRemove = seriesIds.filter((id) => id !== anime.id && trackedIds.has(id))
+      await Promise.all(
+        toRemove.map((id) => fetch(`/api/track?anilistId=${id}`, { method: 'DELETE' }))
+      )
+    }
+
     const res = await fetch('/api/track', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
