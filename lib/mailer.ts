@@ -35,6 +35,43 @@ function buildSeasonRows(seasons: AnimeResult[], highlightId: number): string {
     .join('')
 }
 
+function buildAvailableSection(available: Array<{ parentTitle: string; sequelTitle: string }>): string {
+  if (available.length === 0) return ''
+
+  const rows = available
+    .map(
+      (a, i) => `
+        <tr style="background:${i % 2 === 0 ? '#16161f' : '#1a1a2a'};">
+          <td style="padding:9px 12px;color:#cdd6f4;border-bottom:1px solid #222;">
+            ${a.sequelTitle}
+          </td>
+          <td style="padding:9px 12px;color:#888;font-size:12px;border-bottom:1px solid #222;text-align:right;">
+            המשך של ${a.parentTitle}
+          </td>
+        </tr>`
+    )
+    .join('')
+
+  return `
+  <!-- Available/unwatched section -->
+  <div style="padding:0 24px 24px;">
+    <div style="font-size:12px;color:#7c3aed;margin-bottom:8px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
+      📺 ממתין לצפייה · ${available.length} עונות
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;">
+      <thead>
+        <tr style="background:#1e1e2e;">
+          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">עונה</th>
+          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">סדרה</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </div>`
+}
+
 export async function sendMonthStartEmail(params: {
   hebrewTitle: string
   englishTitle: string
@@ -43,6 +80,7 @@ export async function sendMonthStartEmail(params: {
   startDate: { year: number | null; month: number | null; day: number | null }
   status: string
   seasons: AnimeResult[]
+  availableUnwatched?: Array<{ parentTitle: string; sequelTitle: string }>
 }): Promise<boolean> {
   const transport = createTransport()
   const to = getTo()
@@ -51,7 +89,7 @@ export async function sendMonthStartEmail(params: {
     return false
   }
 
-  const { hebrewTitle, englishTitle, sequelTitle, startDate, status, seasons, sequelId } = params
+  const { hebrewTitle, englishTitle, sequelTitle, startDate, status, seasons, sequelId, availableUnwatched } = params
 
   const statusLabel = status === 'RELEASING' ? 'משודרת עכשיו' : 'יוצאת החודש'
   const statusColor = status === 'RELEASING' ? '#a6e3a1' : '#fab387'
@@ -69,6 +107,8 @@ export async function sendMonthStartEmail(params: {
   const coverHtml = sequelCover
     ? `<img src="${sequelCover}" alt="cover" style="width:100px;border-radius:8px;float:left;margin:0 0 8px 16px;" />`
     : ''
+
+  const availableSection = buildAvailableSection(availableUnwatched ?? [])
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
@@ -126,6 +166,8 @@ export async function sendMonthStartEmail(params: {
     </table>
   </div>
 
+  ${availableSection}
+
   <!-- Footer -->
   <div style="padding:14px 24px;border-top:1px solid #1a1a2a;text-align:center;">
     <p style="color:#333;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
@@ -174,6 +216,82 @@ export async function sendDayBeforeEmail(params: {
   })
 
   console.log(`[mailer] Day-before email sent for ${params.sequelTitle}`)
+  return true
+}
+
+export async function sendAvailableSeasonsEmail(params: {
+  available: Array<{ parentTitle: string; sequelTitle: string }>
+}): Promise<boolean> {
+  const transport = createTransport()
+  const to = getTo()
+  if (!transport || !to) {
+    console.warn('[mailer] Missing email config — skipping')
+    return false
+  }
+
+  const { available } = params
+
+  const rows = available
+    .map(
+      (a, i) => `
+        <tr style="background:${i % 2 === 0 ? '#16161f' : '#1a1a2a'};">
+          <td style="padding:10px 14px;color:#cdd6f4;border-bottom:1px solid #222;">
+            📺 ${a.sequelTitle}
+          </td>
+          <td style="padding:10px 14px;color:#888;font-size:12px;border-bottom:1px solid #222;text-align:right;">
+            ${a.parentTitle}
+          </td>
+        </tr>`
+    )
+    .join('')
+
+  await transport.sendMail({
+    from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: `📺 ${available.length} עונות ממתינות לצפייה`,
+    html: `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<body style="margin:0;padding:0;background:#070710;font-family:Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#0f0f1a;border-radius:14px;overflow:hidden;border:1px solid #1e1e2e;">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#5b21b6 0%,#7c3aed 100%);padding:28px 24px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:6px;">📺</div>
+    <h1 style="color:white;margin:0;font-size:20px;font-weight:bold;letter-spacing:1px;">עונות שעדיין לא ראית</h1>
+  </div>
+
+  <div style="padding:20px 24px 8px;text-align:center;">
+    <p style="color:#a78bfa;font-size:14px;margin:0;">
+      הסדרות הבאות יצאו כבר — הגיע הזמן להדביק פערים!
+    </p>
+  </div>
+
+  <div style="padding:12px 24px 24px;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;">
+      <thead>
+        <tr style="background:#1e1e2e;">
+          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">עונה זמינה</th>
+          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">סדרה מקורית</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:14px 24px;border-top:1px solid #1a1a2a;text-align:center;">
+    <p style="color:#333;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
+  </div>
+
+</div>
+</body>
+</html>`,
+  })
+
+  console.log(`[mailer] Available-seasons reminder sent (${available.length} entries)`)
   return true
 }
 

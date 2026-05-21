@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAnimeSequels, getAnimeStatusWithSequels, getAllSeasons, delay, RelationNode } from '@/lib/anilist'
-import { sendMonthStartEmail, sendDayBeforeEmail } from '@/lib/mailer'
+import { sendMonthStartEmail, sendDayBeforeEmail, sendAvailableSeasonsEmail } from '@/lib/mailer'
 import { translateToHebrew } from '@/lib/translate'
 
 export interface UpdateResult {
@@ -46,12 +46,25 @@ async function recordNotification(
   })
 }
 
+interface QueuedNotification {
+  anime: { anilistId: number; title: string }
+  sequel: RelationNode
+  type: 'MONTH_START' | 'DAY_BEFORE'
+}
+
 export async function runUpdateCheck(): Promise<UpdateResult> {
   const result: UpdateResult = { checked: 0, notified: 0, errors: 0, notifications: [] }
 
   const tracked = await prisma.trackedAnime.findMany({
     include: { knownSequels: true },
   })
+
+  const trackedIdsSet = new Set(tracked.map((a) => a.anilistId))
+
+  // Phase 1: fetch data, build notification queue and available/unwatched list
+  const queue: QueuedNotification[] = []
+  const availableUnwatched: Array<{ parentTitle: string; sequelTitle: string }> = []
+  const seenAvailableIds = new Set<number>()
 
   for (const anime of tracked) {
     result.checked++
@@ -60,12 +73,19 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
       const allSequels: RelationNode[] = []
       const seenSequelIds = new Set<number>()
 
-      // Check the tracked anime itself — if it's RELEASING, include it as a candidate
       await delay(700)
-      const { status: selfStatus, startDate: selfStartDate, sequels: directSequels } = await getAnimeStatusWithSequels(anime.anilistId)
+      const { status: selfStatus, startDate: selfStartDate, sequels: directSequels } =
+        await getAnimeStatusWithSequels(anime.anilistId)
       seenSequelIds.add(anime.anilistId)
+
       if (selfStatus === 'RELEASING') {
-        allSequels.push({ id: anime.anilistId, format: 'TV', title: { romaji: anime.title }, status: 'RELEASING', startDate: selfStartDate })
+        allSequels.push({
+          id: anime.anilistId,
+          format: 'TV',
+          title: { romaji: anime.title },
+          status: 'RELEASING',
+          startDate: selfStartDate,
+        })
       }
       for (const s of directSequels) {
         if (!seenSequelIds.has(s.id)) {
@@ -74,7 +94,15 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
         }
       }
 
-      // Also traverse known sequels for multi-generation chains (S1→S2 known, S3 new)
+      // Collect FINISHED sequels not yet tracked (available/unwatched)
+      for (const s of directSequels) {
+        if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
+          seenAvailableIds.add(s.id)
+          availableUnwatched.push({ parentTitle: anime.title, sequelTitle: s.title.romaji })
+        }
+      }
+
+      // Traverse known sequels for multi-generation chains (S1→S2 known, S3 new)
       for (const knownId of knownIds) {
         await delay(700)
         const sequels = await getAnimeSequels(knownId)
@@ -86,67 +114,28 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
         }
       }
 
+      // Queue notifications
       for (const sequel of allSequels) {
         if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
 
-        // RELEASING: always notify every check (no dedup).
-        // NOT_YET_RELEASED this month: notify once.
         const qualifiesForMonthStart =
           sequel.status === 'RELEASING' ||
           (sequel.status === 'NOT_YET_RELEASED' && isCurrentMonth(sequel.startDate))
 
-        const shouldNotify =
+        const shouldNotifyMonthStart =
           qualifiesForMonthStart &&
           (sequel.status === 'RELEASING' || !(await hasSentNotification(sequel.id, 'MONTH_START')))
 
-        if (shouldNotify) {
-          const allSeasons = await getAllSeasons(anime.anilistId)
-          const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
-          const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
-          const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
-
-          const sent = await sendMonthStartEmail({
-            hebrewTitle,
-            englishTitle,
-            sequelId: sequel.id,
-            sequelTitle: sequel.title.romaji,
-            startDate: sequel.startDate,
-            status: sequel.status,
-            seasons: allSeasons,
-          })
-          if (sent) {
-            if (sequel.status !== 'RELEASING') {
-              try {
-                await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
-              } catch (recordErr) {
-                console.error(`[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`, recordErr)
-              }
-            }
-            result.notified++
-            result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
-          }
+        if (shouldNotifyMonthStart) {
+          queue.push({ anime, sequel, type: 'MONTH_START' })
         }
 
-        // DAY_BEFORE: start is tomorrow
         if (
           sequel.status === 'NOT_YET_RELEASED' &&
           isTomorrow(sequel.startDate) &&
           !(await hasSentNotification(sequel.id, 'DAY_BEFORE'))
         ) {
-          const sent = await sendDayBeforeEmail({
-            parentTitle: anime.title,
-            sequelTitle: sequel.title.romaji,
-            startDate: sequel.startDate,
-          })
-          if (sent) {
-            try {
-              await recordNotification(sequel.id, 'DAY_BEFORE', sequel.title.romaji, anime.title)
-            } catch (recordErr) {
-              console.error(`[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (DAY_BEFORE) but failed to record — will retry next run`, recordErr)
-            }
-            result.notified++
-            result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'DAY_BEFORE' })
-          }
+          queue.push({ anime, sequel, type: 'DAY_BEFORE' })
         }
       }
     } catch (err) {
@@ -155,7 +144,75 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
     }
   }
 
-  console.log(`[check-updates] Done — checked: ${result.checked}, notified: ${result.notified}, errors: ${result.errors}`)
+  // Phase 2: send emails with full available/unwatched context
+  for (const { anime, sequel, type } of queue) {
+    if (type === 'MONTH_START') {
+      const allSeasons = await getAllSeasons(anime.anilistId)
+      const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
+      const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
+      const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
+
+      const sent = await sendMonthStartEmail({
+        hebrewTitle,
+        englishTitle,
+        sequelId: sequel.id,
+        sequelTitle: sequel.title.romaji,
+        startDate: sequel.startDate,
+        status: sequel.status,
+        seasons: allSeasons,
+        availableUnwatched: availableUnwatched.length > 0 ? availableUnwatched : undefined,
+      })
+      if (sent) {
+        if (sequel.status !== 'RELEASING') {
+          try {
+            await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
+          } catch (recordErr) {
+            console.error(
+              `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`,
+              recordErr
+            )
+          }
+        }
+        result.notified++
+        result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
+      }
+    } else {
+      const sent = await sendDayBeforeEmail({
+        parentTitle: anime.title,
+        sequelTitle: sequel.title.romaji,
+        startDate: sequel.startDate,
+      })
+      if (sent) {
+        try {
+          await recordNotification(sequel.id, 'DAY_BEFORE', sequel.title.romaji, anime.title)
+        } catch (recordErr) {
+          console.error(
+            `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (DAY_BEFORE) but failed to record — will retry next run`,
+            recordErr
+          )
+        }
+        result.notified++
+        result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'DAY_BEFORE' })
+      }
+    }
+  }
+
+  // If no new-season emails sent but available/unwatched exist — send standalone reminder
+  if (result.notified === 0 && availableUnwatched.length > 0) {
+    const sent = await sendAvailableSeasonsEmail({ available: availableUnwatched })
+    if (sent) {
+      result.notified++
+      result.notifications.push({
+        parent: '—',
+        sequel: `${availableUnwatched.length} עונות זמינות`,
+        type: 'AVAILABLE',
+      })
+    }
+  }
+
+  console.log(
+    `[check-updates] Done — checked: ${result.checked}, notified: ${result.notified}, errors: ${result.errors}, available: ${availableUnwatched.length}`
+  )
   return result
 }
 
