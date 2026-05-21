@@ -23,6 +23,7 @@ const MONTHS_HE = [
 
 function formatStartDate(d: RelationNode['startDate']): string {
   if (!d.year) return 'בקרוב'
+  if (d.month && d.day) return `${d.day} ${MONTHS_HE[d.month - 1]} ${d.year}`
   if (d.month) return `${MONTHS_HE[d.month - 1]} ${d.year}`
   return String(d.year)
 }
