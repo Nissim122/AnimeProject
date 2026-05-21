@@ -163,7 +163,7 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
-  const groups: Record<Category, TrackedItem[]> = { available: [], releasing: [], upcoming: [], unknown: [] }
+  const groups: Record<Category, TrackedItem[]> = { behind: [], available: [], releasing: [], upcoming: [], unknown: [] }
   for (const item of items) {
     groups[categorize(item.anilistId, seasonInfo)].push(item)
   }
