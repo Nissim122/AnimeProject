@@ -1,5 +1,6 @@
 ﻿'use client'
 
+import { useState } from 'react'
 import type { RelationNode } from '@/lib/anilist'
 import type { AnimeSeasonInfo } from '@/app/page'
 
@@ -46,6 +47,31 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
 }
 
 type Category = 'behind' | 'available' | 'releasing' | 'upcoming' | 'completed' | 'unknown'
+type FilterOption = 'all' | 'airing' | 'upcoming' | 'finished'
+type SortOption = 'date' | 'name'
+
+const FILTER_LABELS: Record<FilterOption, string> = {
+  all:      'הכל',
+  airing:   '🟢 בשידור',
+  upcoming: '📅 עונה הבאה בדרך',
+  finished: '✅ הסתיים',
+}
+
+const SORT_LABELS: Record<SortOption, string> = {
+  date: 'תאריך הוספה',
+  name: 'שם',
+}
+
+function categoryToFilter(cat: Category): Exclude<FilterOption, 'all'> {
+  if (cat === 'releasing' || cat === 'behind') return 'airing'
+  if (cat === 'upcoming' || cat === 'available') return 'upcoming'
+  return 'finished' // completed + unknown
+}
+
+function sortItems(items: TrackedItem[], sort: SortOption): TrackedItem[] {
+  if (sort === 'name') return [...items].sort((a, b) => a.title.localeCompare(b.title, 'he'))
+  return items
+}
 
 function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
   const info = seasonInfo?.[anilistId]
@@ -184,14 +210,6 @@ function AnimeCard({
             anilistId={item.anilistId}
             onUpdate={onUpdateEpisodes}
           />
-        )}
-        {availableSequel && onOpenSequel && (
-          <button
-            onClick={() => onOpenSequel(availableSequel)}
-            className="text-xs bg-violet-700 hover:bg-violet-600 text-white rounded-lg py-1.5 font-medium transition-colors"
-          >
-            סמן שראיתי
-          </button>
         )}
         <button
           onClick={() => onRemove(item.anilistId)}
