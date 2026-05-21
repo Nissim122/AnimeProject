@@ -33,7 +33,7 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
         if ((err as Error).name === 'AbortError') return
         setFetchError(true)
       })
-      .finally(() => setLoading(false))
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [anime.id])
 

@@ -35,3 +35,11 @@ model SentNotification {
 
   @@unique([sequelAnilistId, type])
 }
+
+model WatchListItem {
+  id         Int      @id @default(autoincrement())
+  anilistId  Int      @unique
+  title      String
+  coverImage String?
+  addedAt    DateTime @default(now())
+}
