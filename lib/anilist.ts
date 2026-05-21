@@ -3,7 +3,7 @@ const ANILIST_URL = 'https://graphql.anilist.co'
 export interface AnimeResult {
   id: number
   title: { romaji: string; english: string | null }
-  coverImage: { medium: string }
+  coverImage: { large: string }
   status: string
   seasonYear: number | null
   season: string | null
@@ -39,7 +39,7 @@ export async function searchAnime(search: string): Promise<AnimeResult[]> {
         media(search: $search, type: ANIME, format_in: [TV, TV_SHORT]) {
           id
           title { romaji english }
-          coverImage { medium }
+          coverImage { large }
           status
           seasonYear
           season
@@ -101,7 +101,7 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
         Media(id: $id, type: ANIME) {
           id
           title { romaji english }
-          coverImage { medium }
+          coverImage { large }
           status
           seasonYear
           season
@@ -120,16 +120,18 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
     const media = data?.data?.Media
     if (!media) continue
 
-    results.push({
-      id: media.id,
-      title: media.title,
-      coverImage: media.coverImage,
-      status: media.status,
-      seasonYear: media.seasonYear,
-      season: media.season,
-      format: media.format,
-      popularity: media.popularity ?? null,
-    })
+    if (media.format === 'TV' || media.format === 'TV_SHORT') {
+      results.push({
+        id: media.id,
+        title: media.title,
+        coverImage: media.coverImage,
+        status: media.status,
+        seasonYear: media.seasonYear,
+        season: media.season,
+        format: media.format,
+        popularity: media.popularity ?? null,
+      })
+    }
 
     const edges: Array<{ relationType: string; node: { id: number; format: string | null } }> =
       media.relations?.edges ?? []
@@ -137,7 +139,6 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
     for (const edge of edges) {
       if (
         (edge.relationType === 'PREQUEL' || edge.relationType === 'SEQUEL') &&
-        (edge.node.format === 'TV' || edge.node.format === 'TV_SHORT') &&
         !visited.has(edge.node.id)
       ) {
         queue.push(edge.node.id)

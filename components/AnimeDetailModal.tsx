@@ -104,10 +104,10 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
                           : 'border-gray-700 bg-gray-800/40 hover:border-gray-500'
                       }`}
                     >
-                      {season.coverImage?.medium ? (
+                      {season.coverImage?.large ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={season.coverImage.medium}
+                          src={season.coverImage.large}
                           alt={title}
                           className="w-10 h-14 object-cover rounded-lg flex-shrink-0"
                         />

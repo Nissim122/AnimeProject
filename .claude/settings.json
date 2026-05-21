@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "Set-Location 'c:\\‏‏שולחן העבודה - עותק\\AnimeProject'; git add -A; $changes = git status --porcelain; if ($changes) { git commit -m 'Auto-save changes' }; git push origin main 2>$null",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

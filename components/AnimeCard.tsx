@@ -23,10 +23,10 @@ export default function AnimeCard({ anime, isTracked, onOpen, isTopResult }: Pro
       }`}
     >
       <div className="relative">
-        {anime.coverImage?.medium && (
+        {anime.coverImage?.large && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={anime.coverImage.medium}
+            src={anime.coverImage.large}
             alt={title}
             className="w-full object-cover"
             style={{ aspectRatio: '3/4' }}
