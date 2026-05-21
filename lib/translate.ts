@@ -28,6 +28,19 @@ export async function translateHebrewToEnglish(text: string): Promise<string> {
   return gtx(text)
 }
 
+export async function translateToHebrew(text: string): Promise<string> {
+  const url =
+    `https://translate.googleapis.com/translate_a/single` +
+    `?client=gtx&sl=auto&tl=he&dt=t&q=${encodeURIComponent(text)}`
+  const res = await fetch(url)
+  if (!res.ok) return text
+  const json = await res.json()
+  return (json[0] as Array<[string]>)
+    .map((chunk) => chunk[0])
+    .join('')
+    .trim()
+}
+
 /** Translate each Hebrew word individually and return unique content keywords. */
 export async function hebrewToKeywords(text: string): Promise<string[]> {
   const heWords = text.split(/\s+/).filter((w) => w.length > 1)

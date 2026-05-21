@@ -1,19 +1,14 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAnimeSequels, delay, RelationNode } from '@/lib/anilist'
+import { getAnimeSequels, getAllSeasons, delay, RelationNode } from '@/lib/anilist'
 import { sendMonthStartEmail, sendDayBeforeEmail } from '@/lib/mailer'
+import { translateToHebrew } from '@/lib/translate'
 
 export interface UpdateResult {
   checked: number
   notified: number
   errors: number
   notifications: Array<{ parent: string; sequel: string; type: string }>
-}
-
-function getTomorrow(): Date {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d
 }
 
 function isCurrentMonth(startDate: RelationNode['startDate']): boolean {
@@ -24,7 +19,8 @@ function isCurrentMonth(startDate: RelationNode['startDate']): boolean {
 
 function isTomorrow(startDate: RelationNode['startDate']): boolean {
   if (!startDate.year || !startDate.month || !startDate.day) return false
-  const tomorrow = getTomorrow()
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
   return (
     startDate.year === tomorrow.getFullYear() &&
     startDate.month === tomorrow.getMonth() + 1 &&
@@ -83,11 +79,19 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
           (sequel.status === 'NOT_YET_RELEASED' && isCurrentMonth(sequel.startDate))
 
         if (qualifiesForMonthStart && !(await hasSentNotification(sequel.id, 'MONTH_START'))) {
+          const allSeasons = await getAllSeasons(anime.anilistId)
+          const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
+          const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
+          const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
+
           const sent = await sendMonthStartEmail({
-            parentTitle: anime.title,
+            hebrewTitle,
+            englishTitle,
+            sequelId: sequel.id,
             sequelTitle: sequel.title.romaji,
             startDate: sequel.startDate,
             status: sequel.status,
+            seasons: allSeasons,
           })
           if (sent) {
             await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
@@ -97,7 +101,11 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
         }
 
         // DAY_BEFORE: start is tomorrow
-        if (sequel.status === 'NOT_YET_RELEASED' && isTomorrow(sequel.startDate) && !(await hasSentNotification(sequel.id, 'DAY_BEFORE'))) {
+        if (
+          sequel.status === 'NOT_YET_RELEASED' &&
+          isTomorrow(sequel.startDate) &&
+          !(await hasSentNotification(sequel.id, 'DAY_BEFORE'))
+        ) {
           const sent = await sendDayBeforeEmail({
             parentTitle: anime.title,
             sequelTitle: sequel.title.romaji,
