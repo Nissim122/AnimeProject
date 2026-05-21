@@ -37,6 +37,9 @@ function pickUpcoming(sequels: RelationNode[]): RelationNode | null {
     if (ay !== by) return ay - by
     const am = a.startDate.month ?? 99
     const bm = b.startDate.month ?? 99
-    return am - bm
+    if (am !== bm) return am - bm
+    const ad = a.startDate.day ?? 99
+    const bd = b.startDate.day ?? 99
+    return ad - bd
   })[0]
 }
