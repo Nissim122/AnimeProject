@@ -5,11 +5,10 @@ import { getAnimeSequels } from '@/lib/anilist'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { anilistId, title, coverImage, totalEpisodes } = body as {
+    const { anilistId, title, coverImage } = body as {
       anilistId: number
       title: string
       coverImage?: string
-      totalEpisodes?: number
     }
 
     if (!anilistId || !title) {
@@ -26,8 +25,6 @@ export async function POST(req: NextRequest) {
         anilistId,
         title,
         coverImage,
-        totalEpisodes: totalEpisodes ?? null,
-        watchedEpisodes: totalEpisodes ?? 0,
       },
     })
 
@@ -50,28 +47,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[track POST]', err)
     return NextResponse.json({ error: 'Failed to track anime' }, { status: 500 })
-  }
-}
-
-export async function PATCH(req: NextRequest) {
-  try {
-    const body = await req.json() as {
-      anilistId: number
-      watchedEpisodes?: number
-      totalEpisodes?: number
-    }
-    const { anilistId, watchedEpisodes, totalEpisodes } = body
-    if (!anilistId || (watchedEpisodes == null && totalEpisodes == null)) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
-    }
-    const data: { watchedEpisodes?: number; totalEpisodes?: number } = {}
-    if (watchedEpisodes != null) data.watchedEpisodes = Math.max(0, watchedEpisodes)
-    if (totalEpisodes != null) data.totalEpisodes = totalEpisodes
-    await prisma.trackedAnime.update({ where: { anilistId }, data })
-    return NextResponse.json({ success: true })
-  } catch (err) {
-    console.error('[track PATCH]', err)
-    return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
   }
 }
 

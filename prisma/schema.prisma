@@ -13,8 +13,6 @@ model TrackedAnime {
   title           String
   coverImage      String?
   trackedAt       DateTime      @default(now())
-  watchedEpisodes Int           @default(0)
-  totalEpisodes   Int?
   knownSequels    KnownSequel[]
 }
 
