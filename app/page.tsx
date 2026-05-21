@@ -47,7 +47,17 @@ export default function Home() {
       const res = await fetch('/api/tracked')
       if (!res.ok) throw new Error(`status ${res.status}`)
       const data = await res.json()
-      setTracked(data.tracked ?? [])
+      const items: TrackedItem[] = data.tracked ?? []
+      setTracked(items)
+      if (items.length > 0) {
+        const ids = items.map((t) => t.anilistId).join(',')
+        fetch(`/api/next-seasons?ids=${ids}`)
+          .then((r) => r.json())
+          .then((d) => setNextSeasons(d))
+          .catch(() => {})
+      } else {
+        setNextSeasons({})
+      }
     } catch (err) {
       console.error('[loadTracked]', err)
     }
@@ -75,7 +85,7 @@ export default function Home() {
       body: JSON.stringify({
         anilistId: anime.id,
         title: anime.title.english ?? anime.title.romaji,
-        coverImage: anime.coverImage?.medium,
+        coverImage: anime.coverImage?.large,
       }),
     })
     const data = await res.json()
@@ -153,7 +163,7 @@ export default function Home() {
             📋 במעקב ({tracked.length})
           </h2>
         </div>
-        <TrackedList items={tracked} onRemove={handleRemove} />
+        <TrackedList items={tracked} onRemove={handleRemove} nextSeasons={nextSeasons} />
       </section>
 
       {/* Toasts */}
