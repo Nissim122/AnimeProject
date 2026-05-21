@@ -37,6 +37,7 @@ export interface AnimeSeasonInfo {
   next: RelationNode | null
   available: RelationNode | null
   hasReleasingAhead?: boolean
+  allWatched?: boolean
 }
 
 let toastId = 0

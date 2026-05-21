@@ -179,7 +179,7 @@ describe('MONTH_START notifications', () => {
   it('sends email for NOT_YET_RELEASED sequel starting this month', async () => {
     const s = makeSequel(201, 'NOT_YET_RELEASED', THIS_MONTH_MID())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     const result = await runUpdateCheck()
 
@@ -191,9 +191,9 @@ describe('MONTH_START notifications', () => {
   })
 
   it('does NOT send if already notified — duplicate prevention', async () => {
-    const s = makeSequel(202, 'RELEASING', { year: 2024, month: 1, day: 1 })
+    const s = makeSequel(202, 'NOT_YET_RELEASED', THIS_MONTH_MID())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
     mockFindUnique.mockResolvedValue({ id: 1, sequelAnilistId: 202, type: 'MONTH_START' })
 
     const result = await runUpdateCheck()
@@ -206,7 +206,7 @@ describe('MONTH_START notifications', () => {
   it('does NOT send for NOT_YET_RELEASED sequel starting next month', async () => {
     const s = makeSequel(203, 'NOT_YET_RELEASED', NEXT_MONTH())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     const result = await runUpdateCheck()
 
@@ -217,7 +217,7 @@ describe('MONTH_START notifications', () => {
   it('does NOT send for FINISHED sequel', async () => {
     const s = makeSequel(204, 'FINISHED', { year: 2020, month: 4, day: 1 })
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     await runUpdateCheck()
 
@@ -227,7 +227,7 @@ describe('MONTH_START notifications', () => {
   it('does NOT send for CANCELLED sequel', async () => {
     const s = makeSequel(205, 'CANCELLED', { year: 2023, month: 1, day: 1 })
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     await runUpdateCheck()
 
@@ -237,7 +237,7 @@ describe('MONTH_START notifications', () => {
   it('does NOT record notification when email returns false (email not configured)', async () => {
     const s = makeSequel(206, 'RELEASING', { year: 2024, month: 1, day: 1 })
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
     mockSendMonthStartEmail.mockResolvedValue(false)
 
     await runUpdateCheck()
@@ -246,9 +246,9 @@ describe('MONTH_START notifications', () => {
   })
 
   it('still increments notified when email succeeds but DB record throws (CRITICAL log scenario)', async () => {
-    const s = makeSequel(207, 'RELEASING', { year: 2024, month: 1, day: 1 })
+    const s = makeSequel(207, 'NOT_YET_RELEASED', THIS_MONTH_MID())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
     mockCreate.mockRejectedValue(new Error('DB locked'))
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -268,7 +268,7 @@ describe('DAY_BEFORE notifications', () => {
     const sd = TOMORROW()
     const s = makeSequel(300, 'NOT_YET_RELEASED', sd)
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     const result = await runUpdateCheck()
 
@@ -285,7 +285,7 @@ describe('DAY_BEFORE notifications', () => {
   it('does NOT send if already notified — duplicate prevention', async () => {
     const s = makeSequel(301, 'NOT_YET_RELEASED', TOMORROW())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
     mockFindUnique.mockImplementation(
       ({ where }: { where: { sequelAnilistId_type: { type: string } } }) =>
         where.sequelAnilistId_type.type === 'DAY_BEFORE'
@@ -301,7 +301,7 @@ describe('DAY_BEFORE notifications', () => {
   it('does NOT send for RELEASING sequel (already started)', async () => {
     const s = makeSequel(302, 'RELEASING', TOMORROW())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     await runUpdateCheck()
 
@@ -311,7 +311,7 @@ describe('DAY_BEFORE notifications', () => {
   it('does NOT send when start date is in 5 days (not tomorrow)', async () => {
     const s = makeSequel(303, 'NOT_YET_RELEASED', IN_5_DAYS())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     await runUpdateCheck()
 
@@ -321,7 +321,7 @@ describe('DAY_BEFORE notifications', () => {
   it('does NOT send when start date is today', async () => {
     const s = makeSequel(304, 'NOT_YET_RELEASED', TODAY())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     await runUpdateCheck()
 
@@ -331,7 +331,7 @@ describe('DAY_BEFORE notifications', () => {
   it('does NOT record DAY_BEFORE when email returns false', async () => {
     const s = makeSequel(305, 'NOT_YET_RELEASED', TOMORROW())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
     mockSendMonthStartEmail.mockResolvedValue(false)
     mockSendDayBeforeEmail.mockResolvedValue(false)
 
@@ -353,7 +353,7 @@ describe('Combined MONTH_START + DAY_BEFORE', () => {
     async () => {
       const s = makeSequel(400, 'NOT_YET_RELEASED', TOMORROW())
       mockFindMany.mockResolvedValue([{ ...ANIME }])
-      mockGetAnimeSequels.mockResolvedValue([s])
+      mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
       const result = await runUpdateCheck()
 
@@ -370,7 +370,7 @@ describe('Combined MONTH_START + DAY_BEFORE', () => {
   it('sends only DAY_BEFORE when MONTH_START already recorded but start is tomorrow', async () => {
     const s = makeSequel(401, 'NOT_YET_RELEASED', TOMORROW())
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
     mockFindUnique.mockImplementation(
       ({ where }: { where: { sequelAnilistId_type: { type: string } } }) =>
         where.sequelAnilistId_type.type === 'MONTH_START'
@@ -389,30 +389,24 @@ describe('Combined MONTH_START + DAY_BEFORE', () => {
 // KnownSequel registration
 // ═════════════════════════════════════════════
 describe('KnownSequel registration', () => {
-  it('upserts a newly discovered sequel into KnownSequel', async () => {
+  it('does not send notification for a FINISHED sequel', async () => {
     const s = makeSequel(500, 'FINISHED', { year: 2020, month: 1, day: 1 })
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     await runUpdateCheck()
 
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { trackedAnimeId_sequelAnilistId: { trackedAnimeId: 1, sequelAnilistId: 500 } },
-        create: { trackedAnimeId: 1, sequelAnilistId: 500 },
-        update: {},
-      })
-    )
+    expect(mockSendMonthStartEmail).not.toHaveBeenCalled()
   })
 
-  it('does NOT re-upsert an already-known sequel', async () => {
+  it('does not send notification for an already-known FINISHED sequel', async () => {
     const s = makeSequel(501, 'FINISHED', { year: 2020, month: 1, day: 1 })
     mockFindMany.mockResolvedValue([{ ...ANIME, knownSequels: [{ sequelAnilistId: 501 }] }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
 
     await runUpdateCheck()
 
-    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockSendMonthStartEmail).not.toHaveBeenCalled()
   })
 })
 

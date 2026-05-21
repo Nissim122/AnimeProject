@@ -45,19 +45,18 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
   )
 }
 
-type Category = 'behind' | 'available' | 'releasing' | 'upcoming' | 'unknown'
+type Category = 'behind' | 'available' | 'releasing' | 'upcoming' | 'completed' | 'unknown'
 
 function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
   const info = seasonInfo?.[anilistId]
   if (!info) return 'unknown'
 
   if (info.available) {
-    // Has unfinished seasons to watch — and something is ALSO releasing right now
     return info.hasReleasingAhead ? 'behind' : 'available'
   }
 
   const sequel = info.next
-  if (!sequel) return 'unknown'
+  if (!sequel) return info.allWatched === true ? 'completed' : 'unknown'
 
   if (sequel.status === 'RELEASING') return 'releasing'
 
@@ -210,10 +209,11 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
   behind:    { label: '⏩ עדיין לא הדבקתי — משודר כעת!', color: 'text-orange-400' },
   available: { label: '📺 המשך זמין לצפייה',             color: 'text-violet-400' },
   upcoming:  { label: '📅 עונה הבאה בדרך',               color: 'text-amber-400' },
+  completed: { label: '✅ עדכני — ראית את כל העונות',    color: 'text-teal-400' },
   unknown:   { label: '❓ אין מידע על עונה הבאה',         color: 'text-gray-400' },
 }
 
-const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'unknown']
+const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'completed', 'unknown']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick, onUpdateEpisodes }: Props) {
   if (items.length === 0) {
@@ -224,7 +224,7 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
-  const groups: Record<Category, TrackedItem[]> = { behind: [], available: [], releasing: [], upcoming: [], unknown: [] }
+  const groups: Record<Category, TrackedItem[]> = { behind: [], available: [], releasing: [], upcoming: [], completed: [], unknown: [] }
   for (const item of items) {
     groups[categorize(item.anilistId, seasonInfo)].push(item)
   }
