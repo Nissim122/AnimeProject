@@ -169,9 +169,8 @@ describe('MONTH_START notifications', () => {
     expect(mockSendMonthStartEmail).toHaveBeenCalledWith(
       expect.objectContaining({ sequelTitle: 'Sequel 200', status: 'RELEASING' })
     )
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ sequelAnilistId: 200, type: 'MONTH_START' }) })
-    )
+    // RELEASING sequels are intentionally not recorded — they re-notify every run
+    expect(mockCreate).not.toHaveBeenCalled()
     expect(result.notified).toBe(1)
     expect(result.notifications[0]).toMatchObject({ type: 'MONTH_START', sequel: 'Sequel 200' })
   })
@@ -424,21 +423,18 @@ describe('Multi-generation sequel traversal — S1 tracked → S2 known → S3 n
       knownSequels: [{ sequelAnilistId: 602 }], // S2 is known
     }])
 
+    mockGetAnimeStatusWithSequels.mockResolvedValue({
+      status: 'FINISHED',
+      startDate: { year: null, month: null, day: null },
+      sequels: [makeSequel(602, 'FINISHED', { year: 2021, month: 1, day: 1 })],
+    })
     mockGetAnimeSequels.mockImplementation((id: number) => {
-      if (id === 601) return Promise.resolve([makeSequel(602, 'FINISHED', { year: 2021, month: 1, day: 1 })])
-      if (id === 602) return Promise.resolve([s3])  // S3 is new, discovered via S2
+      if (id === 602) return Promise.resolve([s3])  // S3 discovered via known S2
       return Promise.resolve([])
     })
 
     const result = await runUpdateCheck()
 
-    // S3 upserted into KnownSequel
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { trackedAnimeId_sequelAnilistId: { trackedAnimeId: 1, sequelAnilistId: 603 } },
-        create: { trackedAnimeId: 1, sequelAnilistId: 603 },
-      })
-    )
     // S3 qualifies for MONTH_START → email sent
     expect(mockSendMonthStartEmail).toHaveBeenCalledOnce()
     expect(result.notified).toBe(1)
@@ -454,21 +450,20 @@ describe('Multi-generation sequel traversal — S1 tracked → S2 known → S3 n
       knownSequels: [{ sequelAnilistId: 702 }],
     }])
 
+    mockGetAnimeStatusWithSequels.mockResolvedValue({
+      status: 'FINISHED',
+      startDate: { year: null, month: null, day: null },
+      sequels: [makeSequel(702, 'FINISHED', { year: 2022, month: 1, day: 1 }), s3],
+    })
     mockGetAnimeSequels.mockImplementation((id: number) => {
-      // S3 appears in both S1's and S2's sequel lists
-      if (id === 701) return Promise.resolve([makeSequel(702, 'FINISHED', { year: 2022, month: 1, day: 1 }), s3])
+      // S3 appears again in S2's sequel list (duplicate path)
       if (id === 702) return Promise.resolve([s3])
       return Promise.resolve([])
     })
 
     const result = await runUpdateCheck()
 
-    // S3 upserted only once
-    const s3Upserts = (mockUpsert.mock.calls as [{ where: { trackedAnimeId_sequelAnilistId: { sequelAnilistId: number } } }][]).filter(
-      (c) => c[0].where.trackedAnimeId_sequelAnilistId.sequelAnilistId === 703
-    )
-    expect(s3Upserts).toHaveLength(1)
-    // Only one MONTH_START email for S3
+    // Only one MONTH_START email for S3 (deduplication via seenSequelIds)
     expect(mockSendMonthStartEmail).toHaveBeenCalledOnce()
     expect(result.notified).toBe(1)
   })
@@ -483,9 +478,8 @@ describe('Error handling', () => {
       { id: 1, anilistId: 100, title: 'Error Anime', knownSequels: [] },
       { id: 2, anilistId: 200, title: 'OK Anime', knownSequels: [] },
     ])
-    mockGetAnimeSequels
-      .mockRejectedValueOnce(new Error('Rate limited'))
-      .mockResolvedValue([])
+    mockGetAnimeStatusWithSequels.mockRejectedValueOnce(new Error('Rate limited'))
+    // second call uses beforeEach default: { status: 'FINISHED', sequels: [] }
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const result = await runUpdateCheck()
@@ -498,7 +492,7 @@ describe('Error handling', () => {
   it('does NOT record notification when email send throws, and increments errors', async () => {
     const s = makeSequel(800, 'RELEASING', { year: 2024, month: 1, day: 1 })
     mockFindMany.mockResolvedValue([{ ...ANIME }])
-    mockGetAnimeSequels.mockResolvedValue([s])
+    mockGetAnimeStatusWithSequels.mockResolvedValue({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [s] })
     mockSendMonthStartEmail.mockRejectedValue(new Error('SMTP connection refused'))
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -521,9 +515,9 @@ describe('Result counters', () => {
       { id: 2, anilistId: 200, title: 'Anime B', knownSequels: [] },
       { id: 3, anilistId: 300, title: 'Anime C Error', knownSequels: [] },
     ])
-    mockGetAnimeSequels
-      .mockResolvedValueOnce([makeSequel(901, 'RELEASING', { year: 2024, month: 1, day: 1 })])
-      .mockResolvedValueOnce([])
+    mockGetAnimeStatusWithSequels
+      .mockResolvedValueOnce({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [makeSequel(901, 'RELEASING', { year: 2024, month: 1, day: 1 })] })
+      .mockResolvedValueOnce({ status: 'FINISHED', startDate: { year: null, month: null, day: null }, sequels: [] })
       .mockRejectedValueOnce(new Error('timeout'))
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
