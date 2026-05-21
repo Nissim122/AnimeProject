@@ -169,8 +169,9 @@ describe('MONTH_START notifications', () => {
     expect(mockSendMonthStartEmail).toHaveBeenCalledWith(
       expect.objectContaining({ sequelTitle: 'Sequel 200', status: 'RELEASING' })
     )
-    // RELEASING sequels are intentionally not recorded — they re-notify every run
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ sequelAnilistId: 200, type: 'MONTH_START' }) })
+    )
     expect(result.notified).toBe(1)
     expect(result.notifications[0]).toMatchObject({ type: 'MONTH_START', sequel: 'Sequel 200' })
   })

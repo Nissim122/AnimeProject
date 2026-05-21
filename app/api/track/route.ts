@@ -55,17 +55,19 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { anilistId, watchedEpisodes } = await req.json() as {
+    const body = await req.json() as {
       anilistId: number
-      watchedEpisodes: number
+      watchedEpisodes?: number
+      totalEpisodes?: number
     }
-    if (!anilistId || watchedEpisodes == null) {
+    const { anilistId, watchedEpisodes, totalEpisodes } = body
+    if (!anilistId || (watchedEpisodes == null && totalEpisodes == null)) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
-    await prisma.trackedAnime.update({
-      where: { anilistId },
-      data: { watchedEpisodes: Math.max(0, watchedEpisodes) },
-    })
+    const data: { watchedEpisodes?: number; totalEpisodes?: number } = {}
+    if (watchedEpisodes != null) data.watchedEpisodes = Math.max(0, watchedEpisodes)
+    if (totalEpisodes != null) data.totalEpisodes = totalEpisodes
+    await prisma.trackedAnime.update({ where: { anilistId }, data })
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[track PATCH]', err)

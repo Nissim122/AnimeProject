@@ -59,6 +59,39 @@ export default function Home() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000)
   }, [])
 
+  const backfillEpisodeCounts = useCallback(async (items: TrackedItem[]) => {
+    const missing = items.filter((t) => t.totalEpisodes === null)
+    for (const item of missing) {
+      try {
+        const res = await fetch(`/api/seasons?id=${item.anilistId}`)
+        if (!res.ok) continue
+        const data = await res.json()
+        const seasons: AnimeResult[] = data.seasons ?? []
+        const matched = seasons.find((s) => s.id === item.anilistId)
+        if (matched?.episodes != null) {
+          fetch('/api/track', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              anilistId: item.anilistId,
+              watchedEpisodes: matched.episodes,
+              totalEpisodes: matched.episodes,
+            }),
+          }).catch(() => {})
+          setTracked((prev) =>
+            prev.map((t) =>
+              t.anilistId === item.anilistId
+                ? { ...t, watchedEpisodes: matched.episodes!, totalEpisodes: matched.episodes }
+                : t
+            )
+          )
+        }
+      } catch {
+        // silent — will retry next page load
+      }
+    }
+  }, [])
+
   const loadTracked = useCallback(async () => {
     try {
       const res = await fetch('/api/tracked')
@@ -66,6 +99,7 @@ export default function Home() {
       const data = await res.json()
       const items: TrackedItem[] = data.tracked ?? []
       setTracked(items)
+      backfillEpisodeCounts(items)
       if (items.length > 0) {
         const ids = items.map((t) => t.anilistId).join(',')
         fetch(`/api/next-seasons?ids=${ids}`)
@@ -78,7 +112,7 @@ export default function Home() {
     } catch (err) {
       console.error('[loadTracked]', err)
     }
-  }, [])
+  }, [backfillEpisodeCounts])
 
   const loadWatchlist = useCallback(async () => {
     try {
