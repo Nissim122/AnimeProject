@@ -158,29 +158,35 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
     if (visited.size >= 20) break
     visited.add(id)
 
-    const data = await gqlFetch(
-      `query GetSeason($id: Int) {
-        Media(id: $id, type: ANIME) {
-          id
-          title { romaji english }
-          coverImage { large }
-          status
-          seasonYear
-          season
-          format
-          episodes
-          relations {
-            edges {
-              relationType
-              node { id format }
+    let data: unknown
+    try {
+      data = await gqlFetch(
+        `query GetSeason($id: Int) {
+          Media(id: $id, type: ANIME) {
+            id
+            title { romaji english }
+            coverImage { large }
+            status
+            seasonYear
+            season
+            format
+            episodes
+            relations {
+              edges {
+                relationType
+                node { id format }
+              }
             }
           }
-        }
-      }`,
-      { id }
-    )
+        }`,
+        { id }
+      )
+    } catch {
+      continue
+    }
 
-    const media = data?.data?.Media
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const media = (data as any)?.data?.Media
     if (!media) continue
 
     if (media.format === 'TV' || media.format === 'TV_SHORT' || media.format === 'MOVIE') {

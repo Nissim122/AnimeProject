@@ -7,6 +7,11 @@ export async function GET(req: NextRequest) {
   if (!idParam || isNaN(id)) {
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
   }
-  const seasons = await getAllSeasons(id)
-  return NextResponse.json({ seasons })
+  try {
+    const seasons = await getAllSeasons(id)
+    return NextResponse.json({ seasons })
+  } catch (err) {
+    console.error('[seasons] getAllSeasons failed:', err)
+    return NextResponse.json({ error: 'Failed to fetch seasons' }, { status: 502 })
+  }
 }
