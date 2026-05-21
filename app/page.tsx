@@ -14,6 +14,8 @@ interface TrackedItem {
   title: string
   coverImage: string | null
   trackedAt: string
+  watchedEpisodes: number
+  totalEpisodes: number | null
 }
 
 interface CheckResult {
@@ -111,6 +113,7 @@ export default function Home() {
         anilistId: anime.id,
         title: anime.title.english ?? anime.title.romaji,
         coverImage: anime.coverImage?.large,
+        totalEpisodes: anime.episodes ?? undefined,
       }),
     })
     const data = await res.json()
@@ -192,6 +195,17 @@ export default function Home() {
       episodes: null,
     }
     setModalAnime(fakeAnime)
+  }
+
+  async function handleUpdateEpisodes(anilistId: number, watched: number) {
+    setTracked((prev) =>
+      prev.map((t) => t.anilistId === anilistId ? { ...t, watchedEpisodes: watched } : t)
+    )
+    fetch('/api/track', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId, watchedEpisodes: watched }),
+    }).catch(() => {})
   }
 
   async function handleCheckUpdates() {
@@ -278,6 +292,7 @@ export default function Home() {
             seasonInfo={seasonInfo}
             onOpenSequel={handleOpenSequel}
             onCardClick={handleCardClick}
+            onUpdateEpisodes={handleUpdateEpisodes}
           />
         )}
         {activeView === 'watchlist' && (

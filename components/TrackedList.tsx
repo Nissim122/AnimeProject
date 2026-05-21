@@ -9,6 +9,8 @@ interface TrackedItem {
   title: string
   coverImage: string | null
   trackedAt: string
+  watchedEpisodes: number
+  totalEpisodes: number | null
 }
 
 interface Props {
@@ -17,6 +19,7 @@ interface Props {
   seasonInfo?: Record<number, AnimeSeasonInfo>
   onOpenSequel?: (sequel: RelationNode) => void
   onCardClick?: (item: TrackedItem) => void
+  onUpdateEpisodes?: (anilistId: number, watched: number) => void
 }
 
 const MONTHS_HE = [
@@ -65,18 +68,60 @@ function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonIn
   return 'upcoming'
 }
 
+function EpisodeProgress({
+  watched,
+  total,
+  anilistId,
+  onUpdate,
+}: {
+  watched: number
+  total: number | null
+  anilistId: number
+  onUpdate: (anilistId: number, n: number) => void
+}) {
+  const pct = total && total > 0 ? Math.min(100, Math.round((watched / total) * 100)) : null
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); onUpdate(anilistId, Math.max(0, watched - 1)) }}
+          className="w-5 h-5 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white text-xs leading-none"
+        >−</button>
+        <span className="text-gray-400 text-xs tabular-nums">
+          {watched}{total != null ? ` / ${total}` : ''} פרקים
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onUpdate(anilistId, total != null ? Math.min(total, watched + 1) : watched + 1) }}
+          className="w-5 h-5 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white text-xs leading-none"
+        >+</button>
+      </div>
+      {pct != null && (
+        <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-pink-500'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AnimeCard({
   item,
   info,
   onRemove,
   onOpenSequel,
   onCardClick,
+  onUpdateEpisodes,
 }: {
   item: TrackedItem
   info: AnimeSeasonInfo | undefined
   onRemove: (id: number) => void
   onOpenSequel?: (sequel: RelationNode) => void
   onCardClick?: (item: TrackedItem) => void
+  onUpdateEpisodes?: (anilistId: number, watched: number) => void
 }) {
   const availableSequel = info?.available ?? null
   const nextSequel = info?.next ?? null
@@ -133,6 +178,14 @@ function AnimeCard({
         ) : (
           nextSequel && <NextSeasonBadge sequel={nextSequel} />
         )}
+        {onUpdateEpisodes && (
+          <EpisodeProgress
+            watched={item.watchedEpisodes}
+            total={item.totalEpisodes}
+            anilistId={item.anilistId}
+            onUpdate={onUpdateEpisodes}
+          />
+        )}
         {availableSequel && onOpenSequel && (
           <button
             onClick={() => onOpenSequel(availableSequel)}
@@ -162,7 +215,7 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
 
 const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'unknown']
 
-export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
+export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick, onUpdateEpisodes }: Props) {
   if (items.length === 0) {
     return (
       <p className="text-gray-500 text-center py-8">
@@ -194,6 +247,7 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
                   onRemove={onRemove}
                   onOpenSequel={onOpenSequel}
                   onCardClick={onCardClick}
+                  onUpdateEpisodes={onUpdateEpisodes}
                 />
               ))}
             </div>
