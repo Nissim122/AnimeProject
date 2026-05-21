@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TrackedAnime {
+  id           Int           @id @default(autoincrement())
+  anilistId    Int           @unique
+  title        String
+  coverImage   String?
+  trackedAt    DateTime      @default(now())
+  knownSequels KnownSequel[]
+}
+
+model KnownSequel {
+  id              Int          @id @default(autoincrement())
+  trackedAnimeId  Int
+  sequelAnilistId Int
+  trackedAnime    TrackedAnime @relation(fields: [trackedAnimeId], references: [id], onDelete: Cascade)
+
+  @@unique([trackedAnimeId, sequelAnilistId])
+}
+
+model SentNotification {
+  id              Int      @id @default(autoincrement())
+  sequelAnilistId Int      @unique
+  sequelTitle     String
+  parentTitle     String
+  sentAt          DateTime @default(now())
+}
