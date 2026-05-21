@@ -66,7 +66,10 @@ export async function searchAnime(search: string): Promise<AnimeResult[]> {
   return data?.data?.Page?.media ?? []
 }
 
-export async function getAnimeSequels(anilistId: number): Promise<RelationNode[]> {
+export async function getAnimeSequels(
+  anilistId: number,
+  { includeMovies = false }: { includeMovies?: boolean } = {}
+): Promise<RelationNode[]> {
   const query = `
     query GetRelations($id: Int) {
       Media(id: $id, type: ANIME) {
@@ -93,12 +96,15 @@ export async function getAnimeSequels(anilistId: number): Promise<RelationNode[]
     .filter(
       (e) =>
         e.relationType === 'SEQUEL' &&
-        (e.node.format === 'TV' || e.node.format === 'TV_SHORT')
+        (e.node.format === 'TV' || e.node.format === 'TV_SHORT' || (includeMovies && e.node.format === 'MOVIE'))
     )
     .map((e) => e.node)
 }
 
-export async function getAnimeStatusWithSequels(anilistId: number): Promise<{
+export async function getAnimeStatusWithSequels(
+  anilistId: number,
+  { includeMovies = false }: { includeMovies?: boolean } = {}
+): Promise<{
   status: string
   startDate: { year: number | null; month: number | null; day: number | null }
   sequels: RelationNode[]
@@ -134,7 +140,7 @@ export async function getAnimeStatusWithSequels(anilistId: number): Promise<{
     .filter(
       (e) =>
         e.relationType === 'SEQUEL' &&
-        (e.node.format === 'TV' || e.node.format === 'TV_SHORT')
+        (e.node.format === 'TV' || e.node.format === 'TV_SHORT' || (includeMovies && e.node.format === 'MOVIE'))
     )
     .map((e) => e.node)
 

@@ -34,6 +34,7 @@ interface Toast {
 export interface AnimeSeasonInfo {
   next: RelationNode | null
   available: RelationNode | null
+  hasReleasingAhead?: boolean
 }
 
 let toastId = 0

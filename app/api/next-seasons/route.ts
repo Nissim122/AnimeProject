@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAnimeStatusWithSequels } from '@/lib/anilist'
+import { getAnimeStatusWithSequels, getAnimeSequels } from '@/lib/anilist'
 import type { RelationNode } from '@/lib/anilist'
 
 export async function GET(req: NextRequest) {
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const entries = await Promise.all(
     idList.map(async (id) => {
       try {
-        const { status, startDate, sequels } = await getAnimeStatusWithSequels(id)
+        const { status, startDate, sequels } = await getAnimeStatusWithSequels(id, { includeMovies: true })
 
         const upcoming = pickUpcoming(sequels)
         const next: RelationNode | null = upcoming ?? (
@@ -27,9 +27,26 @@ export async function GET(req: NextRequest) {
 
         const available = pickAvailable(sequels, trackedSet)
 
-        return [id, { next, available }] as const
+        // Detect if a season/movie is currently releasing while the user is still behind
+        let hasReleasingAhead = false
+        if (available) {
+          if (next && next.status === 'RELEASING') {
+            // Direct sequels include both a finished (available) and a releasing one
+            hasReleasingAhead = true
+          } else {
+            // Check one level deeper: does the available sequel itself have a releasing sequel?
+            try {
+              const level2 = await getAnimeSequels(available.id, { includeMovies: true })
+              hasReleasingAhead = level2.some((s) => s.status === 'RELEASING')
+            } catch {
+              // ignore — hasReleasingAhead stays false
+            }
+          }
+        }
+
+        return [id, { next, available, hasReleasingAhead }] as const
       } catch {
-        return [id, { next: null, available: null }] as const
+        return [id, { next: null, available: null, hasReleasingAhead: false }] as const
       }
     })
   )
