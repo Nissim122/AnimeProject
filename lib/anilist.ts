@@ -92,6 +92,49 @@ export async function getAnimeSequels(anilistId: number): Promise<RelationNode[]
     .map((e) => e.node)
 }
 
+export async function getAnimeStatusWithSequels(anilistId: number): Promise<{
+  status: string
+  startDate: { year: number | null; month: number | null; day: number | null }
+  sequels: RelationNode[]
+}> {
+  const query = `
+    query GetMedia($id: Int) {
+      Media(id: $id, type: ANIME) {
+        status
+        startDate { year month day }
+        relations {
+          edges {
+            relationType
+            node {
+              id
+              format
+              title { romaji }
+              status
+              startDate { year month day }
+            }
+          }
+        }
+      }
+    }
+  `
+  const data = await gqlFetch(query, { id: anilistId })
+  const media = data?.data?.Media
+  if (!media) return { status: 'UNKNOWN', startDate: { year: null, month: null, day: null }, sequels: [] }
+
+  const edges: Array<{ relationType: string; node: RelationNode }> =
+    media.relations?.edges ?? []
+
+  const sequels = edges
+    .filter(
+      (e) =>
+        e.relationType === 'SEQUEL' &&
+        (e.node.format === 'TV' || e.node.format === 'TV_SHORT')
+    )
+    .map((e) => e.node)
+
+  return { status: media.status, startDate: media.startDate, sequels }
+}
+
 export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
   const visited = new Set<number>()
   const queue: number[] = [anilistId]

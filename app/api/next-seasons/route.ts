@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAnimeSequels } from '@/lib/anilist'
+import { getAnimeStatusWithSequels } from '@/lib/anilist'
 import type { RelationNode } from '@/lib/anilist'
 
 export async function GET(req: NextRequest) {
@@ -14,9 +14,17 @@ export async function GET(req: NextRequest) {
   const entries = await Promise.all(
     idList.map(async (id) => {
       try {
-        const sequels = await getAnimeSequels(id)
+        const { status, startDate, sequels } = await getAnimeStatusWithSequels(id)
         const upcoming = pickUpcoming(sequels)
-        return [id, upcoming ?? null] as const
+        if (upcoming) return [id, upcoming] as const
+
+        // The tracked season itself is currently airing — show it as releasing
+        if (status === 'RELEASING') {
+          const self: RelationNode = { id, format: 'TV', title: { romaji: '' }, status: 'RELEASING', startDate }
+          return [id, self] as const
+        }
+
+        return [id, null] as const
       } catch {
         return [id, null] as const
       }
