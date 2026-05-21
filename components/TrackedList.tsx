@@ -51,8 +51,8 @@ function categorize(anilistId: number, nextSeasons?: Record<number, RelationNode
   const { year, month } = sequel.startDate
   if (year === now.getFullYear() && month === now.getMonth() + 1) return 'releasing'
 
-  if (year) return 'upcoming'
-  return 'unknown'
+  // sequel exists (even without a known date → "בקרוב") — not "unknown"
+  return 'upcoming'
 }
 
 function AnimeCard({ item, sequel, onRemove }: { item: TrackedItem; sequel: RelationNode | null | undefined; onRemove: (id: number) => void }) {
