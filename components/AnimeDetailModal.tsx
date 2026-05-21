@@ -119,9 +119,16 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
                       <div className="flex-1 min-w-0 text-right">
                         <p className="text-white text-sm font-semibold">עונה {idx + 1}</p>
                         <p className="text-gray-400 text-xs truncate">{title}</p>
-                        {season.seasonYear && (
-                          <p className="text-gray-500 text-xs">{season.seasonYear}</p>
-                        )}
+                        <div className="flex items-center gap-2 justify-end flex-wrap">
+                          {season.seasonYear && (
+                            <p className="text-gray-500 text-xs">{season.seasonYear}</p>
+                          )}
+                          {season.episodes != null && (
+                            <p className="text-gray-500 text-xs">
+                              פרקים 1–{season.episodes}
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex-shrink-0 flex flex-col items-center gap-1">
                         {isTracked && (

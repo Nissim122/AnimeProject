@@ -9,6 +9,7 @@ export interface AnimeResult {
   season: string | null
   format: string | null
   popularity: number | null
+  episodes: number | null
 }
 
 export interface RelationNode {
@@ -106,6 +107,7 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
           seasonYear
           season
           format
+          episodes
           relations {
             edges {
               relationType
@@ -130,6 +132,7 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
         season: media.season,
         format: media.format,
         popularity: media.popularity ?? null,
+        episodes: media.episodes ?? null,
       })
     }
 
