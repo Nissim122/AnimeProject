@@ -1,6 +1,5 @@
 ﻿'use client'
 
-import { useState } from 'react'
 import type { RelationNode } from '@/lib/anilist'
 import type { AnimeSeasonInfo } from '@/app/page'
 
@@ -10,14 +9,11 @@ interface TrackedItem {
   title: string
   coverImage: string | null
   trackedAt: string
-  watchedEpisodes: number
-  totalEpisodes: number | null
 }
 
 interface Props {
   items: TrackedItem[]
   onRemove: (anilistId: number) => void
-  onUpdateEpisodes?: (anilistId: number, watched: number) => void
   seasonInfo?: Record<number, AnimeSeasonInfo>
   onOpenSequel?: (sequel: RelationNode) => void
   onCardClick?: (item: TrackedItem) => void
