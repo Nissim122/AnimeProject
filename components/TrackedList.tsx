@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import type { RelationNode } from '@/lib/anilist'
@@ -84,11 +84,14 @@ function AnimeCard({
 }) {
   const availableSequel = info?.available ?? null
   const nextSequel = info?.next ?? null
+  const isReleasing = !availableSequel && nextSequel?.status === 'RELEASING'
 
   return (
     <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${
       availableSequel
         ? (info?.hasReleasingAhead ? 'border-orange-500' : 'border-violet-600')
+        : isReleasing
+        ? 'border-green-500'
         : 'border-gray-700'
     }`}>
       <div
@@ -108,6 +111,11 @@ function AnimeCard({
           <div className="w-full h-full bg-gray-700 flex items-center justify-center text-gray-500 text-4xl">
             🎌
           </div>
+        )}
+        {isReleasing && (
+          <span className="absolute top-2 right-2 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold z-10">
+            בשידור
+          </span>
         )}
         {onCardClick && (
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
@@ -149,14 +157,14 @@ function AnimeCard({
 }
 
 const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
+  releasing: { label: '🟢 בשידור עכשיו',                  color: 'text-green-400' },
   behind:    { label: '⏩ עדיין לא הדבקתי — משודר כעת!', color: 'text-orange-400' },
   available: { label: '📺 המשך זמין לצפייה',             color: 'text-violet-400' },
-  releasing: { label: '🟢 יוצא עכשיו',                   color: 'text-green-400' },
   upcoming:  { label: '📅 עונה הבאה בדרך',               color: 'text-amber-400' },
   unknown:   { label: '❓ אין מידע על עונה הבאה',         color: 'text-gray-400' },
 }
 
-const CATEGORY_ORDER: Category[] = ['behind', 'available', 'releasing', 'upcoming', 'unknown']
+const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'unknown']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
   if (items.length === 0) {
