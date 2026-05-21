@@ -27,8 +27,11 @@ model KnownSequel {
 
 model SentNotification {
   id              Int      @id @default(autoincrement())
-  sequelAnilistId Int      @unique
+  sequelAnilistId Int
+  type            String   @default("MONTH_START")
   sequelTitle     String
   parentTitle     String
   sentAt          DateTime @default(now())
+
+  @@unique([sequelAnilistId, type])
 }

@@ -1,13 +1,53 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAnimeSequels, delay } from '@/lib/anilist'
-import { sendNewSeasonEmail, isEmailConfigured } from '@/lib/mailer'
+import { getAnimeSequels, delay, RelationNode } from '@/lib/anilist'
+import { sendMonthStartEmail, sendDayBeforeEmail } from '@/lib/mailer'
 
 export interface UpdateResult {
   checked: number
   notified: number
   errors: number
-  notifications: Array<{ parent: string; sequel: string }>
+  notifications: Array<{ parent: string; sequel: string; type: string }>
+}
+
+function getTomorrow(): Date {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return d
+}
+
+function isCurrentMonth(startDate: RelationNode['startDate']): boolean {
+  if (!startDate.year || !startDate.month) return false
+  const now = new Date()
+  return startDate.year === now.getFullYear() && startDate.month === now.getMonth() + 1
+}
+
+function isTomorrow(startDate: RelationNode['startDate']): boolean {
+  if (!startDate.year || !startDate.month || !startDate.day) return false
+  const tomorrow = getTomorrow()
+  return (
+    startDate.year === tomorrow.getFullYear() &&
+    startDate.month === tomorrow.getMonth() + 1 &&
+    startDate.day === tomorrow.getDate()
+  )
+}
+
+async function hasSentNotification(sequelId: number, type: string): Promise<boolean> {
+  const existing = await prisma.sentNotification.findUnique({
+    where: { sequelAnilistId_type: { sequelAnilistId: sequelId, type } },
+  })
+  return !!existing
+}
+
+async function recordNotification(
+  sequelId: number,
+  type: string,
+  sequelTitle: string,
+  parentTitle: string
+): Promise<void> {
+  await prisma.sentNotification.create({
+    data: { sequelAnilistId: sequelId, type, sequelTitle, parentTitle },
+  })
 }
 
 export async function runUpdateCheck(): Promise<UpdateResult> {
@@ -26,43 +66,49 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
       const knownIds = new Set(anime.knownSequels.map((s) => s.sequelAnilistId))
 
       for (const sequel of sequels) {
-        if (knownIds.has(sequel.id)) continue // already known
+        // Always register new sequels in KnownSequel
+        if (!knownIds.has(sequel.id)) {
+          await prisma.knownSequel.upsert({
+            where: { trackedAnimeId_sequelAnilistId: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id } },
+            create: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id },
+            update: {},
+          })
+        }
 
-        // Save to known sequels regardless of status
-        await prisma.knownSequel.upsert({
-          where: { trackedAnimeId_sequelAnilistId: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id } },
-          create: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id },
-          update: {},
-        })
-
-        // Only notify if it's releasing or upcoming (not finished)
         if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
 
-        // Check if already notified
-        const alreadyNotified = await prisma.sentNotification.findUnique({
-          where: { sequelAnilistId: sequel.id },
-        })
-        if (alreadyNotified) continue
+        // MONTH_START: releasing now, or scheduled for this month
+        const qualifiesForMonthStart =
+          sequel.status === 'RELEASING' ||
+          (sequel.status === 'NOT_YET_RELEASED' && isCurrentMonth(sequel.startDate))
 
-        // Send email — only record as notified if email was actually sent
-        const sent = await sendNewSeasonEmail({
-          parentTitle: anime.title,
-          sequelTitle: sequel.title.romaji,
-          sequelYear: sequel.startDate.year,
-          status: sequel.status,
-        })
-        if (!sent) continue
-
-        await prisma.sentNotification.create({
-          data: {
-            sequelAnilistId: sequel.id,
-            sequelTitle: sequel.title.romaji,
+        if (qualifiesForMonthStart && !(await hasSentNotification(sequel.id, 'MONTH_START'))) {
+          const sent = await sendMonthStartEmail({
             parentTitle: anime.title,
-          },
-        })
+            sequelTitle: sequel.title.romaji,
+            startDate: sequel.startDate,
+            status: sequel.status,
+          })
+          if (sent) {
+            await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
+            result.notified++
+            result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
+          }
+        }
 
-        result.notified++
-        result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji })
+        // DAY_BEFORE: start is tomorrow
+        if (sequel.status === 'NOT_YET_RELEASED' && isTomorrow(sequel.startDate) && !(await hasSentNotification(sequel.id, 'DAY_BEFORE'))) {
+          const sent = await sendDayBeforeEmail({
+            parentTitle: anime.title,
+            sequelTitle: sequel.title.romaji,
+            startDate: sequel.startDate,
+          })
+          if (sent) {
+            await recordNotification(sequel.id, 'DAY_BEFORE', sequel.title.romaji, anime.title)
+            result.notified++
+            result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'DAY_BEFORE' })
+          }
+        }
       }
     } catch (err) {
       console.error(`[check-updates] Error checking ${anime.title}:`, err)

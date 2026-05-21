@@ -11,42 +11,92 @@ function createTransport() {
   })
 }
 
-export async function sendNewSeasonEmail(params: {
+function getTo(): string | null {
+  return process.env.NOTIFY_EMAIL ?? null
+}
+
+export async function sendMonthStartEmail(params: {
   parentTitle: string
   sequelTitle: string
-  sequelYear: number | null
+  startDate: { year: number | null; month: number | null; day: number | null }
   status: string
 }): Promise<boolean> {
   const transport = createTransport()
-  const to = process.env.NOTIFY_EMAIL
-
+  const to = getTo()
   if (!transport || !to) {
-    console.warn('[mailer] Missing EMAIL_USER, EMAIL_PASS or NOTIFY_EMAIL — skipping email')
+    console.warn('[mailer] Missing email config — skipping')
     return false
   }
 
-  const yearStr = params.sequelYear ? ` (${params.sequelYear})` : ''
-  const statusLabel =
-    params.status === 'RELEASING' ? 'כבר משודרת!' : 'תצא בקרוב'
+  const { startDate, status } = params
+  const dateStr =
+    status === 'RELEASING'
+      ? 'כבר משודרת!'
+      : startDate.day
+        ? `${startDate.day}/${startDate.month}/${startDate.year}`
+        : startDate.month
+          ? `${startDate.month}/${startDate.year}`
+          : 'תאריך לא ידוע'
+
+  const statusLabel = status === 'RELEASING' ? 'כבר משודרת!' : 'יוצאת החודש'
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
     to,
-    subject: `🎌 עונה חדשה: ${params.parentTitle}`,
+    subject: `🎌 עונה חדשה החודש: ${params.parentTitle}`,
     html: `
       <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-        <h2 style="color: #e11d48;">🎌 עונה חדשה יצאה!</h2>
+        <h2 style="color: #e11d48;">🎌 עונה חדשה יוצאת החודש!</h2>
         <p>האנימה <strong>${params.parentTitle}</strong> קיבלה עונה חדשה:</p>
         <div style="background: #1e1e2e; color: #cdd6f4; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <strong>${params.sequelTitle}${yearStr}</strong><br/>
-          <span style="color: #a6e3a1;">${statusLabel}</span>
+          <strong>${params.sequelTitle}</strong><br/>
+          <span style="color: #a6e3a1;">${statusLabel}</span><br/>
+          <span style="color: #89b4fa; font-size: 14px;">📅 ${dateStr}</span>
         </div>
         <p style="color: #888; font-size: 12px;">נשלח אוטומטית ע"י Anime Tracker</p>
       </div>
     `,
   })
 
-  console.log(`[mailer] Email sent for ${params.sequelTitle}`)
+  console.log(`[mailer] Month-start email sent for ${params.sequelTitle}`)
+  return true
+}
+
+export async function sendDayBeforeEmail(params: {
+  parentTitle: string
+  sequelTitle: string
+  startDate: { year: number | null; month: number | null; day: number | null }
+}): Promise<boolean> {
+  const transport = createTransport()
+  const to = getTo()
+  if (!transport || !to) {
+    console.warn('[mailer] Missing email config — skipping')
+    return false
+  }
+
+  const { startDate } = params
+  const dateStr = startDate.day
+    ? `${startDate.day}/${startDate.month}/${startDate.year}`
+    : 'מחר'
+
+  await transport.sendMail({
+    from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: `⏰ מחר יוצאת: ${params.parentTitle}`,
+    html: `
+      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+        <h2 style="color: #f59e0b;">⏰ מחר יוצאת עונה חדשה!</h2>
+        <p>האנימה <strong>${params.parentTitle}</strong> — מחר מתחילה עונה חדשה:</p>
+        <div style="background: #1e1e2e; color: #cdd6f4; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <strong>${params.sequelTitle}</strong><br/>
+          <span style="color: #fab387; font-size: 14px;">📅 ${dateStr}</span>
+        </div>
+        <p style="color: #888; font-size: 12px;">נשלח אוטומטית ע"י Anime Tracker</p>
+      </div>
+    `,
+  })
+
+  console.log(`[mailer] Day-before email sent for ${params.sequelTitle}`)
   return true
 }
 
