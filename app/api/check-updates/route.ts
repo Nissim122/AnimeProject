@@ -44,13 +44,14 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
         })
         if (alreadyNotified) continue
 
-        // Send email
-        await sendNewSeasonEmail({
+        // Send email — only record as notified if email was actually sent
+        const sent = await sendNewSeasonEmail({
           parentTitle: anime.title,
           sequelTitle: sequel.title.romaji,
           sequelYear: sequel.startDate.year,
           status: sequel.status,
         })
+        if (!sent) continue
 
         await prisma.sentNotification.create({
           data: {

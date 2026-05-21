@@ -17,9 +17,10 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
   const [selectedId, setSelectedId] = useState<number>(anime.id)
 
   useEffect(() => {
+    const controller = new AbortController()
     setLoading(true)
     setFetchError(false)
-    fetch(`/api/seasons?id=${anime.id}`)
+    fetch(`/api/seasons?id=${anime.id}`, { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`status ${r.status}`)
         return r.json()
@@ -28,8 +29,12 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
         setSeasons(data.seasons ?? [])
         setSelectedId(anime.id)
       })
-      .catch(() => setFetchError(true))
+      .catch((err) => {
+        if ((err as Error).name === 'AbortError') return
+        setFetchError(true)
+      })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [anime.id])
 
   const selectedAnime = seasons.find((s) => s.id === selectedId)
