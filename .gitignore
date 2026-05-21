@@ -11,3 +11,6 @@ prisma/dev.db
 prisma/dev.db-journal
 
 /generated/prisma
+
+# Build artifacts
+tsconfig.tsbuildinfo
