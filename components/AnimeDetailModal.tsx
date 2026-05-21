@@ -6,11 +6,13 @@ import type { AnimeResult } from '@/lib/anilist'
 interface Props {
   anime: AnimeResult
   trackedIds: Set<number>
+  watchlistIds?: Set<number>
   onTrack: (anime: AnimeResult, seriesIds?: number[]) => void
+  onAddToWatchlist?: (anime: AnimeResult) => void
   onClose: () => void
 }
 
-export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }: Props) {
+export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new Set(), onTrack, onAddToWatchlist, onClose }: Props) {
   const [seasons, setSeasons] = useState<AnimeResult[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
@@ -39,12 +41,20 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
 
   const selectedAnime = seasons.find((s) => s.id === selectedId)
   const alreadyTracked = selectedAnime ? trackedIds.has(selectedAnime.id) : false
+  const alreadyInWatchlist = selectedAnime ? watchlistIds.has(selectedAnime.id) : false
   // Any other season in this series that is already tracked (besides the selected one)
   const otherTrackedCount = seasons.filter((s) => s.id !== selectedId && trackedIds.has(s.id)).length
 
   function handleTrack() {
     if (selectedAnime && !alreadyTracked) {
       onTrack(selectedAnime, seasons.map((s) => s.id))
+      onClose()
+    }
+  }
+
+  function handleAddToWatchlist() {
+    if (selectedAnime && !alreadyInWatchlist && onAddToWatchlist) {
+      onAddToWatchlist(selectedAnime)
       onClose()
     }
   }
@@ -177,13 +187,24 @@ export default function AnimeDetailModal({ anime, trackedIds, onTrack, onClose }
             return `נבחרה: עונה ${tvNum}`
           })()}
           </p>
-          <button
-            onClick={handleTrack}
-            disabled={loading || fetchError || !selectedAnime || alreadyTracked}
-            className="px-5 py-2 bg-pink-600 hover:bg-pink-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm transition-colors"
-          >
-            {alreadyTracked ? '✓ כבר במעקב' : 'סמן שראיתי עד עונה זו'}
-          </button>
+          <div className="flex gap-2">
+            {onAddToWatchlist && (
+              <button
+                onClick={handleAddToWatchlist}
+                disabled={loading || fetchError || !selectedAnime || alreadyInWatchlist}
+                className="px-4 py-2 bg-teal-700 hover:bg-teal-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm transition-colors"
+              >
+                {alreadyInWatchlist ? '✓ ברשימת צפיה' : '+ רשימת צפיה'}
+              </button>
+            )}
+            <button
+              onClick={handleTrack}
+              disabled={loading || fetchError || !selectedAnime || alreadyTracked}
+              className="px-5 py-2 bg-pink-600 hover:bg-pink-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm transition-colors"
+            >
+              {alreadyTracked ? '✓ כבר במעקב' : 'סמן שראיתי עד עונה זו'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

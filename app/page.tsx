@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
+import WatchListView from '@/components/WatchListView'
 import AnimeDetailModal from '@/components/AnimeDetailModal'
 import type { AnimeResult, RelationNode } from '@/lib/anilist'
+import type { WatchListItem } from '@/components/WatchListView'
 
 interface TrackedItem {
   id: number
@@ -36,8 +38,12 @@ export interface AnimeSeasonInfo {
 
 let toastId = 0
 
+type ActiveView = 'tracked' | 'watchlist'
+
 export default function Home() {
   const [tracked, setTracked] = useState<TrackedItem[]>([])
+  const [watchlist, setWatchlist] = useState<WatchListItem[]>([])
+  const [activeView, setActiveView] = useState<ActiveView>('tracked')
   const [seasonInfo, setSeasonInfo] = useState<Record<number, AnimeSeasonInfo> | undefined>()
   const [modalAnime, setModalAnime] = useState<AnimeResult | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -70,11 +76,24 @@ export default function Home() {
     }
   }, [])
 
+  const loadWatchlist = useCallback(async () => {
+    try {
+      const res = await fetch('/api/watchlist')
+      if (!res.ok) throw new Error(`status ${res.status}`)
+      const data = await res.json()
+      setWatchlist(data.items ?? [])
+    } catch (err) {
+      console.error('[loadWatchlist]', err)
+    }
+  }, [])
+
   useEffect(() => {
     loadTracked()
-  }, [loadTracked])
+    loadWatchlist()
+  }, [loadTracked, loadWatchlist])
 
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
+  const watchlistIds = new Set(watchlist.map((w) => w.anilistId))
 
   async function handleTrack(anime: AnimeResult, seriesIds?: number[]) {
     if (seriesIds && seriesIds.length > 0) {
@@ -99,6 +118,37 @@ export default function Home() {
       loadTracked()
     } else {
       addToast(data.error ?? 'שגיאה בהוספה', 'error')
+    }
+  }
+
+  async function handleAddToWatchlist(anime: AnimeResult) {
+    const res = await fetch('/api/watchlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        anilistId: anime.id,
+        title: anime.title.english ?? anime.title.romaji,
+        coverImage: anime.coverImage?.large,
+      }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      addToast(`נוסף לרשימת הצפיה: ${anime.title.english ?? anime.title.romaji}`, 'success')
+      loadWatchlist()
+      setActiveView('watchlist')
+    } else {
+      addToast(data.error ?? 'שגיאה בהוספה לרשימת הצפיה', 'error')
+    }
+  }
+
+  async function handleRemoveFromWatchlist(anilistId: number) {
+    const item = watchlist.find((w) => w.anilistId === anilistId)
+    const res = await fetch(`/api/watchlist?anilistId=${anilistId}`, { method: 'DELETE' })
+    if (res.ok) {
+      addToast(`הוסר מרשימת הצפיה: ${item?.title ?? ''}`, 'info')
+      loadWatchlist()
+    } else {
+      addToast('שגיאה בהסרה', 'error')
     }
   }
 
@@ -176,35 +226,62 @@ export default function Home() {
       {/* Search */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-300 mb-3 text-right">🔍 חפש אנימה</h2>
-        <SearchBar onTrack={handleTrack} trackedIds={trackedIds} />
+        <SearchBar
+          onTrack={handleTrack}
+          onAddToWatchlist={handleAddToWatchlist}
+          trackedIds={trackedIds}
+          watchlistIds={watchlistIds}
+        />
       </section>
 
-      {/* Tracked list */}
+      {/* Lists section */}
       <section className="mb-8">
+        {/* Tab nav */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={handleCheckUpdates}
-            disabled={checking || tracked.length === 0}
+            disabled={checking || tracked.length === 0 || activeView !== 'tracked'}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
           >
-            {checking ? (
-              <span className="animate-spin">⟳</span>
-            ) : (
-              '🔄'
-            )}
+            {checking ? <span className="animate-spin">⟳</span> : '🔄'}
             בדוק עדכונים
           </button>
-          <h2 className="text-lg font-semibold text-gray-300">
-            📋 במעקב ({tracked.length})
-          </h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveView('tracked')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                activeView === 'tracked'
+                  ? 'bg-pink-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              📋 במעקב ({tracked.length})
+            </button>
+            <button
+              onClick={() => setActiveView('watchlist')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                activeView === 'watchlist'
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              👁 לצפייה ({watchlist.length})
+            </button>
+          </div>
         </div>
-        <TrackedList
-          items={tracked}
-          onRemove={handleRemove}
-          seasonInfo={seasonInfo}
-          onOpenSequel={handleOpenSequel}
-          onCardClick={handleCardClick}
-        />
+
+        {activeView === 'tracked' && (
+          <TrackedList
+            items={tracked}
+            onRemove={handleRemove}
+            seasonInfo={seasonInfo}
+            onOpenSequel={handleOpenSequel}
+            onCardClick={handleCardClick}
+          />
+        )}
+        {activeView === 'watchlist' && (
+          <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} />
+        )}
       </section>
 
       {/* Modal for available sequel */}
@@ -212,7 +289,9 @@ export default function Home() {
         <AnimeDetailModal
           anime={modalAnime}
           trackedIds={trackedIds}
+          watchlistIds={watchlistIds}
           onTrack={handleTrack}
+          onAddToWatchlist={handleAddToWatchlist}
           onClose={() => setModalAnime(null)}
         />
       )}
