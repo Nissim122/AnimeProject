@@ -32,6 +32,7 @@ app.prepare().then(() => {
       const res = await fetch(`http://${hostname}:${port}/api/check-updates`, {
         method: 'POST',
       })
+      if (!res.ok) throw new Error(`API returned ${res.status}`)
       const data = await res.json()
       console.log(`[cron] Done — checked: ${data.checked}, notified: ${data.notified}`)
     } catch (err) {
