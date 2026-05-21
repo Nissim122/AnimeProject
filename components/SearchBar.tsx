@@ -3,9 +3,10 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnimeResult } from '@/lib/anilist'
 import AnimeCard from './AnimeCard'
+import AnimeDetailModal from './AnimeDetailModal'
 
 interface Props {
-  onTrack: (anime: AnimeResult) => void
+  onTrack: (anime: AnimeResult, seriesIds?: number[]) => void
   trackedIds: Set<number>
 }
 
@@ -13,15 +14,31 @@ export default function SearchBar({ onTrack, trackedIds }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<AnimeResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchError, setSearchError] = useState(false)
+  const [modalAnime, setModalAnime] = useState<AnimeResult | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); return }
+    if (q.length < 2) { setResults([]); setSearchError(false); return }
+
+    // Cancel any in-flight request so stale results never overwrite newer ones
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
+
     setLoading(true)
+    setSearchError(false)
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+        signal: abortRef.current.signal,
+      })
+      if (!res.ok) throw new Error(`status ${res.status}`)
       const data = await res.json()
       setResults(data.results ?? [])
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return
+      setResults([])
+      setSearchError(true)
     } finally {
       setLoading(false)
     }
@@ -52,6 +69,10 @@ export default function SearchBar({ onTrack, trackedIds }: Props) {
         )}
       </div>
 
+      {searchError && (
+        <p className="mt-2 text-red-400 text-sm text-right">שגיאה בחיפוש — נסה שוב</p>
+      )}
+
       {results.length > 0 && (
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {results.map((anime) => (
@@ -59,10 +80,19 @@ export default function SearchBar({ onTrack, trackedIds }: Props) {
               key={anime.id}
               anime={anime}
               isTracked={trackedIds.has(anime.id)}
-              onTrack={() => onTrack(anime)}
+              onOpen={() => setModalAnime(anime)}
             />
           ))}
         </div>
+      )}
+
+      {modalAnime && (
+        <AnimeDetailModal
+          anime={modalAnime}
+          trackedIds={trackedIds}
+          onTrack={onTrack}
+          onClose={() => setModalAnime(null)}
+        />
       )}
     </div>
   )
