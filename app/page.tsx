@@ -113,6 +113,21 @@ export default function Home() {
     }
   }
 
+  function handleCardClick(item: TrackedItem) {
+    const fakeAnime: AnimeResult = {
+      id: item.anilistId,
+      title: { romaji: item.title, english: null },
+      coverImage: { large: item.coverImage ?? '' },
+      status: 'FINISHED',
+      seasonYear: null,
+      season: null,
+      format: null,
+      popularity: null,
+      episodes: null,
+    }
+    setModalAnime(fakeAnime)
+  }
+
   function handleOpenSequel(sequel: RelationNode) {
     const fakeAnime: AnimeResult = {
       id: sequel.id,
@@ -188,6 +203,7 @@ export default function Home() {
           onRemove={handleRemove}
           seasonInfo={seasonInfo}
           onOpenSequel={handleOpenSequel}
+          onCardClick={handleCardClick}
         />
       </section>
 

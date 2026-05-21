@@ -16,6 +16,7 @@ interface Props {
   onRemove: (anilistId: number) => void
   seasonInfo?: Record<number, AnimeSeasonInfo>
   onOpenSequel?: (sequel: RelationNode) => void
+  onCardClick?: (item: TrackedItem) => void
 }
 
 const MONTHS_HE = [
@@ -66,11 +67,13 @@ function AnimeCard({
   info,
   onRemove,
   onOpenSequel,
+  onCardClick,
 }: {
   item: TrackedItem
   info: AnimeSeasonInfo | undefined
   onRemove: (id: number) => void
   onOpenSequel?: (sequel: RelationNode) => void
+  onCardClick?: (item: TrackedItem) => void
 }) {
   const availableSequel = info?.available ?? null
   const nextSequel = info?.next ?? null
@@ -79,22 +82,32 @@ function AnimeCard({
     <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${
       availableSequel ? 'border-violet-600' : 'border-gray-700'
     }`}>
-      {item.coverImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.coverImage}
-          alt={item.title}
-          className="w-full object-cover"
-          style={{ aspectRatio: '3/4' }}
-        />
-      ) : (
-        <div
-          className="w-full bg-gray-700 flex items-center justify-center text-gray-500 text-4xl"
-          style={{ aspectRatio: '3/4' }}
-        >
-          🎌
-        </div>
-      )}
+      <div
+        className="relative cursor-pointer group"
+        style={{ aspectRatio: '3/4' }}
+        onClick={() => onCardClick?.(item)}
+        title="לחץ לשינוי עונה"
+      >
+        {item.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.coverImage}
+            alt={item.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gray-700 flex items-center justify-center text-gray-500 text-4xl">
+            🎌
+          </div>
+        )}
+        {onCardClick && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
+            <span className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-pink-600 px-2 py-1 rounded-lg">
+              שנה עונה
+            </span>
+          </div>
+        )}
+      </div>
       <div className="p-2 flex flex-col gap-2 flex-1">
         <p className="text-white text-xs font-medium leading-tight line-clamp-2">{item.title}</p>
         <p className="text-gray-500 text-xs">
@@ -135,7 +148,7 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
 
 const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'upcoming', 'unknown']
 
-export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel }: Props) {
+export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
   if (items.length === 0) {
     return (
       <p className="text-gray-500 text-center py-8">
@@ -166,6 +179,7 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel 
                   info={seasonInfo?.[item.anilistId]}
                   onRemove={onRemove}
                   onOpenSequel={onOpenSequel}
+                  onCardClick={onCardClick}
                 />
               ))}
             </div>
