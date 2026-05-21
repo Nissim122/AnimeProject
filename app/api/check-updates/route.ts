@@ -75,24 +75,19 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
       }
 
       for (const sequel of allSequels) {
-        // Register every discovered sequel in KnownSequel (idempotent)
-        if (!knownIds.has(sequel.id)) {
-          await prisma.knownSequel.upsert({
-            where: { trackedAnimeId_sequelAnilistId: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id } },
-            create: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id },
-            update: {},
-          })
-          knownIds.add(sequel.id) // keep local set in sync to avoid re-upserting
-        }
-
         if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
 
-        // MONTH_START: releasing now, or scheduled for this month
+        // RELEASING: always notify every check (no dedup).
+        // NOT_YET_RELEASED this month: notify once.
         const qualifiesForMonthStart =
           sequel.status === 'RELEASING' ||
           (sequel.status === 'NOT_YET_RELEASED' && isCurrentMonth(sequel.startDate))
 
-        if (qualifiesForMonthStart && !(await hasSentNotification(sequel.id, 'MONTH_START'))) {
+        const shouldNotify =
+          qualifiesForMonthStart &&
+          (sequel.status === 'RELEASING' || !(await hasSentNotification(sequel.id, 'MONTH_START')))
+
+        if (shouldNotify) {
           const allSeasons = await getAllSeasons(anime.anilistId)
           const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
           const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
@@ -108,11 +103,12 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
             seasons: allSeasons,
           })
           if (sent) {
-            // Fix: wrap record in try-catch so a DB failure doesn't silently lose the send
-            try {
-              await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
-            } catch (recordErr) {
-              console.error(`[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`, recordErr)
+            if (sequel.status !== 'RELEASING') {
+              try {
+                await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
+              } catch (recordErr) {
+                console.error(`[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`, recordErr)
+              }
             }
             result.notified++
             result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
