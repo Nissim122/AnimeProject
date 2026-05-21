@@ -87,12 +87,9 @@ export async function GET(req: NextRequest) {
       }
 
       if (keywords.length > 0) {
-        // Try all keywords as one combined query first (e.g. "garden eden hell")
-        const wordResults = await Promise.all([
-          searchAnime(keywords.join(' ')),
-          ...keywords.map((kw) => searchAnime(kw)),
-        ])
-        for (const batch of wordResults) {
+        const kwQueries = [keywords.join(' '), ...keywords]
+        for (const kw of kwQueries) {
+          const batch = await searchAnime(kw)
           for (const anime of batch) {
             if (!seen.has(anime.id)) {
               seen.add(anime.id)

@@ -48,7 +48,7 @@ export default function SearchBar({ onTrack, trackedIds }: Props) {
     const val = e.target.value
     setQuery(val)
     if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => search(val), 400)
+    timerRef.current = setTimeout(() => search(val), 700)
   }
 
   return (

@@ -1,4 +1,6 @@
 const ANILIST_URL = 'https://graphql.anilist.co'
+let _lastGqlCall = 0
+const GQL_MIN_INTERVAL = 300
 
 export interface AnimeResult {
   id: number
@@ -21,6 +23,10 @@ export interface RelationNode {
 }
 
 async function gqlFetch(query: string, variables: Record<string, unknown>) {
+  const wait = _lastGqlCall + GQL_MIN_INTERVAL - Date.now()
+  if (wait > 0) await delay(wait)
+  _lastGqlCall = Date.now()
+
   const res = await fetch(ANILIST_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
