@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAnimeSequels, getAllSeasons, delay, RelationNode } from '@/lib/anilist'
+import { getAnimeSequels, getAnimeStatusWithSequels, getAllSeasons, delay, RelationNode } from '@/lib/anilist'
 import { sendMonthStartEmail, sendDayBeforeEmail } from '@/lib/mailer'
 import { translateToHebrew } from '@/lib/translate'
 
