@@ -1,6 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchAnime } from '@/lib/anilist'
+import { searchAnime, type AnimeResult } from '@/lib/anilist'
 import { isHebrew, translateHebrewToEnglish, hebrewToKeywords } from '@/lib/translate'
+
+type RawResult = AnimeResult & {
+  relations?: { edges: Array<{ relationType: string; node: { id: number } }> }
+}
+
+function groupBySeries(results: RawResult[]): AnimeResult[] {
+  if (results.length === 0) return []
+
+  const idToIdx = new Map<number, number>()
+  results.forEach((a, i) => idToIdx.set(a.id, i))
+
+  const parent = results.map((_, i) => i)
+  function find(x: number): number {
+    if (parent[x] !== x) parent[x] = find(parent[x])
+    return parent[x]
+  }
+
+  for (let i = 0; i < results.length; i++) {
+    for (const edge of results[i].relations?.edges ?? []) {
+      if (edge.relationType === 'PREQUEL' || edge.relationType === 'SEQUEL') {
+        const j = idToIdx.get(edge.node.id)
+        if (j !== undefined) parent[find(i)] = find(j)
+      }
+    }
+  }
+
+  // Pick the first-seen representative per group (preserves relevance order)
+  const rootFirst = new Map<number, number>()
+  for (let i = 0; i < results.length; i++) {
+    const root = find(i)
+    if (!rootFirst.has(root)) rootFirst.set(root, i)
+  }
+
+  return Array.from(rootFirst.values())
+    .sort((a, b) => a - b)
+    .map((i) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { relations: _rel, ...clean } = results[i]
+      return clean as AnimeResult
+    })
+}
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim()
@@ -10,7 +51,7 @@ export async function GET(req: NextRequest) {
 
   try {
     if (!isHebrew(q)) {
-      const results = await searchAnime(q)
+      const results = groupBySeries(await searchAnime(q) as RawResult[])
       return NextResponse.json({ results })
     }
 
@@ -62,7 +103,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ results })
+    return NextResponse.json({ results: groupBySeries(results as RawResult[]) })
   } catch (err) {
     console.error('[search]', err)
     return NextResponse.json({ error: 'Failed to search AniList' }, { status: 500 })

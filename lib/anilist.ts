@@ -46,6 +46,12 @@ export async function searchAnime(search: string): Promise<AnimeResult[]> {
           season
           format
           popularity
+          relations {
+            edges {
+              relationType
+              node { id }
+            }
+          }
         }
       }
     }
