@@ -56,19 +56,33 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
   for (const anime of tracked) {
     result.checked++
     try {
-      await delay(700) // AniList rate limit protection
-
-      const sequels = await getAnimeSequels(anime.anilistId)
       const knownIds = new Set(anime.knownSequels.map((s) => s.sequelAnilistId))
 
-      for (const sequel of sequels) {
-        // Always register new sequels in KnownSequel
+      // Fix: also check known sequels for new children (multi-generation chains: S1→S2 known, S3 new)
+      const idsToCheck = [anime.anilistId, ...knownIds]
+      const allSequels: RelationNode[] = []
+      const seenSequelIds = new Set<number>()
+
+      for (const parentId of idsToCheck) {
+        await delay(700) // AniList rate limit protection
+        const sequels = await getAnimeSequels(parentId)
+        for (const s of sequels) {
+          if (!seenSequelIds.has(s.id)) {
+            seenSequelIds.add(s.id)
+            allSequels.push(s)
+          }
+        }
+      }
+
+      for (const sequel of allSequels) {
+        // Register every discovered sequel in KnownSequel (idempotent)
         if (!knownIds.has(sequel.id)) {
           await prisma.knownSequel.upsert({
             where: { trackedAnimeId_sequelAnilistId: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id } },
             create: { trackedAnimeId: anime.id, sequelAnilistId: sequel.id },
             update: {},
           })
+          knownIds.add(sequel.id) // keep local set in sync to avoid re-upserting
         }
 
         if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
@@ -94,7 +108,12 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
             seasons: allSeasons,
           })
           if (sent) {
-            await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
+            // Fix: wrap record in try-catch so a DB failure doesn't silently lose the send
+            try {
+              await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
+            } catch (recordErr) {
+              console.error(`[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`, recordErr)
+            }
             result.notified++
             result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
           }
@@ -112,7 +131,11 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
             startDate: sequel.startDate,
           })
           if (sent) {
-            await recordNotification(sequel.id, 'DAY_BEFORE', sequel.title.romaji, anime.title)
+            try {
+              await recordNotification(sequel.id, 'DAY_BEFORE', sequel.title.romaji, anime.title)
+            } catch (recordErr) {
+              console.error(`[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (DAY_BEFORE) but failed to record — will retry next run`, recordErr)
+            }
             result.notified++
             result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'DAY_BEFORE' })
           }
