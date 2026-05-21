@@ -6,16 +6,21 @@ interface Props {
   anime: AnimeResult
   isTracked: boolean
   onOpen: () => void
+  isTopResult?: boolean
 }
 
-export default function AnimeCard({ anime, isTracked, onOpen }: Props) {
+export default function AnimeCard({ anime, isTracked, onOpen, isTopResult }: Props) {
   const title = anime.title.english ?? anime.title.romaji
   const year = anime.seasonYear ? ` (${anime.seasonYear})` : ''
 
   return (
     <div
       onClick={onOpen}
-      className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-pink-500 transition-colors flex flex-col cursor-pointer group"
+      className={`bg-gray-800 rounded-xl overflow-hidden border transition-colors flex flex-col cursor-pointer group ${
+        isTopResult
+          ? 'border-yellow-400 hover:border-yellow-300'
+          : 'border-gray-700 hover:border-pink-500'
+      }`}
     >
       <div className="relative">
         {anime.coverImage?.medium && (
@@ -26,6 +31,11 @@ export default function AnimeCard({ anime, isTracked, onOpen }: Props) {
             className="w-full object-cover"
             style={{ aspectRatio: '3/4' }}
           />
+        )}
+        {isTopResult && (
+          <span className="absolute top-2 left-2 bg-yellow-400/90 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">
+            ★ מוביל
+          </span>
         )}
         {isTracked && (
           <span className="absolute top-2 right-2 bg-green-700/90 text-green-200 text-xs font-medium px-2 py-0.5 rounded-full">

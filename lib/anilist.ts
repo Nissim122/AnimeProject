@@ -8,6 +8,7 @@ export interface AnimeResult {
   seasonYear: number | null
   season: string | null
   format: string | null
+  popularity: number | null
 }
 
 export interface RelationNode {
@@ -43,6 +44,7 @@ export async function searchAnime(search: string): Promise<AnimeResult[]> {
           seasonYear
           season
           format
+          popularity
         }
       }
     }
@@ -126,6 +128,7 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
       seasonYear: media.seasonYear,
       season: media.season,
       format: media.format,
+      popularity: media.popularity ?? null,
     })
 
     const edges: Array<{ relationType: string; node: { id: number; format: string | null } }> =

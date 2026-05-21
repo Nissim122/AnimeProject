@@ -81,6 +81,7 @@ export default function SearchBar({ onTrack, trackedIds }: Props) {
               anime={anime}
               isTracked={trackedIds.has(anime.id)}
               onOpen={() => setModalAnime(anime)}
+              isTopResult={anime.id === results.reduce((top, a) => (a.popularity ?? 0) > (top.popularity ?? 0) ? a : top).id}
             />
           ))}
         </div>
