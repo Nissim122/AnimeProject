@@ -42,7 +42,7 @@ export default function Home() {
   const [tracked, setTracked] = useState<TrackedItem[]>([])
   const [watchlist, setWatchlist] = useState<WatchListItem[]>([])
   const [activeView, setActiveView] = useState<ActiveView>('tracked')
-  const [seasonInfo, setSeasonInfo] = useState<Record<number, AnimeSeasonInfo> | undefined>()
+  const [seasonInfo, setSeasonInfo] = useState<Record<number, AnimeSeasonInfo> | undefined>({})
   const [modalAnime, setModalAnime] = useState<AnimeResult | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [checking, setChecking] = useState(false)
@@ -68,7 +68,7 @@ export default function Home() {
         fetch(`/api/next-seasons?ids=${ids}`)
           .then((r) => { if (!r.ok) throw new Error(`status ${r.status}`); return r.json() })
           .then((d) => { setSeasonInfo(d) })
-          .catch(() => {})
+          .catch(() => { setSeasonInfo(undefined) })
       } else {
         setSeasonInfo({})
       }
