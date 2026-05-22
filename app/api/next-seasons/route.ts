@@ -13,68 +13,68 @@ export async function GET(req: NextRequest) {
 
   const trackedSet = new Set(idList)
 
-  const entries = await Promise.all(
-    idList.map(async (id) => {
-      try {
-        const { status, startDate, sequels } = await getAnimeStatusWithSequels(id, { includeMovies: true })
+  const entries: Array<readonly [number, { next: RelationNode | null; available: RelationNode | null; hasReleasingAhead: boolean; allWatched: boolean | undefined }]> = []
 
-        const upcoming = pickUpcoming(sequels)
-        const next: RelationNode | null = upcoming ?? (
-          status === 'RELEASING'
-            ? { id, format: 'TV', title: { romaji: '' }, status: 'RELEASING', startDate }
-            : null
-        )
+  for (const id of idList) {
+    try {
+      const { status, startDate, sequels } = await getAnimeStatusWithSequels(id, { includeMovies: true })
 
-        let available = pickAvailable(sequels, trackedSet)
-        let allWatched: boolean | undefined = undefined
+      const upcoming = pickUpcoming(sequels)
+      const next: RelationNode | null = upcoming ?? (
+        status === 'RELEASING'
+          ? { id, format: 'TV', title: { romaji: '' }, status: 'RELEASING', startDate }
+          : null
+      )
 
-        // When no direct sequel found, scan the full season chain
-        if (!next && !available) {
-          try {
-            const allSeasons = await getAllSeasons(id)
-            const trackedIdx = allSeasons.findIndex((s) => trackedSet.has(s.id))
-            const laterSeasons = trackedIdx >= 0 ? allSeasons.slice(trackedIdx + 1) : []
-            const untracked = laterSeasons.filter(
-              (s) => s.status === 'FINISHED' && !trackedSet.has(s.id)
-            )
-            if (untracked.length > 0) {
-              const earliest = untracked[0]
-              available = {
-                id: earliest.id,
-                format: earliest.format,
-                title: { romaji: earliest.title.english ?? earliest.title.romaji },
-                status: 'FINISHED',
-                startDate: { year: earliest.seasonYear ?? null, month: null, day: null },
-              }
-            } else if (trackedIdx >= 0) {
-              allWatched = true
+      let available = pickAvailable(sequels, trackedSet)
+      let allWatched: boolean | undefined = undefined
+
+      // When no direct sequel found, scan the full season chain
+      if (!next && !available) {
+        try {
+          const allSeasons = await getAllSeasons(id)
+          const trackedIdx = allSeasons.findIndex((s) => trackedSet.has(s.id))
+          const laterSeasons = trackedIdx >= 0 ? allSeasons.slice(trackedIdx + 1) : []
+          const untracked = laterSeasons.filter(
+            (s) => s.status === 'FINISHED' && !trackedSet.has(s.id)
+          )
+          if (untracked.length > 0) {
+            const earliest = untracked[0]
+            available = {
+              id: earliest.id,
+              format: earliest.format,
+              title: { romaji: earliest.title.english ?? earliest.title.romaji },
+              status: 'FINISHED',
+              startDate: { year: earliest.seasonYear ?? null, month: null, day: null },
             }
-          } catch {
-            // allWatched stays undefined → unknown
+          } else if (trackedIdx >= 0) {
+            allWatched = true
           }
+        } catch {
+          // allWatched stays undefined → unknown
         }
-
-        // Detect if a season/movie is currently releasing while the user is still behind
-        let hasReleasingAhead = false
-        if (available) {
-          if (next && next.status === 'RELEASING') {
-            hasReleasingAhead = true
-          } else {
-            try {
-              const level2 = await getAnimeSequels(available.id, { includeMovies: true })
-              hasReleasingAhead = level2.some((s) => s.status === 'RELEASING')
-            } catch {
-              // ignore — hasReleasingAhead stays false
-            }
-          }
-        }
-
-        return [id, { next, available, hasReleasingAhead, allWatched }] as const
-      } catch {
-        return [id, { next: null, available: null, hasReleasingAhead: false, allWatched: undefined }] as const
       }
-    })
-  )
+
+      // Detect if a season/movie is currently releasing while the user is still behind
+      let hasReleasingAhead = false
+      if (available) {
+        if (next && next.status === 'RELEASING') {
+          hasReleasingAhead = true
+        } else {
+          try {
+            const level2 = await getAnimeSequels(available.id, { includeMovies: true })
+            hasReleasingAhead = level2.some((s) => s.status === 'RELEASING')
+          } catch {
+            // ignore — hasReleasingAhead stays false
+          }
+        }
+      }
+
+      entries.push([id, { next, available, hasReleasingAhead, allWatched }] as const)
+    } catch {
+      entries.push([id, { next: null, available: null, hasReleasingAhead: false, allWatched: undefined }] as const)
+    }
+  }
 
   return NextResponse.json(Object.fromEntries(entries))
 }
