@@ -66,7 +66,7 @@ components/
   SearchBar.tsx              # שורת חיפוש + רשת תוצאות + פתיחת modal
   AnimeCard.tsx              # קלף אנימה בתוצאות חיפוש
   AnimeDetailModal.tsx       # modal לבחירת עונה ספציפית
-  TrackedList.tsx            # רשת האנימות במעקב עם קטגוריות
+  TrackedList.tsx            # רשת האנימות במעקב
   WatchListView.tsx          # תצוגת watchlist
 
 lib/
@@ -219,26 +219,9 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - כפתור disabled אם העונה הנבחרת כבר במעקב
 
 ### רשימת מעוקבות (TrackedList)
-- **קטגוריות (עם צבע וסמל) — סדר עדיפויות מלמעלה למטה:**
-  - 📺 `available` — **עדיפות ראשונה.** יש עונה/סרט שלא נצפה עדיין (כולל מצב שיוצאת עונה חדשה במקביל). תנאי: `available !== null`.
-  - 🟢 `releasing` — כל העונות נצפו (`available === null`) **וגם** יוצאת עונה/פרקים חדשים בחודש הנוכחי (`next` הוא RELEASING או startDate תואם חודש נוכחי).
-  - 📅 `upcoming` — כל העונות נצפו (`available === null`) **וגם** קיימת עונה הבאה מוכרזת אך לא בחודש הנוכחי (`next !== null`).
-  - ✅ `completed` — כל העונות נצפו (`available === null`) ואין עונה הבאה מוכרזת (`next === null`).
-- **לוגיקת מיון** (בקוד: `categorize()` ב-`components/TrackedList.tsx`):
-  1. אם `available` → `'available'`
-  2. אם `next` יוצא החודש → `'releasing'`
-  3. אם `next` קיים → `'upcoming'`
-  4. אחרת → `'completed'`
-- **מיון:** לפי תאריך הוספה (ברירת מחדל) / לפי שם
-- **קטגוריות מתקפלות** (collapse/expand)
 - גריד רספונסיבי: 2 עמודות → 5
-- **כפתור ריענון לכל קטגוריה (`↻`):**
-  - מופיע ליד כותרת כל קטגוריה, בצבע אפור (`text-gray-500`)
-  - בלחיצה: קורא ל-`GET /api/next-seasons?ids=` **רק** עבור הסדרות שנמצאות תחת אותה קטגוריה בזמן הלחיצה
-  - בזמן הבקשה: הכפתור מציג אנימציית `animate-spin`, disabled
-  - לאחר קבלת תגובה: `seasonInfo` מתעדכן במיזוג (`{ ...prev, ...data }`) — סדרות שסטטוסן השתנה זזות אוטומטית לקטגוריה הנכונה
-  - disabled אם הקטגוריה ריקה (0 פריטים)
-  - מימוש: prop `onRefreshCategory?: (anilistIds: number[]) => Promise<void>` על `TrackedList`; state `refreshing: Set<Category>` בתוך הקומפוננטה; `handleRefreshCategory` ב-`page.tsx` עושה את הקריאה ומעדכן state
+- כרטיס מציג בורדר צבעוני לפי סטטוס: סגול = `available`, ירוק = `releasing`, אפור = רגיל
+- הודעת ריק אם אין פריטים; אזהרה כתומה אם `seasonInfo` לא נטען
 
 ### WatchListView
 - גריד זהה ל-TrackedList
@@ -301,4 +284,4 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 4. **החלפת עונה** — הלוגיקה ב-`handleTrack` ב-`app/page.tsx`: מוחק קודם עונות אחרות מאותה הסדרה, אחר כך מוסיף את החדשה.
 5. **Rate limit** — `gqlFetch` ב-`lib/anilist.ts` מאכף 700ms; לא לקרוא ל-`getAllSeasons` בלולאה על הרבה אנימות.
 6. **Watchlist** — פיצ'ר נפרד לחלוטין מ-tracked: טבלה נפרדת, endpoints נפרדים, אין התראות מייל ל-watchlist.
-7. **next-seasons** — קריאה ב-batch בטעינת הדף; מחשב `seasonInfo` לכל אנימה במעקב לצורך קטגוריזציה ב-TrackedList.
+7. **next-seasons** — קריאה ב-batch בטעינת הדף; מחשב `seasonInfo` לכל אנימה במעקב (משמש להצגת בורדר + badge על הכרטיס).
