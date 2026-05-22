@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { AnimeSeasonInfo } from '@/app/page'
 import type { RelationNode } from '@/lib/anilist'
 
@@ -53,6 +54,9 @@ const GROUP_META: Record<Group, { label: string; icon: string; color: string }> 
 const GROUP_ORDER: Group[] = ['watching', 'releasing', 'upcoming']
 
 export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Props) {
+  const [sending, setSending] = useState(false)
+  const [sendResult, setSendResult] = useState<'success' | 'error' | null>(null)
+
   const grouped: Partial<Record<Group, TrackedItem[]>> = {}
 
   for (const item of tracked) {
@@ -63,6 +67,44 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
   }
 
   const total = GROUP_ORDER.reduce((n, g) => n + (grouped[g]?.length ?? 0), 0)
+
+  async function handleSendEmail() {
+    setSending(true)
+    setSendResult(null)
+    try {
+      const watching = (grouped['watching'] ?? []).map((item) => {
+        const info = seasonInfo?.[item.anilistId]
+        return {
+          title: item.title,
+          coverImage: item.coverImage ?? undefined,
+          subtitle: info?.available ? `📺 ${info.available.title.romaji}` : undefined,
+        }
+      })
+      const releasing = (grouped['releasing'] ?? []).map((item) => ({
+        title: item.title,
+        coverImage: item.coverImage ?? undefined,
+        subtitle: '🟢 משודר כעת',
+      }))
+      const upcoming = (grouped['upcoming'] ?? []).map((item) => {
+        const info = seasonInfo?.[item.anilistId]
+        return {
+          title: item.title,
+          coverImage: item.coverImage ?? undefined,
+          subtitle: info?.next ? `📅 ${formatDate(info.next.startDate)}` : undefined,
+        }
+      })
+      const res = await fetch('/api/send-updates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ watching, releasing, upcoming }),
+      })
+      setSendResult(res.ok ? 'success' : 'error')
+    } catch {
+      setSendResult('error')
+    } finally {
+      setSending(false)
+    }
+  }
 
   return (
     <div
@@ -133,13 +175,35 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-700 shrink-0">
+        <div className="px-5 py-4 border-t border-gray-700 shrink-0 flex items-center justify-between gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors"
           >
             סגור
           </button>
+          <div className="flex items-center gap-3">
+            {sendResult === 'success' && (
+              <span className="text-green-400 text-xs">✓ המייל נשלח</span>
+            )}
+            {sendResult === 'error' && (
+              <span className="text-red-400 text-xs">שגיאה בשליחה</span>
+            )}
+            <button
+              onClick={handleSendEmail}
+              disabled={sending || total === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium transition-colors"
+            >
+              {sending ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                  שולח...
+                </>
+              ) : (
+                <>✉️ שלח למייל</>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

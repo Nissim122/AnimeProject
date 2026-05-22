@@ -295,6 +295,101 @@ export async function sendAvailableSeasonsEmail(params: {
   return true
 }
 
+export interface UpdatesEmailItem {
+  title: string
+  coverImage?: string
+  subtitle?: string
+}
+
+export async function sendUpdatesEmail(params: {
+  watching: UpdatesEmailItem[]
+  releasing: UpdatesEmailItem[]
+  upcoming: UpdatesEmailItem[]
+}): Promise<boolean> {
+  const transport = createTransport()
+  const to = getTo()
+  if (!transport || !to) {
+    console.warn('[mailer] Missing email config — skipping')
+    return false
+  }
+
+  const { watching, releasing, upcoming } = params
+  const total = watching.length + releasing.length + upcoming.length
+
+  function buildGroup(
+    items: UpdatesEmailItem[],
+    icon: string,
+    label: string,
+    headerColor: string,
+    subtitleColor: string,
+  ): string {
+    if (items.length === 0) return ''
+    const rows = items
+      .map(
+        (item, i) => `
+        <tr style="background:${i % 2 === 0 ? '#16161f' : '#1a1a2a'};">
+          <td style="padding:10px 12px;border-bottom:1px solid #222;vertical-align:top;width:44px;">
+            ${item.coverImage ? `<img src="${item.coverImage}" alt="" style="width:36px;height:50px;object-fit:cover;border-radius:4px;display:block;" />` : ''}
+          </td>
+          <td style="padding:10px 12px;border-bottom:1px solid #222;vertical-align:middle;">
+            <div style="color:#e2e8f0;font-size:13px;font-weight:bold;">${item.title}</div>
+            ${item.subtitle ? `<div style="color:${subtitleColor};font-size:12px;margin-top:3px;">${item.subtitle}</div>` : ''}
+          </td>
+        </tr>`,
+      )
+      .join('')
+    return `
+    <div style="padding:0 24px 20px;">
+      <div style="font-size:11px;color:${headerColor};font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+        ${icon} ${label} · ${items.length}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;">
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`
+  }
+
+  const watchingSection = buildGroup(watching, '📺', 'צופה', '#a78bfa', '#a78bfa')
+  const releasingSection = buildGroup(releasing, '🟢', 'יוצאים פרקים חדשים', '#4ade80', '#4ade80')
+  const upcomingSection = buildGroup(upcoming, '📅', 'הוכרזה עונה', '#fbbf24', '#fbbf24')
+
+  await transport.sendMail({
+    from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: `🎌 עדכוני אנימה — ${total} סדרות`,
+    html: `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<body style="margin:0;padding:0;background:#070710;font-family:Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#0f0f1a;border-radius:14px;overflow:hidden;border:1px solid #1e1e2e;">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:28px 24px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:6px;">🎌</div>
+    <h1 style="color:white;margin:0;font-size:20px;font-weight:bold;letter-spacing:1px;">עדכוני אנימה</h1>
+    <p style="color:#c4b5fd;margin:6px 0 0;font-size:13px;">${total} סדרות עם עדכון</p>
+  </div>
+
+  <div style="padding:20px 0 4px;">
+    ${watchingSection}
+    ${releasingSection}
+    ${upcomingSection}
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:14px 24px;border-top:1px solid #1a1a2a;text-align:center;">
+    <p style="color:#333;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
+  </div>
+
+</div>
+</body>
+</html>`,
+  })
+
+  console.log(`[mailer] Updates summary email sent (${total} items)`)
+  return true
+}
+
 export function isEmailConfigured(): boolean {
   return !!(process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.NOTIFY_EMAIL)
 }
