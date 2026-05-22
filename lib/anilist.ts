@@ -1,6 +1,6 @@
 const ANILIST_URL = 'https://graphql.anilist.co'
 let _lastGqlCall = 0
-const GQL_MIN_INTERVAL = 300
+const GQL_MIN_INTERVAL = 700
 
 export interface AnimeResult {
   id: number
@@ -22,7 +22,7 @@ export interface RelationNode {
   startDate: { year: number | null; month: number | null; day: number | null }
 }
 
-async function gqlFetch(query: string, variables: Record<string, unknown>) {
+async function gqlFetch(query: string, variables: Record<string, unknown>, attempt = 0): Promise<unknown> {
   const wait = _lastGqlCall + GQL_MIN_INTERVAL - Date.now()
   if (wait > 0) await delay(wait)
   _lastGqlCall = Date.now()
@@ -32,11 +32,35 @@ async function gqlFetch(query: string, variables: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ query, variables }),
   })
+
+  if (res.status === 429) {
+    if (attempt < 2) {
+      console.warn(`[AniList] rate limited (HTTP 429), retry ${attempt + 1}…`)
+      await delay(3000 * (attempt + 1))
+      return gqlFetch(query, variables, attempt + 1)
+    }
+    throw new Error('AniList rate limit exceeded after retries')
+  }
+
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`AniList API error ${res.status}: ${text}`)
   }
-  return res.json()
+
+  const data = await res.json() as { data: unknown; errors?: Array<{ message: string; status?: number }> }
+
+  // AniList sometimes returns HTTP 200 with errors (e.g., rate limiting)
+  if (data.errors?.length && data.data == null) {
+    const err = data.errors[0]
+    if ((err.status === 429 || err.message.includes('Too Many')) && attempt < 2) {
+      console.warn(`[AniList] rate limited (GQL 429), retry ${attempt + 1}…`)
+      await delay(3000 * (attempt + 1))
+      return gqlFetch(query, variables, attempt + 1)
+    }
+    throw new Error(`AniList error: ${err.message}`)
+  }
+
+  return data
 }
 
 export async function searchAnime(search: string): Promise<AnimeResult[]> {
@@ -181,7 +205,8 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
         }`,
         { id }
       )
-    } catch {
+    } catch (err) {
+      console.error(`[getAllSeasons] fetch failed for id ${id}:`, err)
       continue
     }
 
