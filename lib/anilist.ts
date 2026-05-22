@@ -86,7 +86,7 @@ export async function searchAnime(search: string): Promise<AnimeResult[]> {
       }
     }
   `
-  const data = await gqlFetch(query, { search })
+  const data = await gqlFetch(query, { search }) as any
   return data?.data?.Page?.media ?? []
 }
 
@@ -112,7 +112,7 @@ export async function getAnimeSequels(
       }
     }
   `
-  const data = await gqlFetch(query, { id: anilistId })
+  const data = await gqlFetch(query, { id: anilistId }) as any
   const edges: Array<{ relationType: string; node: RelationNode }> =
     data?.data?.Media?.relations?.edges ?? []
 
@@ -153,7 +153,7 @@ export async function getAnimeStatusWithSequels(
       }
     }
   `
-  const data = await gqlFetch(query, { id: anilistId })
+  const data = await gqlFetch(query, { id: anilistId }) as any
   const media = data?.data?.Media
   if (!media) return { status: 'UNKNOWN', startDate: { year: null, month: null, day: null }, sequels: [] }
 
