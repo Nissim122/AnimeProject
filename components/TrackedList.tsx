@@ -64,9 +64,10 @@ function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonIn
   // releasing: all watched (no available gap) AND new content this month
   if (releasingThisMonth) return 'releasing'
 
-  if (!sequel) return 'completed'
+  // upcoming: all watched (no available) AND a next season announced but not yet this month
+  if (!info.available && sequel) return 'upcoming'
 
-  return 'upcoming'
+  return 'completed'
 }
 
 function AnimeCard({
