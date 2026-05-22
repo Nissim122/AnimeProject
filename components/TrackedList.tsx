@@ -1,6 +1,5 @@
-﻿'use client'
+'use client'
 
-import { useState } from 'react'
 import type { RelationNode } from '@/lib/anilist'
 import type { AnimeSeasonInfo } from '@/app/page'
 
@@ -18,7 +17,6 @@ interface Props {
   seasonInfo?: Record<number, AnimeSeasonInfo>
   onOpenSequel?: (sequel: RelationNode) => void
   onCardClick?: (item: TrackedItem) => void
-  onRefreshCategory?: (anilistIds: number[]) => Promise<void>
 }
 
 const MONTHS_HE = [
@@ -42,34 +40,6 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
         : `📅 עונה הבאה: ${formatStartDate(sequel.startDate)}`}
     </p>
   )
-}
-
-type Category = 'available' | 'releasing' | 'upcoming' | 'completed' | 'unknown'
-
-function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
-  const info = seasonInfo?.[anilistId]
-  if (!info) return 'unknown'
-
-  const now = new Date()
-  const sequel = info.next
-
-  // available: untracked finished sequel exists — takes priority over everything
-  if (info.available) return 'available'
-
-  const releasingThisMonth =
-    !!sequel &&
-    (sequel.status === 'RELEASING' ||
-      (sequel.startDate.year === now.getFullYear() &&
-        sequel.startDate.month === now.getMonth() + 1))
-
-  // releasing: all watched (no available gap) AND new content this month
-  if (releasingThisMonth) return 'releasing'
-
-  // upcoming: all watched (no available) AND a next season announced but not yet this month
-  if (!info.available && sequel) return 'upcoming'
-
-  // completed: all watched (no available) AND no next season announced
-  return 'completed'
 }
 
 function AnimeCard({
@@ -151,42 +121,7 @@ function AnimeCard({
   )
 }
 
-const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
-  releasing: { label: '🟢 בשידור עכשיו',               color: 'text-green-400' },
-  available: { label: '📺 המשך זמין לצפייה',           color: 'text-violet-400' },
-  upcoming:  { label: '📅 עונה הבאה בדרך',             color: 'text-amber-400' },
-  completed: { label: '✅ עדכני — ראית את כל העונות',  color: 'text-teal-400' },
-  unknown:   { label: '❓ לא נמצאה התאמה',              color: 'text-gray-500' },
-}
-
-const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'upcoming', 'completed', 'unknown']
-
-export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick, onRefreshCategory }: Props) {
-  const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
-  const [refreshing, setRefreshing] = useState<Set<Category>>(new Set())
-
-  function toggleSection(cat: Category) {
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      next.has(cat) ? next.delete(cat) : next.add(cat)
-      return next
-    })
-  }
-
-  async function handleRefresh(cat: Category, anilistIds: number[]) {
-    if (!onRefreshCategory || anilistIds.length === 0) return
-    setRefreshing((prev) => new Set(prev).add(cat))
-    try {
-      await onRefreshCategory(anilistIds)
-    } finally {
-      setRefreshing((prev) => {
-        const next = new Set(prev)
-        next.delete(cat)
-        return next
-      })
-    }
-  }
-
+export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
   if (items.length === 0) {
     return (
       <p className="text-gray-500 text-center py-8">
@@ -195,10 +130,13 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
-  function renderGrid(list: TrackedItem[]) {
-    return (
+  return (
+    <div className="flex flex-col gap-4">
+      {seasonInfo === undefined && (
+        <p className="text-amber-400 text-xs text-right">⚠ לא ניתן לטעון סטטוס עונות</p>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {list.map((item) => (
+        {items.map((item) => (
           <AnimeCard
             key={item.id}
             item={item}
@@ -209,63 +147,6 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
           />
         ))}
       </div>
-    )
-  }
-
-  // seasonInfo=undefined means the API call failed — show flat list to avoid
-  // incorrectly categorizing everything as 'completed'
-  if (seasonInfo === undefined) {
-    return (
-      <div className="flex flex-col gap-4">
-        <p className="text-amber-400 text-xs text-right">⚠ לא ניתן לטעון סטטוס עונות</p>
-        {renderGrid(items)}
-      </div>
-    )
-  }
-
-  const groups: Record<Category, TrackedItem[]> = { available: [], releasing: [], upcoming: [], completed: [], unknown: [] }
-  for (const item of items) {
-    groups[categorize(item.anilistId, seasonInfo)].push(item)
-  }
-
-  return (
-    <div className="flex flex-col gap-8">
-      {CATEGORY_ORDER.map((cat) => {
-        const group = groups[cat]
-        const { label, color } = SECTION_CONFIG[cat]
-        const isOpen = !collapsed.has(cat)
-        const isRefreshing = refreshing.has(cat)
-        const groupIds = group.map((item) => item.anilistId)
-        return (
-          <section key={cat}>
-            <div className="flex items-center gap-2 mb-3">
-              <button
-                onClick={() => toggleSection(cat)}
-                className={`flex items-center gap-2 text-sm font-semibold ${color} hover:opacity-80 transition-opacity flex-1 text-right`}
-              >
-                <span className="text-gray-500 text-xs transition-transform duration-200" style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
-                {label} ({group.length})
-              </button>
-              {onRefreshCategory && (
-                <button
-                  onClick={() => handleRefresh(cat, groupIds)}
-                  disabled={isRefreshing || group.length === 0}
-                  title={`רענן סטטוס ${label}`}
-                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-md border border-gray-600 transition-colors"
-                >
-                  <span className={isRefreshing ? 'animate-spin inline-block' : ''} style={{ fontSize: '14px', lineHeight: 1 }}>↻</span>
-                  רענן
-                </button>
-              )}
-            </div>
-            {isOpen && (
-              group.length === 0
-                ? <p className="text-gray-600 text-sm py-2 pr-4">אין אנימות בקטגוריה זו</p>
-                : renderGrid(group)
-            )}
-          </section>
-        )
-      })}
     </div>
   )
 }
