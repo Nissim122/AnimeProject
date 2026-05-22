@@ -182,6 +182,15 @@ const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcomin
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
   const [filter, setFilter] = useState<FilterOption>('all')
   const [sort, setSort] = useState<SortOption>('date')
+  const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
+
+  function toggleSection(cat: Category) {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      next.has(cat) ? next.delete(cat) : next.add(cat)
+      return next
+    })
+  }
 
   if (items.length === 0) {
     return (
@@ -267,10 +276,17 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
         const group = sortItems(groups[cat], sort)
         if (group.length === 0) return null
         const { label, color } = SECTION_CONFIG[cat]
+        const isOpen = !collapsed.has(cat)
         return (
           <section key={cat}>
-            <h3 className={`text-sm font-semibold mb-3 ${color}`}>{label} ({group.length})</h3>
-            {renderGrid(group)}
+            <button
+              onClick={() => toggleSection(cat)}
+              className={`flex items-center gap-2 mb-3 text-sm font-semibold ${color} hover:opacity-80 transition-opacity w-full text-right`}
+            >
+              <span className="text-gray-500 text-xs transition-transform duration-200" style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+              {label} ({group.length})
+            </button>
+            {isOpen && renderGrid(group)}
           </section>
         )
       })}
