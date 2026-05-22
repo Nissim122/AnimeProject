@@ -33,12 +33,12 @@ export default function AnimeCard({ anime, isTracked, onOpen, isTopResult }: Pro
           />
         )}
         {isTopResult && (
-          <span className="absolute top-2 left-2 bg-yellow-400/90 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">
+          <span className="absolute top-2 right-2 bg-yellow-400/90 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">
             ★ מוביל
           </span>
         )}
         {isTracked && (
-          <span className="absolute top-2 right-2 bg-green-700/90 text-green-200 text-xs font-medium px-2 py-0.5 rounded-full">
+          <span className={`absolute ${isTopResult ? 'top-8' : 'top-2'} right-2 bg-green-700/90 text-green-200 text-xs font-medium px-2 py-0.5 rounded-full`}>
             ✓ במעקב
           </span>
         )}
