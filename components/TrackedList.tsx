@@ -211,6 +211,17 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
+  // seasonInfo=undefined means the API call failed — show flat list to avoid
+  // incorrectly categorizing everything as 'completed'
+  if (seasonInfo === undefined) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-amber-400 text-xs text-right">⚠ לא ניתן לטעון סטטוס עונות</p>
+        {renderGrid(items)}
+      </div>
+    )
+  }
+
   const groups: Record<Category, TrackedItem[]> = { available: [], releasing: [], upcoming: [], completed: [] }
   for (const item of items) {
     groups[categorize(item.anilistId, seasonInfo)].push(item)

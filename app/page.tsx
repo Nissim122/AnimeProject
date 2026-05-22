@@ -67,7 +67,7 @@ export default function Home() {
         fetch(`/api/next-seasons?ids=${ids}`)
           .then((r) => { if (!r.ok) throw new Error(`status ${r.status}`); return r.json() })
           .then((d) => { setSeasonInfo(d); setTrackedLoading(false) })
-          .catch(() => { setSeasonInfo({}); setTrackedLoading(false) })
+          .catch(() => { setTrackedLoading(false) })
       } else {
         setSeasonInfo({})
         setTrackedLoading(false)
