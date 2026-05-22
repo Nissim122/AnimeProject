@@ -32,6 +32,7 @@ export interface AnimeSeasonInfo {
   available: RelationNode | null
   hasReleasingAhead?: boolean
   allWatched?: boolean
+  error?: boolean
 }
 
 let toastId = 0
@@ -47,6 +48,7 @@ export default function Home() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [checking, setChecking] = useState(false)
   const [trackedLoading, setTrackedLoading] = useState(true)
+  const [seasonInfoLoading, setSeasonInfoLoading] = useState(true)
   const [checkResults, setCheckResults] = useState<CheckOnlyResult | null>(null)
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
@@ -64,13 +66,15 @@ export default function Home() {
       setTracked(items)
       setTrackedLoading(false)
       if (items.length > 0) {
+        setSeasonInfoLoading(true)
         const ids = items.map((t) => t.anilistId).join(',')
         fetch(`/api/next-seasons?ids=${ids}`)
           .then((r) => { if (!r.ok) throw new Error(`status ${r.status}`); return r.json() })
-          .then((d) => { setSeasonInfo(d) })
-          .catch(() => { setSeasonInfo(undefined) })
+          .then((d) => { setSeasonInfo(d); setSeasonInfoLoading(false) })
+          .catch(() => { setSeasonInfo(undefined); setSeasonInfoLoading(false) })
       } else {
         setSeasonInfo({})
+        setSeasonInfoLoading(false)
       }
     } catch (err) {
       console.error('[loadTracked]', err)
@@ -195,6 +199,18 @@ export default function Home() {
     setModalAnime(fakeAnime)
   }
 
+  async function handleRefreshCategory(anilistIds: number[]) {
+    const ids = anilistIds.join(',')
+    try {
+      const r = await fetch(`/api/next-seasons?ids=${ids}`)
+      if (!r.ok) return
+      const d = await r.json()
+      setSeasonInfo((prev) => prev ? { ...prev, ...d } : d)
+    } catch {
+      // ignore — user can retry via the refresh button again
+    }
+  }
+
   async function handleCheckUpdates() {
     setChecking(true)
     try {
@@ -285,8 +301,10 @@ export default function Home() {
               items={tracked}
               onRemove={handleRemove}
               seasonInfo={seasonInfo}
+              seasonInfoLoading={seasonInfoLoading}
               onOpenSequel={handleOpenSequel}
               onCardClick={handleCardClick}
+              onRefreshCategory={handleRefreshCategory}
             />
           )
         )}

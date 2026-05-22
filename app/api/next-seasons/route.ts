@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const trackedSet = new Set(idList)
 
-  const entries: Array<readonly [number, { next: RelationNode | null; available: RelationNode | null; hasReleasingAhead: boolean; allWatched: boolean | undefined }]> = []
+  const entries: Array<readonly [number, { next: RelationNode | null; available: RelationNode | null; hasReleasingAhead: boolean; allWatched: boolean | undefined; error?: boolean }]> = []
 
   for (const id of idList) {
     try {
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
 
       entries.push([id, { next, available, hasReleasingAhead, allWatched }] as const)
     } catch {
-      entries.push([id, { next: null, available: null, hasReleasingAhead: false, allWatched: undefined }] as const)
+      entries.push([id, { next: null, available: null, hasReleasingAhead: false, allWatched: undefined, error: true }] as const)
     }
   }
 
