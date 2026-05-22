@@ -52,16 +52,17 @@ function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonIn
   const now = new Date()
   const sequel = info.next
 
+  // available: untracked finished sequel exists — takes priority over everything
+  if (info.available) return 'available'
+
   const releasingThisMonth =
     !!sequel &&
     (sequel.status === 'RELEASING' ||
       (sequel.startDate.year === now.getFullYear() &&
         sequel.startDate.month === now.getMonth() + 1))
 
-  // releasing: no untracked finished sequel (all watched) AND new content this month
-  if (!info.available && releasingThisMonth) return 'releasing'
-
-  if (info.available) return 'available'
+  // releasing: all watched (no available gap) AND new content this month
+  if (releasingThisMonth) return 'releasing'
 
   if (!sequel) return 'completed'
 
