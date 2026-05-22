@@ -67,6 +67,7 @@ function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonIn
   // upcoming: all watched (no available) AND a next season announced but not yet this month
   if (!info.available && sequel) return 'upcoming'
 
+  // completed: all watched (no available) AND no next season announced
   return 'completed'
 }
 
