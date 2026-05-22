@@ -152,53 +152,53 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
   // Phase 2: send emails with full available/unwatched context
   for (const { anime, sequel, type } of queue) {
     try {
-    if (type === 'MONTH_START') {
-      const allSeasons = await getAllSeasons(anime.anilistId)
-      const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
-      const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
-      const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
+      if (type === 'MONTH_START') {
+        const allSeasons = await getAllSeasons(anime.anilistId)
+        const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
+        const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
+        const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? anime.title
 
-      const sent = await sendMonthStartEmail({
-        hebrewTitle,
-        englishTitle,
-        sequelId: sequel.id,
-        sequelTitle: sequel.title.romaji,
-        startDate: sequel.startDate,
-        status: sequel.status,
-        seasons: allSeasons,
-        availableUnwatched: availableUnwatched.length > 0 ? availableUnwatched : undefined,
-      })
-      if (sent) {
-        try {
-          await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
-        } catch (recordErr) {
-          console.error(
-            `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`,
-            recordErr
-          )
+        const sent = await sendMonthStartEmail({
+          hebrewTitle,
+          englishTitle,
+          sequelId: sequel.id,
+          sequelTitle: sequel.title.romaji,
+          startDate: sequel.startDate,
+          status: sequel.status,
+          seasons: allSeasons,
+          availableUnwatched: availableUnwatched.length > 0 ? availableUnwatched : undefined,
+        })
+        if (sent) {
+          try {
+            await recordNotification(sequel.id, 'MONTH_START', sequel.title.romaji, anime.title)
+          } catch (recordErr) {
+            console.error(
+              `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (MONTH_START) but failed to record — will retry next run`,
+              recordErr
+            )
+          }
+          result.notified++
+          result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
         }
-        result.notified++
-        result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'MONTH_START' })
-      }
-    } else {
-      const sent = await sendDayBeforeEmail({
-        parentTitle: anime.title,
-        sequelTitle: sequel.title.romaji,
-        startDate: sequel.startDate,
-      })
-      if (sent) {
-        try {
-          await recordNotification(sequel.id, 'DAY_BEFORE', sequel.title.romaji, anime.title)
-        } catch (recordErr) {
-          console.error(
-            `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (DAY_BEFORE) but failed to record — will retry next run`,
-            recordErr
-          )
+      } else {
+        const sent = await sendDayBeforeEmail({
+          parentTitle: anime.title,
+          sequelTitle: sequel.title.romaji,
+          startDate: sequel.startDate,
+        })
+        if (sent) {
+          try {
+            await recordNotification(sequel.id, 'DAY_BEFORE', sequel.title.romaji, anime.title)
+          } catch (recordErr) {
+            console.error(
+              `[check-updates] CRITICAL: email sent for ${sequel.title.romaji} (DAY_BEFORE) but failed to record — will retry next run`,
+              recordErr
+            )
+          }
+          result.notified++
+          result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'DAY_BEFORE' })
         }
-        result.notified++
-        result.notifications.push({ parent: anime.title, sequel: sequel.title.romaji, type: 'DAY_BEFORE' })
       }
-    }
     } catch (err) {
       console.error(`[check-updates] Error sending notification for ${sequel.title.romaji}:`, err)
       result.errors++

@@ -59,7 +59,6 @@ export default function Home() {
   }, [])
 
   const loadTracked = useCallback(async () => {
-    setTrackedLoading(true)
     try {
       const res = await fetch('/api/tracked')
       if (!res.ok) throw new Error(`status ${res.status}`)
@@ -69,9 +68,9 @@ export default function Home() {
       if (items.length > 0) {
         const ids = items.map((t) => t.anilistId).join(',')
         fetch(`/api/next-seasons?ids=${ids}`)
-          .then((r) => r.json())
+          .then((r) => { if (!r.ok) throw new Error(`status ${r.status}`); return r.json() })
           .then((d) => { setSeasonInfo(d); setTrackedLoading(false) })
-          .catch(() => { setTrackedLoading(false) })
+          .catch(() => { setSeasonInfo({}); setTrackedLoading(false) })
       } else {
         setSeasonInfo({})
         setTrackedLoading(false)
