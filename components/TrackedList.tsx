@@ -237,20 +237,20 @@ export default function TrackedList({
 
         return (
           <section key={cat}>
-            <div className="flex items-center justify-between mb-3">
+            <div className="relative flex items-center justify-center mb-4">
               <button
                 onClick={() => handleRefresh(cat)}
                 disabled={isRefreshing || !onRefreshCategory}
-                className="text-gray-500 hover:text-gray-300 disabled:opacity-30 transition-colors text-sm px-1"
+                className="absolute left-0 text-gray-500 hover:text-gray-300 disabled:opacity-30 transition-colors text-sm px-1"
                 title="רענן קטגוריה"
               >
                 <span className={isRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
               </button>
               <button
                 onClick={() => toggleCollapse(cat)}
-                className={`flex items-center gap-2 font-semibold text-sm ${meta.headerColor} hover:opacity-80 transition-opacity`}
+                className={`flex items-center gap-3 font-bold text-2xl ${meta.headerColor} hover:opacity-80 transition-opacity`}
               >
-                <span className="text-gray-500 text-xs">{isCollapsed ? '▸' : '▾'}</span>
+                <span className="text-gray-400 text-base">{isCollapsed ? '▸' : '▾'}</span>
                 {`${meta.icon} ${meta.label} (${catItems.length})`}
               </button>
             </div>
