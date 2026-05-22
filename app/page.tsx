@@ -5,10 +5,9 @@ import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
 import WatchListView from '@/components/WatchListView'
 import AnimeDetailModal from '@/components/AnimeDetailModal'
-import CheckUpdatesModal from '@/components/CheckUpdatesModal'
 import type { AnimeResult, RelationNode } from '@/lib/anilist'
 import type { WatchListItem } from '@/components/WatchListView'
-import type { CheckOnlyResult } from '@/app/api/check-updates/route'
+import type { Category } from '@/components/TrackedList'
 
 interface TrackedItem {
   id: number
@@ -49,7 +48,8 @@ export default function Home() {
   const [checking, setChecking] = useState(false)
   const [trackedLoading, setTrackedLoading] = useState(true)
   const [seasonInfoLoading, setSeasonInfoLoading] = useState(true)
-  const [checkResults, setCheckResults] = useState<CheckOnlyResult | null>(null)
+  const [checkFilterActive, setCheckFilterActive] = useState(false)
+  const CHECK_CATEGORIES: Category[] = ['watching', 'releasing']
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++toastId
@@ -255,6 +255,7 @@ export default function Home() {
 
   async function handleCheckUpdates() {
     setChecking(true)
+    setCheckFilterActive(false)
     try {
       const res = await fetch('/api/check-updates', {
         method: 'POST',
@@ -265,7 +266,7 @@ export default function Home() {
       if (data.error) {
         addToast(`שגיאה: ${data.error}`, 'error')
       } else {
-        setCheckResults(data as CheckOnlyResult)
+        setCheckFilterActive(true)
       }
     } catch {
       addToast('בדיקת עדכונים נכשלה', 'error')
@@ -299,14 +300,24 @@ export default function Home() {
       <section className="mb-8">
         {/* Tab nav */}
         <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={handleCheckUpdates}
-            disabled={checking || tracked.length === 0 || activeView !== 'tracked'}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            {checking ? <span className="animate-spin">⟳</span> : '🔄'}
-            בדוק עדכונים
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCheckUpdates}
+              disabled={checking || tracked.length === 0 || activeView !== 'tracked'}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              {checking ? <span className="animate-spin">⟳</span> : '🔄'}
+              בדוק עדכונים
+            </button>
+            {checkFilterActive && (
+              <button
+                onClick={() => setCheckFilterActive(false)}
+                className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors"
+              >
+                ✕ הצג הכל
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => setActiveView('tracked')}
@@ -346,6 +357,8 @@ export default function Home() {
               onOpenSequel={handleOpenSequel}
               onCardClick={handleCardClick}
               onRefreshCategory={handleRefreshCategory}
+              checkingUpdates={checking}
+              filterCategories={checkFilterActive ? CHECK_CATEGORIES : undefined}
             />
           )
         )}
@@ -353,21 +366,6 @@ export default function Home() {
           <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} />
         )}
       </section>
-
-      {/* Check updates results modal */}
-      {checkResults && (
-        <CheckUpdatesModal
-          result={checkResults}
-          onClose={() => setCheckResults(null)}
-          onEmailSent={(notified) => {
-            setCheckResults(null)
-            addToast(
-              notified > 0 ? `📧 נשלחו ${notified} התראות מייל` : 'לא נשלחו מיילים חדשים',
-              notified > 0 ? 'success' : 'info'
-            )
-          }}
-        />
-      )}
 
       {/* Modal for available sequel */}
       {modalAnime && (

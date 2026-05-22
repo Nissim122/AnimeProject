@@ -12,7 +12,7 @@ interface TrackedItem {
   trackedAt: string
 }
 
-type Category = 'watching' | 'releasing' | 'upcoming' | 'completed' | 'error'
+export type Category = 'watching' | 'releasing' | 'upcoming' | 'completed' | 'error'
 
 const CATEGORY_ORDER: Category[] = ['watching', 'releasing', 'upcoming', 'completed', 'error']
 
@@ -32,6 +32,8 @@ interface Props {
   onOpenSequel?: (sequel: RelationNode) => void
   onCardClick?: (item: TrackedItem) => void
   onRefreshCategory?: (anilistIds: number[]) => Promise<Record<number, AnimeSeasonInfo>>
+  checkingUpdates?: boolean
+  filterCategories?: Category[]
 }
 
 const MONTHS_HE = [
@@ -166,6 +168,8 @@ export default function TrackedList({
   seasonInfoLoading,
   onCardClick,
   onRefreshCategory,
+  checkingUpdates,
+  filterCategories,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
   const [refreshing, setRefreshing] = useState<Set<Category>>(new Set())
@@ -206,12 +210,13 @@ export default function TrackedList({
     )
   }
 
-  if (seasonInfoLoading) {
+  if (seasonInfoLoading || checkingUpdates) {
+    const loadingLabel = checkingUpdates ? 'בודק עדכונים...' : 'טוען סטטוסים...'
     return (
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 text-gray-500 text-sm justify-end">
           <span className="animate-spin inline-block">⟳</span>
-          <span>טוען סטטוסים...</span>
+          <span>{loadingLabel}</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {items.map((item) => (
@@ -239,7 +244,13 @@ export default function TrackedList({
     grouped[cat]!.push(item)
   }
 
-  const activeCategories = CATEGORY_ORDER
+  const activeCategories = filterCategories
+    ? CATEGORY_ORDER.filter((c) => filterCategories.includes(c))
+    : CATEGORY_ORDER
+
+  if (filterCategories && !activeCategories.some((cat) => (grouped[cat] ?? []).length > 0)) {
+    return <p className="text-gray-400 text-sm text-center py-8">לא נמצאו עדכונים</p>
+  }
 
   function toggleCollapse(cat: Category) {
     setCollapsed((prev) => {
