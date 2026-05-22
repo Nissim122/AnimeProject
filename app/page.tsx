@@ -45,11 +45,9 @@ export default function Home() {
   const [seasonInfo, setSeasonInfo] = useState<Record<number, AnimeSeasonInfo> | undefined>({})
   const [modalAnime, setModalAnime] = useState<AnimeResult | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
-  const [checking, setChecking] = useState(false)
   const [trackedLoading, setTrackedLoading] = useState(true)
   const [seasonInfoLoading, setSeasonInfoLoading] = useState(true)
   const [checkFilterActive, setCheckFilterActive] = useState(false)
-  const CHECK_CATEGORIES: Category[] = ['watching', 'releasing']
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++toastId
@@ -253,26 +251,8 @@ export default function Home() {
     }
   }
 
-  async function handleCheckUpdates() {
-    setChecking(true)
-    setCheckFilterActive(false)
-    try {
-      const res = await fetch('/api/check-updates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sendEmails: false }),
-      })
-      const data = await res.json()
-      if (data.error) {
-        addToast(`שגיאה: ${data.error}`, 'error')
-      } else {
-        setCheckFilterActive(true)
-      }
-    } catch {
-      addToast('בדיקת עדכונים נכשלה', 'error')
-    } finally {
-      setChecking(false)
-    }
+  function handleCheckUpdates() {
+    setCheckFilterActive(true)
   }
 
   return (
@@ -303,11 +283,10 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleCheckUpdates}
-              disabled={checking || tracked.length === 0 || activeView !== 'tracked'}
+              disabled={tracked.length === 0 || activeView !== 'tracked'}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
             >
-              {checking ? <span className="animate-spin">⟳</span> : '🔄'}
-              בדוק עדכונים
+              🔄 בדוק עדכונים
             </button>
             {checkFilterActive && (
               <button
@@ -357,8 +336,7 @@ export default function Home() {
               onOpenSequel={handleOpenSequel}
               onCardClick={handleCardClick}
               onRefreshCategory={handleRefreshCategory}
-              checkingUpdates={checking}
-              filterCategories={checkFilterActive ? CHECK_CATEGORIES : undefined}
+              filterCategories={checkFilterActive ? ['watching', 'releasing', 'upcoming'] : undefined}
             />
           )
         )}
