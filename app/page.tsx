@@ -62,15 +62,15 @@ export default function Home() {
       const data = await res.json()
       const items: TrackedItem[] = data.tracked ?? []
       setTracked(items)
+      setTrackedLoading(false)
       if (items.length > 0) {
         const ids = items.map((t) => t.anilistId).join(',')
         fetch(`/api/next-seasons?ids=${ids}`)
           .then((r) => { if (!r.ok) throw new Error(`status ${r.status}`); return r.json() })
-          .then((d) => { setSeasonInfo(d); setTrackedLoading(false) })
-          .catch(() => { setTrackedLoading(false) })
+          .then((d) => { setSeasonInfo(d) })
+          .catch(() => {})
       } else {
         setSeasonInfo({})
-        setTrackedLoading(false)
       }
     } catch (err) {
       console.error('[loadTracked]', err)
