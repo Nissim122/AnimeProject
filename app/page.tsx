@@ -243,16 +243,14 @@ export default function Home() {
       <section className="mb-8">
         {/* Tab nav */}
         <div className="flex items-center justify-between mb-4">
-          {activeView !== 'tracked' && (
-            <button
-              onClick={handleCheckUpdates}
-              disabled={checking || tracked.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              {checking ? <span className="animate-spin">⟳</span> : '🔄'}
-              בדוק עדכונים
-            </button>
-          )}
+          <button
+            onClick={handleCheckUpdates}
+            disabled={checking || tracked.length === 0 || activeView !== 'tracked'}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            {checking ? <span className="animate-spin">⟳</span> : '🔄'}
+            בדוק עדכונים
+          </button>
           <div className="flex gap-2">
             <button
               onClick={() => setActiveView('tracked')}
