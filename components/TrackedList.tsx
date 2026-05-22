@@ -251,9 +251,10 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
                   onClick={() => handleRefresh(cat, groupIds)}
                   disabled={isRefreshing || group.length === 0}
                   title={`רענן סטטוס ${label}`}
-                  className="text-gray-500 hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm px-1.5 py-0.5 rounded"
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-md border border-gray-600 transition-colors"
                 >
-                  <span className={isRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
+                  <span className={isRefreshing ? 'animate-spin inline-block' : ''} style={{ fontSize: '14px', lineHeight: 1 }}>↻</span>
+                  רענן
                 </button>
               )}
             </div>
