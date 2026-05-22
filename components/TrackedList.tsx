@@ -200,7 +200,7 @@ export default function TrackedList({
     grouped[cat]!.push(item)
   }
 
-  const activeCategories = CATEGORY_ORDER.filter((cat) => (grouped[cat]?.length ?? 0) > 0)
+  const activeCategories = CATEGORY_ORDER
 
   function toggleCollapse(cat: Category) {
     setCollapsed((prev) => {
