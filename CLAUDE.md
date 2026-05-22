@@ -2,7 +2,7 @@
 
 ## מה המערכת
 
-אפליקציית Next.js למעקב אחרי אנימות. המשתמש מסמן אנימות שצפה בהן (לפי עונה), והמערכת שולחת מייל אוטומטי כשיוצאת עונה חדשה לאחת האנימות במעקב.
+אפליקציית Next.js למעקב אחרי אנימות. המשתמש מסמן אנימות שצפה בהן (לפי עונה), והמערכת שולחת מייל אוטומטי כשיוצאת עונה חדשה לאחת האנימות במעקב. קיים גם Watchlist נפרד לאנימות שרוצים לצפות בעתיד.
 
 ---
 
@@ -17,6 +17,7 @@
 | Email | Nodemailer + Gmail |
 | Cron | node-cron בתוך server.js מותאם |
 | שפת קוד | TypeScript |
+| Testing | Vitest + Playwright |
 
 ---
 
@@ -35,9 +36,9 @@ npm start     # production
 ## משתני סביבה (env)
 
 ```
-DATABASE_URL=file:./dev.db
+DATABASE_URL=file:C:/Users/nisim/.anime-tracker/anime.db
 EMAIL_USER=...@gmail.com       # חשבון שולח
-EMAIL_PASS=...                 # App Password של Gmail
+EMAIL_PASS=...                 # App Password של Gmail (לא סיסמה רגילה)
 NOTIFY_EMAIL=...@gmail.com     # לאן שולחים את ההתראות
 ```
 
@@ -49,7 +50,7 @@ NOTIFY_EMAIL=...@gmail.com     # לאן שולחים את ההתראות
 
 ```
 app/
-  page.tsx                   # דף ראשי (client component)
+  page.tsx                   # דף ראשי (client component) — tabs: מעקב / watchlist
   layout.tsx                 # html lang="he" dir="rtl", רקע #0f0f1a
   globals.css
   api/
@@ -57,18 +58,21 @@ app/
     seasons/route.ts         # GET ?id= — כל עונות סדרה
     track/route.ts           # POST / DELETE — הוספה/הסרה ממעקב
     tracked/route.ts         # GET — רשימת מעוקבות
+    next-seasons/route.ts    # GET ?ids= — מצב עונות עבור אנימות במעקב
     check-updates/route.ts   # POST — בדיקת עדכונים + שליחת מייל
+    watchlist/route.ts       # GET / POST / DELETE — ניהול watchlist
 
 components/
   SearchBar.tsx              # שורת חיפוש + רשת תוצאות + פתיחת modal
   AnimeCard.tsx              # קלף אנימה בתוצאות חיפוש
   AnimeDetailModal.tsx       # modal לבחירת עונה ספציפית
-  TrackedList.tsx            # רשת האנימות במעקב
+  TrackedList.tsx            # רשת האנימות במעקב עם קטגוריות
+  WatchListView.tsx          # תצוגת watchlist
 
 lib/
-  anilist.ts                 # כל קריאות ל-AniList GraphQL
+  anilist.ts                 # כל קריאות ל-AniList GraphQL + rate limiting
   translate.ts               # זיהוי עברית + תרגום דרך Google Translate
-  mailer.ts                  # שליחת מייל עם Nodemailer
+  mailer.ts                  # שליחת 3 סוגי מיילים עם Nodemailer
   prisma.ts                  # Prisma client singleton
 
 prisma/
@@ -94,7 +98,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | שדה | סוג | הערה |
 |---|---|---|
 | id | Int PK | |
-| trackedAnimeId | Int FK | → TrackedAnime |
+| trackedAnimeId | Int FK | → TrackedAnime, cascade delete |
 | sequelAnilistId | Int | מזהה סיקוול |
 | unique | (trackedAnimeId, sequelAnilistId) | |
 
@@ -102,10 +106,21 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | שדה | סוג | הערה |
 |---|---|---|
 | id | Int PK | |
-| sequelAnilistId | Int unique | מונע כפילויות |
+| sequelAnilistId | Int | |
+| type | String | `'MONTH_START'` או `'DAY_BEFORE'` |
 | sequelTitle | String | |
 | parentTitle | String | |
 | sentAt | DateTime | |
+| unique | (sequelAnilistId, type) | מונע כפל מיילים לאותו סוג |
+
+### `WatchListItem`
+| שדה | סוג | הערה |
+|---|---|---|
+| id | Int PK | |
+| anilistId | Int unique | מזהה AniList |
+| title | String | |
+| coverImage | String? | URL תמונה |
+| addedAt | DateTime | תאריך הוספה |
 
 ---
 
@@ -116,6 +131,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - **חיפוש עברי:** מזהה עברית עם regex, מתרגם דרך Google Translate, מחפש בעברית ובתרגום במקביל, ממזג ומנכה כפילויות. אם פחות מ-3 תוצאות — fallback חיפוש מילה-מילה.
 - **חיפוש אנגלי:** ישירות ל-AniList.
 - מחזיר רק `TV` ו-`TV_SHORT` (לא סרטים/OVA).
+- **קיבוץ סדרות:** מאחד סיקוולים/פריקוולים לכרטיס אחד (union-find), מציג נציג אחד לסדרה.
 
 ### `GET /api/seasons?id=`
 - מקבל AniList ID של עונה כלשהי בסדרה.
@@ -135,34 +151,89 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 ### `GET /api/tracked`
 - מחזיר כל TrackedAnime ממוין `trackedAt DESC`.
 
+### `GET /api/next-seasons?ids=`
+- מקבל ids מופרדים בפסיק של אנימות במעקב.
+- לכל אנימה מחשב:
+  - `next` — עונה הבאה (RELEASING / NOT_YET_RELEASED)
+  - `available` — סיקוול שכבר יצא אבל לא במעקב
+  - `hasReleasingAhead` — יש עונה עתידית בזמן שהמשתמש מפגר
+  - `allWatched` — כל העונות נצפו
+- מחזיר object ממפה anilistId → AnimeSeasonInfo.
+
 ### `POST /api/check-updates`
-- עובר על כל המעוקבות.
-- לכל אנימה קורא `getAnimeSequels` מ-AniList.
-- סיקוול חדש (לא ב-KnownSequel) + סטטוס `RELEASING` או `NOT_YET_RELEASED` + לא נשלחה כבר הודעה → שולח מייל ורושם ב-SentNotification.
+**שלב 1 — איסוף נתונים:**
+- לכל אנימה במעקב: מביא סטטוס + סיקוולים ישירים מ-AniList.
+- אם RELEASING — מוסיף לתור התראות.
+- עובר על KnownSequel לזיהוי שרשראות רב-דוריות (S1→S2 ידוע, S3 חדש).
 - delay 700ms בין כל קריאה (rate limit AniList).
-- מחזיר `{ checked, notified, errors, notifications }`.
+
+**שלב 2 — שליחת מיילים:**
+- `MONTH_START`: סיקוול RELEASING או בחודש הנוכחי → מייל מפורט עם כל העונות.
+- `DAY_BEFORE`: סיקוול מחר → מייל קצר.
+- כל סוג נשלח רק פעם אחת (unique על sequelAnilistId + type).
+
+**שלב 3 — reminder:**
+- אם לא נשלחו מיילים אבל יש סיקוולים שיצאו ולא נצפו → מייל תזכורת כללי.
+
+מחזיר `{ checked, notified, errors, notifications }`.
+
+### `GET /api/watchlist`
+- מחזיר כל WatchListItem ממוין `addedAt DESC`.
+
+### `POST /api/watchlist`
+```json
+{ "anilistId": 123, "title": "...", "coverImage": "..." }
+```
+- בודק אם כבר קיים → מחזיר existing.
+
+### `DELETE /api/watchlist?anilistId=`
+- מוחק מה-watchlist.
 
 ---
 
 ## לוגיקת UI — כללים חשובים
 
+### מבנה דף ראשי (page.tsx)
+- שני tabs: **מעקב** / **Watchlist**
+- טוען tracked + watchlist + next-seasons בהעלאה
+- State: `tracked`, `watchlist`, `activeView`, `seasonInfo`, `modalAnime`, `toasts`, `checking`, `trackedLoading`
+
 ### חיפוש (SearchBar)
-- Debounce 400ms
+- Debounce **700ms**
 - ביטול בקשות in-flight (AbortController) — תוצאות ישנות לא דורסות חדשות
+- כפתור חיפוש ידני + כפתור ניקוי
 - לחיצה על כרטיסייה פותחת AnimeDetailModal (לא מוסיפה ישירות!)
+
+### AnimeCard
+- תג ⭐ זהוב אם `isTopResult` (הפופולרי ביותר בתוצאות)
+- תג ✓ ירוק אם כבר במעקב
+- hover: "📺 בחר עונה"
 
 ### AnimeDetailModal
 - טוען את כל עונות הסדרה דרך `/api/seasons?id=`
 - ברירת מחדל: העונה שנלחצה (לא בהכרח עונה 1)
-- אפשר לשנות בחירה לפני האישור
-- **חוק עונות:** כשמסמנים עונה — כל עונה אחרת מאותה הסדרה שכבר במעקב **מוסרת אוטומטית**. כך מניחים שהמשתמש ראה עד העונה שבחר.
-- אם עונה אחרת כבר במעקב — מוצגת אזהרה כתומה `⚠️ עונה אחרת מהסדרה כבר במעקב — תוחלף בבחירה החדשה`
+- מחשב ממוספור אפיזודות רציף (מדלג על סרטים)
+- כפתור **הוסף למעקב** + כפתור **הוסף ל-Watchlist**
+- **חוק עונות:** כשמסמנים עונה — כל עונה אחרת מאותה הסדרה שכבר במעקב **מוסרת אוטומטית**.
+- אם עונה אחרת כבר במעקב — אזהרה כתומה `⚠️ עונה אחרת מהסדרה כבר במעקב — תוחלף בבחירה החדשה`
 - כפתור disabled אם העונה הנבחרת כבר במעקב
 
 ### רשימת מעוקבות (TrackedList)
-- גריד רספונסיבי: 2 עמודות → 3 → 4 → 5
-- מציג: תמונה, כותרת, תאריך מעקב (עברית), כפתור הסרה
-- אם ריקה: הודעה "עדיין לא עוקב אחרי אנימות"
+- **קטגוריות (עם צבע וסמל):**
+  - 🟢 `releasing` — עונה נוכחית משודרת
+  - ⏩ `behind` — יש עונה זמינה אבל כבר יצאה עונה חדשה אחריה
+  - 📺 `available` — סיקוול שיצא ולא מסומן
+  - 📅 `upcoming` — עונה הבאה טרם שודרה
+  - ✅ `completed` — כל העונות נצפו
+- **פילטרים:** הכל / משודרות / עתידיות / הסתיימו
+- **מיון:** לפי תאריך הוספה (ברירת מחדל) / לפי שם
+- **קטגוריות מתקפלות** (collapse/expand)
+- גריד רספונסיבי: 2 עמודות → 5
+
+### WatchListView
+- גריד זהה ל-TrackedList
+- מציג: תמונה, כותרת, תאריך הוספה, כפתור הסרה
+- הודעת ריק אם אין פריטים
 
 ### Toasts
 - מוצגים בפינה ימנית תחתית
@@ -173,6 +244,27 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - מושבת כשאין אנימות במעקב או כשבדיקה רצה
 - מציג ⟳ מסתובב בזמן בדיקה
 - לאחר בדיקה: toast עם מספר עדכונים שנמצאו
+
+---
+
+## מיילים — 3 סוגים (lib/mailer.ts)
+
+| פונקציה | מתי נשלחת | תוכן |
+|---|---|---|
+| `sendMonthStartEmail` | RELEASING או בחודש הנוכחי | מייל מפורט: טבלת כל העונות, עונה חדשה מסומנת באדום, סקשן אופציונלי של סיקוולים שיצאו |
+| `sendDayBeforeEmail` | מחר בדיוק | מייל קצר עם תאריך וכותרת |
+| `sendAvailableSeasonsEmail` | לא נשלחו מיילים אחרים אבל יש סיקוולים שיצאו | רשימת כל הסיקוולים הזמינים |
+
+כל המיילים בסגנון dark theme עם CSS inline.
+
+---
+
+## AniList + Rate Limiting (lib/anilist.ts)
+
+- `gqlFetch` — אוכף 700ms מינימום בין קריאות
+- HTTP 429 → retry עד 2 פעמים עם exponential backoff (3s, 6s)
+- GQL-level 429 (HTTP 200 + שגיאה בגוף) — מטופל גם כן
+- `getAllSeasons` — BFS על PREQUEL+SEQUEL, מוגבל ל-20 nodes
 
 ---
 
@@ -194,7 +286,9 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 ## נקודות שימו לב בתיקון באגים
 
 1. **חיפוש עברי** — לוגיקה ב-`app/api/search/route.ts` + `lib/translate.ts`. תרגום דרך `translate.googleapis.com` (לא API מוסמך).
-2. **עונות** — `getAllSeasons` ב-`lib/anilist.ts` עושה traversal של PREQUEL+SEQUEL, מוגבל ל-20 nodes.
-3. **כפילויות נוטיפיקציה** — `SentNotification.sequelAnilistId` הוא unique, מגן מפני כפל מיילים.
-4. **החלפת עונה** — הלוגיקה ב-`handleTrack` ב-`app/page.tsx` (שורות 61-87): מוחק קודם עונות אחרות מאותה הסדרה.
-5. **Rate limit** — `delay(700)` ב-check-updates; `getAllSeasons` לא מושהה — לא לקרוא ל-getAllSeasons בלולאה על הרבה אנימות.
+2. **עונות** — `getAllSeasons` ב-`lib/anilist.ts` עושה BFS של PREQUEL+SEQUEL, מוגבל ל-20 nodes.
+3. **כפילויות נוטיפיקציה** — `SentNotification` unique על `(sequelAnilistId, type)` — שני סוגים שונים לאותו סיקוול אפשריים, אותו סוג רק פעם אחת.
+4. **החלפת עונה** — הלוגיקה ב-`handleTrack` ב-`app/page.tsx`: מוחק קודם עונות אחרות מאותה הסדרה, אחר כך מוסיף את החדשה.
+5. **Rate limit** — `gqlFetch` ב-`lib/anilist.ts` מאכף 700ms; לא לקרוא ל-`getAllSeasons` בלולאה על הרבה אנימות.
+6. **Watchlist** — פיצ'ר נפרד לחלוטין מ-tracked: טבלה נפרדת, endpoints נפרדים, אין התראות מייל ל-watchlist.
+7. **next-seasons** — קריאה ב-batch בטעינת הדף; מחשב `seasonInfo` לכל אנימה במעקב לצורך קטגוריזציה ב-TrackedList.
