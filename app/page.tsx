@@ -50,6 +50,7 @@ export default function Home() {
   const [modalAnime, setModalAnime] = useState<AnimeResult | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [checking, setChecking] = useState(false)
+  const [trackedLoading, setTrackedLoading] = useState(true)
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++toastId
@@ -58,6 +59,7 @@ export default function Home() {
   }, [])
 
   const loadTracked = useCallback(async () => {
+    setTrackedLoading(true)
     try {
       const res = await fetch('/api/tracked')
       if (!res.ok) throw new Error(`status ${res.status}`)
@@ -68,13 +70,15 @@ export default function Home() {
         const ids = items.map((t) => t.anilistId).join(',')
         fetch(`/api/next-seasons?ids=${ids}`)
           .then((r) => r.json())
-          .then((d) => setSeasonInfo(d))
-          .catch(() => {})
+          .then((d) => { setSeasonInfo(d); setTrackedLoading(false) })
+          .catch(() => { setTrackedLoading(false) })
       } else {
         setSeasonInfo({})
+        setTrackedLoading(false)
       }
     } catch (err) {
       console.error('[loadTracked]', err)
+      setTrackedLoading(false)
     }
   }, [])
 
@@ -273,14 +277,21 @@ export default function Home() {
         </div>
 
         {activeView === 'tracked' && (
-          <TrackedList
-            key={tracked.map((t) => t.anilistId).join(',')}
-            items={tracked}
-            onRemove={handleRemove}
-            seasonInfo={seasonInfo}
-            onOpenSequel={handleOpenSequel}
-            onCardClick={handleCardClick}
-          />
+          trackedLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-gray-400 text-sm">טוען רשימה...</p>
+            </div>
+          ) : (
+            <TrackedList
+              key={tracked.map((t) => t.anilistId).join(',')}
+              items={tracked}
+              onRemove={handleRemove}
+              seasonInfo={seasonInfo}
+              onOpenSequel={handleOpenSequel}
+              onCardClick={handleCardClick}
+            />
+          )
         )}
         {activeView === 'watchlist' && (
           <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} />
