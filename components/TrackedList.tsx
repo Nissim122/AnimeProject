@@ -295,8 +295,11 @@ export default function TrackedList({
                 onClick={() => toggleCollapse(cat)}
                 className={`flex items-center gap-3 font-bold text-2xl ${meta.headerColor} hover:opacity-80 transition-opacity`}
               >
-                <span className="text-gray-400 text-base">{isCollapsed ? '▸' : '▾'}</span>
                 {`${meta.icon} ${meta.label} (${catItems.length})`}
+                <span
+                  className={`text-xl transition-transform duration-200 inline-block ${meta.headerColor}`}
+                  style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+                >▾</span>
               </button>
             </div>
             {!isCollapsed && (
