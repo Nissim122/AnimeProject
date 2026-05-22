@@ -174,14 +174,28 @@ export default function TrackedList({
   const initialized = useRef(false)
 
   useEffect(() => {
-    if (!seasonInfoLoading && !initialized.current && seasonInfo !== undefined) {
+    if (seasonInfoLoading || seasonInfo === undefined) return
+
+    if (!initialized.current) {
       initialized.current = true
       const cats: Record<number, Category> = {}
       for (const item of items) {
         cats[item.anilistId] = categorize(seasonInfo[item.anilistId])
       }
       setStableCategories(cats)
+      return
     }
+
+    // After initialization: categorize only items not yet in stableCategories
+    setStableCategories((prev) => {
+      const newItems = items.filter((item) => !(item.anilistId in prev))
+      if (newItems.length === 0) return prev
+      const next = { ...prev }
+      for (const item of newItems) {
+        next[item.anilistId] = categorize(seasonInfo[item.anilistId])
+      }
+      return next
+    })
   }, [seasonInfoLoading, seasonInfo, items])
 
   if (items.length === 0) {
