@@ -44,11 +44,11 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
   )
 }
 
-type Category = 'available' | 'releasing' | 'upcoming' | 'completed'
+type Category = 'available' | 'releasing' | 'upcoming' | 'completed' | 'unknown'
 
 function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
   const info = seasonInfo?.[anilistId]
-  if (!info) return 'completed'
+  if (!info) return 'unknown'
 
   const now = new Date()
   const sequel = info.next
@@ -156,9 +156,10 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
   available: { label: '📺 המשך זמין לצפייה',           color: 'text-violet-400' },
   upcoming:  { label: '📅 עונה הבאה בדרך',             color: 'text-amber-400' },
   completed: { label: '✅ עדכני — ראית את כל העונות',  color: 'text-teal-400' },
+  unknown:   { label: '❓ לא נמצאה התאמה',              color: 'text-gray-500' },
 }
 
-const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'upcoming', 'completed']
+const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'upcoming', 'completed', 'unknown']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick, onRefreshCategory }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
@@ -222,7 +223,7 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
-  const groups: Record<Category, TrackedItem[]> = { available: [], releasing: [], upcoming: [], completed: [] }
+  const groups: Record<Category, TrackedItem[]> = { available: [], releasing: [], upcoming: [], completed: [], unknown: [] }
   for (const item of items) {
     groups[categorize(item.anilistId, seasonInfo)].push(item)
   }
