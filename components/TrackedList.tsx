@@ -241,10 +241,11 @@ export default function TrackedList({
               <button
                 onClick={() => handleRefresh(cat)}
                 disabled={isRefreshing || !onRefreshCategory}
-                className="absolute left-0 text-gray-500 hover:text-gray-300 disabled:opacity-30 transition-colors text-sm px-1"
+                className="absolute left-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white transition-all text-sm font-medium border border-gray-600 hover:border-gray-400"
                 title="רענן קטגוריה"
               >
-                <span className={isRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
+                <span className={isRefreshing ? 'animate-spin inline-block text-base' : 'text-base'}>↻</span>
+                <span>רענן</span>
               </button>
               <button
                 onClick={() => toggleCollapse(cat)}
