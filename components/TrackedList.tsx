@@ -199,7 +199,6 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     <div className="flex flex-col gap-8">
       {CATEGORY_ORDER.map((cat) => {
         const group = groups[cat]
-        if (group.length === 0) return null
         const { label, color } = SECTION_CONFIG[cat]
         const isOpen = !collapsed.has(cat)
         return (
@@ -211,7 +210,11 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
               <span className="text-gray-500 text-xs transition-transform duration-200" style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
               {label} ({group.length})
             </button>
-            {isOpen && renderGrid(group)}
+            {isOpen && (
+              group.length === 0
+                ? <p className="text-gray-600 text-sm py-2 pr-4">אין אנימות בקטגוריה זו</p>
+                : renderGrid(group)
+            )}
           </section>
         )
       })}
