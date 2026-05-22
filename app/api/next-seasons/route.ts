@@ -28,8 +28,10 @@ export async function GET(req: NextRequest) {
       let available = pickAvailable(sequels, trackedSet)
       let allWatched: boolean | undefined = undefined
 
-      // When no direct sequel found, scan the full season chain
-      if (!next && !available) {
+      // Scan the full season chain to find any finished untracked gap.
+      // Must run even when a direct upcoming sequel was found, because AniList relations
+      // can skip intermediate finished seasons (e.g. S1→S3 direct, S2 finished but hidden).
+      if (!available) {
         try {
           const allSeasons = await getAllSeasons(id)
           const trackedIdx = allSeasons.findIndex((s) => trackedSet.has(s.id))
@@ -50,8 +52,8 @@ export async function GET(req: NextRequest) {
               status: 'FINISHED',
               startDate: { year: earliest.seasonYear ?? null, month: null, day: null },
             }
-          } else if (upcomingLater.length > 0) {
-            // Season exists in the chain but isn't a direct sequel relation — still expose it
+          } else if (!next && upcomingLater.length > 0) {
+            // No direct sequel relation — expose the chain's upcoming season
             const earliest = upcomingLater[0]
             next = {
               id: earliest.id,
@@ -60,7 +62,7 @@ export async function GET(req: NextRequest) {
               status: earliest.status,
               startDate: { year: earliest.seasonYear ?? null, month: null, day: null },
             }
-          } else if (trackedIdx >= 0) {
+          } else if (trackedIdx >= 0 && !next) {
             allWatched = true
           }
         } catch {

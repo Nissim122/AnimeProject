@@ -157,7 +157,7 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
   completed: { label: '✅ עדכני — ראית את כל העונות',  color: 'text-teal-400' },
 }
 
-const CATEGORY_ORDER: Category[] = ['releasing', 'available', 'upcoming', 'completed']
+const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'upcoming', 'completed']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
