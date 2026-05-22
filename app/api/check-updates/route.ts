@@ -135,13 +135,9 @@ async function collectCheckData(): Promise<CheckOnlyResult & { _queue: PendingNo
         }
 
         for (const sequel of allSequels) {
-          if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
+          if (sequel.status !== 'RELEASING') continue
 
-          const qualifiesForMonthStart =
-            sequel.status === 'RELEASING' ||
-            (sequel.status === 'NOT_YET_RELEASED' && isCurrentMonth(sequel.startDate))
-
-          if (qualifiesForMonthStart && !(await hasSentNotification(sequel.id, 'MONTH_START'))) {
+          if (!(await hasSentNotification(sequel.id, 'MONTH_START'))) {
             pendingNotifications.push({
               animeId: anime.anilistId,
               animeTitle: anime.title,
@@ -149,23 +145,6 @@ async function collectCheckData(): Promise<CheckOnlyResult & { _queue: PendingNo
               sequelId: sequel.id,
               sequelTitle: sequel.title.romaji,
               type: 'MONTH_START',
-              startDate: sequel.startDate,
-              status: sequel.status,
-            })
-          }
-
-          if (
-            sequel.status === 'NOT_YET_RELEASED' &&
-            isTomorrow(sequel.startDate) &&
-            !(await hasSentNotification(sequel.id, 'DAY_BEFORE'))
-          ) {
-            pendingNotifications.push({
-              animeId: anime.anilistId,
-              animeTitle: anime.title,
-              animeCoverImage: anime.coverImage ?? undefined,
-              sequelId: sequel.id,
-              sequelTitle: sequel.title.romaji,
-              type: 'DAY_BEFORE',
               startDate: sequel.startDate,
               status: sequel.status,
             })
