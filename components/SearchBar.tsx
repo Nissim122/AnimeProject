@@ -72,8 +72,8 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="flex gap-2">
+    <div className="w-full max-w-5xl mx-auto">
+      <div className="flex gap-2 max-w-2xl mx-auto">
         <div className="relative flex-1">
         <input
           type="text"
@@ -113,7 +113,7 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
       )}
 
       {results.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="mt-3 grid grid-cols-5 gap-3">
           {results.map((anime) => (
             <AnimeCard
               key={anime.id}
