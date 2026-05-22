@@ -164,7 +164,13 @@ export default function Home() {
     const res = await fetch(`/api/track?anilistId=${anilistId}`, { method: 'DELETE' })
     if (res.ok) {
       addToast(`הוסר: ${anime?.title ?? ''}`, 'info')
-      loadTracked()
+      setTracked((prev) => prev.filter((t) => t.anilistId !== anilistId))
+      setSeasonInfo((prev) => {
+        if (!prev) return prev
+        const next = { ...prev }
+        delete next[anilistId]
+        return next
+      })
     } else {
       addToast('שגיאה בהסרה', 'error')
     }
