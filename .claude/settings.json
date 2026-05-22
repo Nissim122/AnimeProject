@@ -4,6 +4,11 @@
       {
         "hooks": [
           {
+            "type": "agent",
+            "prompt": "You are a documentation updater for an anime tracker web app. Your job: check if any source code changed this turn and update CLAUDE.md accordingly.\n\nSteps:\n1. Run: git -C \"c:\\\\‏‏שולחן העבודה - עותק\\\\AnimeProject\" diff HEAD -- \"*.ts\" \"*.tsx\" \"*.js\" \"prisma/schema.prisma\" \"server.js\"\n2. If the diff is empty or only affects CLAUDE.md — stop, do nothing.\n3. If real source code changed, read CLAUDE.md at \"c:\\\\‏‏שולחן העבודה - עותק\\\\AnimeProject\\\\CLAUDE.md\".\n4. Read only the changed source files to understand what was added/modified/removed.\n5. Update ONLY the relevant sections of CLAUDE.md to reflect: new or changed API endpoints, components, DB models, features, UI behavior, or env vars. Make targeted edits — do not rewrite the whole file.\n6. Skip trivial changes: bug fixes, styling tweaks, refactors that don't change observable behavior.",
+            "timeout": 120
+          },
+          {
             "type": "command",
             "shell": "powershell",
             "command": "Set-Location 'c:\\‏‏שולחן העבודה - עותק\\AnimeProject'; git add -A; $changes = git status --porcelain; if ($changes) { git commit -m 'Auto-save changes' }; git push origin main 2>$null",
