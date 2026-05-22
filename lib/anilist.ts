@@ -1,6 +1,6 @@
 const ANILIST_URL = 'https://graphql.anilist.co'
 let _lastGqlCall = 0
-const GQL_MIN_INTERVAL = 700
+const GQL_MIN_INTERVAL = 1000
 
 export interface AnimeResult {
   id: number
@@ -34,9 +34,9 @@ async function gqlFetch(query: string, variables: Record<string, unknown>, attem
   })
 
   if (res.status === 429) {
-    if (attempt < 2) {
+    if (attempt < 3) {
       console.warn(`[AniList] rate limited (HTTP 429), retry ${attempt + 1}…`)
-      await delay(3000 * (attempt + 1))
+      await delay(5000 * (attempt + 1))
       return gqlFetch(query, variables, attempt + 1)
     }
     throw new Error('AniList rate limit exceeded after retries')
@@ -52,9 +52,9 @@ async function gqlFetch(query: string, variables: Record<string, unknown>, attem
   // AniList sometimes returns HTTP 200 with errors (e.g., rate limiting)
   if (data.errors?.length && data.data == null) {
     const err = data.errors[0]
-    if ((err.status === 429 || err.message.includes('Too Many')) && attempt < 2) {
+    if ((err.status === 429 || err.message.includes('Too Many')) && attempt < 3) {
       console.warn(`[AniList] rate limited (GQL 429), retry ${attempt + 1}…`)
-      await delay(3000 * (attempt + 1))
+      await delay(5000 * (attempt + 1))
       return gqlFetch(query, variables, attempt + 1)
     }
     throw new Error(`AniList error: ${err.message}`)
