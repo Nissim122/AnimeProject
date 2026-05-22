@@ -43,14 +43,14 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
   )
 }
 
-type Category = 'behind' | 'available' | 'releasing' | 'upcoming' | 'completed'
+type Category = 'available' | 'releasing' | 'upcoming' | 'completed'
 
 function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
   const info = seasonInfo?.[anilistId]
   if (!info) return 'completed'
 
   if (info.available) {
-    return info.hasReleasingAhead ? 'behind' : 'available'
+    return 'available'
   }
 
   const sequel = info.next
@@ -85,7 +85,7 @@ function AnimeCard({
   return (
     <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${
       availableSequel
-        ? (info?.hasReleasingAhead ? 'border-orange-500' : 'border-violet-600')
+        ? 'border-violet-600'
         : isReleasing
         ? 'border-green-500'
         : 'border-gray-700'
@@ -145,14 +145,13 @@ function AnimeCard({
 }
 
 const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
-  releasing: { label: '🟢 בשידור עכשיו',                  color: 'text-green-400' },
-  behind:    { label: '⏩ עדיין לא הדבקתי — משודר כעת!', color: 'text-orange-400' },
-  available: { label: '📺 המשך זמין לצפייה',             color: 'text-violet-400' },
-  upcoming:  { label: '📅 עונה הבאה בדרך',               color: 'text-amber-400' },
-  completed: { label: '✅ עדכני — ראית את כל העונות',    color: 'text-teal-400' },
+  releasing: { label: '🟢 בשידור עכשיו',               color: 'text-green-400' },
+  available: { label: '📺 המשך זמין לצפייה',           color: 'text-violet-400' },
+  upcoming:  { label: '📅 עונה הבאה בדרך',             color: 'text-amber-400' },
+  completed: { label: '✅ עדכני — ראית את כל העונות',  color: 'text-teal-400' },
 }
 
-const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'completed']
+const CATEGORY_ORDER: Category[] = ['releasing', 'available', 'upcoming', 'completed']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
@@ -190,7 +189,7 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
-  const groups: Record<Category, TrackedItem[]> = { behind: [], available: [], releasing: [], upcoming: [], completed: [] }
+  const groups: Record<Category, TrackedItem[]> = { available: [], releasing: [], upcoming: [], completed: [] }
   for (const item of items) {
     groups[categorize(item.anilistId, seasonInfo)].push(item)
   }
