@@ -254,3 +254,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Update check failed' }, { status: 500 })
   }
 }
+
+// Vercel Cron Jobs send GET requests
+export async function GET() {
+  try {
+    const result = await runUpdateCheck()
+    return NextResponse.json(result)
+  } catch (err) {
+    console.error('[check-updates]', err)
+    return NextResponse.json({ error: 'Update check failed' }, { status: 500 })
+  }
+}
