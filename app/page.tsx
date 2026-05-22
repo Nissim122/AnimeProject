@@ -198,7 +198,8 @@ export default function Home() {
   async function handleRefreshCategory(anilistIds: number[]) {
     if (anilistIds.length === 0) return
     const ids = anilistIds.join(',')
-    const res = await fetch(`/api/next-seasons?ids=${ids}`)
+    const ctxIds = tracked.map((t) => t.anilistId).join(',')
+    const res = await fetch(`/api/next-seasons?ids=${ids}&ctx_ids=${ctxIds}`)
     if (!res.ok) return
     const data: Record<number, AnimeSeasonInfo> = await res.json()
     setSeasonInfo((prev) => ({ ...prev, ...data }))

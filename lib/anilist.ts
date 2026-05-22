@@ -232,8 +232,10 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
       media.relations?.edges ?? []
 
     for (const edge of edges) {
+      const fmt = edge.node.format
       if (
         (edge.relationType === 'PREQUEL' || edge.relationType === 'SEQUEL') &&
+        (fmt === null || fmt === 'TV' || fmt === 'TV_SHORT' || fmt === 'MOVIE') &&
         !visited.has(edge.node.id)
       ) {
         queue.push(edge.node.id)

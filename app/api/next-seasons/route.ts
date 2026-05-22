@@ -11,7 +11,13 @@ export async function GET(req: NextRequest) {
     .map(Number)
     .filter((n) => !isNaN(n) && n > 0)
 
-  const trackedSet = new Set(idList)
+  // ctx_ids = all currently tracked IDs (for correct pickAvailable exclusions).
+  // Falls back to idList when not provided (e.g. initial full load already passes all IDs).
+  const ctxRaw = req.nextUrl.searchParams.get('ctx_ids')
+  const ctxList = ctxRaw
+    ? ctxRaw.split(',').map(Number).filter((n) => !isNaN(n) && n > 0)
+    : idList
+  const trackedSet = new Set([...idList, ...ctxList])
 
   const entries: Array<readonly [number, { next: RelationNode | null; available: RelationNode | null; hasReleasingAhead: boolean; allWatched: boolean | undefined }]> = []
 
