@@ -9,6 +9,8 @@ export interface UpdateResult {
   notified: number
   errors: number
   notifications: Array<{ parent: string; sequel: string; type: string }>
+  releasingAnimes: Array<{ id: number; title: string; coverImage?: string }>
+  availableSequels: Array<{ parentTitle: string; sequelTitle: string; sequelId: number }>
 }
 
 function isCurrentMonth(startDate: RelationNode['startDate']): boolean {
@@ -53,7 +55,14 @@ interface QueuedNotification {
 }
 
 export async function runUpdateCheck(): Promise<UpdateResult> {
-  const result: UpdateResult = { checked: 0, notified: 0, errors: 0, notifications: [] }
+  const result: UpdateResult = {
+    checked: 0,
+    notified: 0,
+    errors: 0,
+    notifications: [],
+    releasingAnimes: [],
+    availableSequels: [],
+  }
 
   const tracked = await prisma.trackedAnime.findMany({
     include: { knownSequels: true },
@@ -65,6 +74,7 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
   const queue: QueuedNotification[] = []
   const availableUnwatched: Array<{ parentTitle: string; sequelTitle: string }> = []
   const seenAvailableIds = new Set<number>()
+  const seenReleasingIds = new Set<number>()
 
   for (const anime of tracked) {
     result.checked++
@@ -86,6 +96,14 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
           status: 'RELEASING',
           startDate: selfStartDate,
         })
+        if (!seenReleasingIds.has(anime.anilistId)) {
+          seenReleasingIds.add(anime.anilistId)
+          result.releasingAnimes.push({
+            id: anime.anilistId,
+            title: anime.title,
+            coverImage: anime.coverImage ?? undefined,
+          })
+        }
       }
       for (const s of directSequels) {
         if (!seenSequelIds.has(s.id)) {
@@ -101,6 +119,11 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
           if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
             seenAvailableIds.add(s.id)
             availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji })
+            result.availableSequels.push({
+              parentTitle: label,
+              sequelTitle: s.title.romaji,
+              sequelId: s.id,
+            })
           }
         }
       }

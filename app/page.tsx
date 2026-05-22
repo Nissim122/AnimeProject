@@ -20,6 +20,8 @@ interface CheckResult {
   checked?: number
   notified?: number
   notifications?: Array<{ parent: string; sequel: string }>
+  releasingAnimes?: Array<{ id: number; title: string; coverImage?: string }>
+  availableSequels?: Array<{ parentTitle: string; sequelTitle: string; sequelId: number }>
   error?: string
 }
 
@@ -51,6 +53,7 @@ export default function Home() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [checking, setChecking] = useState(false)
   const [trackedLoading, setTrackedLoading] = useState(true)
+  const [checkResults, setCheckResults] = useState<CheckResult | null>(null)
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++toastId
@@ -200,16 +203,17 @@ export default function Home() {
 
   async function handleCheckUpdates() {
     setChecking(true)
+    setCheckResults(null)
     try {
       const res = await fetch('/api/check-updates', { method: 'POST' })
       const data: CheckResult = await res.json()
       if (data.error) {
         addToast(`שגיאה: ${data.error}`, 'error')
-      } else if (data.notified && data.notified > 0) {
-        const titles = data.notifications?.map((n) => n.sequel).join(', ')
-        addToast(`נמצאו ${data.notified} עונות חדשות! 📧 מייל נשלח: ${titles}`, 'success')
       } else {
-        addToast(`נבדקו ${data.checked ?? 0} אנימות — אין עדכונים חדשים`, 'info')
+        setCheckResults(data)
+        if (data.notified && data.notified > 0) {
+          addToast(`📧 נשלחו ${data.notified} התראות מייל`, 'success')
+        }
       }
     } catch {
       addToast('בדיקת עדכונים נכשלה', 'error')
@@ -274,6 +278,71 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* Results panel after check */}
+        {checkResults && !checking && (() => {
+          const releasing = checkResults.releasingAnimes ?? []
+          const available = checkResults.availableSequels ?? []
+          const hasResults = releasing.length > 0 || available.length > 0
+          return (
+            <div className="mb-6 rounded-xl border border-gray-700 bg-gray-900/70 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                <span className="text-sm font-semibold text-gray-300">
+                  תוצאות בדיקה — נבדקו {checkResults.checked ?? 0} אנימות
+                </span>
+                <button
+                  onClick={() => setCheckResults(null)}
+                  className="text-gray-500 hover:text-gray-300 text-lg leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {!hasResults ? (
+                <p className="px-4 py-4 text-sm text-gray-400 text-center">לא נמצאו סדרות בשידור או המשכים זמינים</p>
+              ) : (
+                <div className="divide-y divide-gray-700/50">
+                  {releasing.length > 0 && (
+                    <div className="px-4 py-3">
+                      <p className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
+                        🟢 בשידור עכשיו
+                        <span className="ml-1 bg-green-900/50 text-green-400 rounded-full px-2 py-0.5 text-xs">{releasing.length}</span>
+                      </p>
+                      <ul className="flex flex-col gap-1">
+                        {releasing.map((a) => (
+                          <li key={a.id} className="flex items-center gap-2 text-sm text-gray-200">
+                            {a.coverImage && (
+                              <img src={a.coverImage} alt="" className="w-8 h-10 object-cover rounded" />
+                            )}
+                            <span>{a.title}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {available.length > 0 && (
+                    <div className="px-4 py-3">
+                      <p className="text-xs font-semibold text-sky-400 mb-2 flex items-center gap-1">
+                        📺 המשך זמין לצפייה
+                        <span className="ml-1 bg-sky-900/50 text-sky-400 rounded-full px-2 py-0.5 text-xs">{available.length}</span>
+                      </p>
+                      <ul className="flex flex-col gap-1">
+                        {available.map((a, i) => (
+                          <li key={`${a.sequelId}-${i}`} className="text-sm text-gray-200">
+                            <span className="text-gray-400">{a.parentTitle}</span>
+                            <span className="mx-2 text-gray-600">→</span>
+                            <span>{a.sequelTitle}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {activeView === 'tracked' && (
           trackedLoading ? (
