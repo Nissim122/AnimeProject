@@ -199,13 +199,14 @@ export default function TrackedList({
           <span className="animate-spin inline-block">⟳</span>
           <span>טוען סטטוסים...</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 opacity-40 pointer-events-none">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {items.map((item) => (
             <AnimeCard
               key={item.id}
               item={item}
               info={undefined}
               category="completed"
+              isRefreshing={true}
               onRemove={onRemove}
             />
           ))}

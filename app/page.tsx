@@ -108,6 +108,15 @@ export default function Home() {
       await Promise.all(
         toRemove.map((id) => fetch(`/api/track?anilistId=${id}`, { method: 'DELETE' }))
       )
+      if (toRemove.length > 0) {
+        setTracked((prev) => prev.filter((t) => !toRemove.includes(t.anilistId)))
+        setSeasonInfo((prev) => {
+          if (!prev) return prev
+          const next = { ...prev }
+          toRemove.forEach((id) => delete next[id])
+          return next
+        })
+      }
     }
 
     const res = await fetch('/api/track', {
@@ -121,8 +130,32 @@ export default function Home() {
     })
     const data = await res.json()
     if (res.ok) {
+      if (data.message === 'Already tracked') {
+        addToast(`${anime.title.english ?? anime.title.romaji} כבר במעקב`, 'info')
+        return
+      }
       addToast(`✓ ${anime.title.english ?? anime.title.romaji} נוסף למעקב!`, 'success')
-      loadTracked()
+
+      const newItem: TrackedItem = {
+        id: data.anime.id,
+        anilistId: data.anime.anilistId,
+        title: data.anime.title,
+        coverImage: data.anime.coverImage ?? null,
+        trackedAt: data.anime.trackedAt,
+      }
+
+      // Fetch season info for ONLY the new anime, then update both states together
+      let newSeasonInfo: Record<number, AnimeSeasonInfo> = {}
+      try {
+        const r = await fetch(`/api/next-seasons?ids=${anime.id}`)
+        if (r.ok) newSeasonInfo = await r.json()
+        else newSeasonInfo = { [anime.id]: { next: null, available: null, error: true } }
+      } catch {
+        newSeasonInfo = { [anime.id]: { next: null, available: null, error: true } }
+      }
+
+      setSeasonInfo((prev) => ({ ...(prev ?? {}), ...newSeasonInfo }))
+      setTracked((prev) => [newItem, ...prev])
     } else {
       addToast(data.error ?? 'שגיאה בהוספה', 'error')
     }
@@ -306,7 +339,6 @@ export default function Home() {
             </div>
           ) : (
             <TrackedList
-              key={tracked.map((t) => t.anilistId).join(',')}
               items={tracked}
               onRemove={handleRemove}
               seasonInfo={seasonInfo}
