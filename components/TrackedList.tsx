@@ -77,12 +77,14 @@ function AnimeCard({
   item,
   info,
   category,
+  isRefreshing,
   onRemove,
   onCardClick,
 }: {
   item: TrackedItem
   info: AnimeSeasonInfo | undefined
   category: Category
+  isRefreshing?: boolean
   onRemove: (id: number) => void
   onCardClick?: (item: TrackedItem) => void
 }) {
@@ -91,11 +93,11 @@ function AnimeCard({
   const { borderColor } = CATEGORY_META[category]
 
   return (
-    <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${borderColor}`}>
+    <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${borderColor} ${isRefreshing ? 'opacity-60' : ''}`}>
       <div
         className="relative cursor-pointer group"
         style={{ aspectRatio: '3/4' }}
-        onClick={() => onCardClick?.(item)}
+        onClick={() => !isRefreshing && onCardClick?.(item)}
         title="לחץ לשינוי עונה"
       >
         {item.coverImage ? (
@@ -110,17 +112,22 @@ function AnimeCard({
             🎌
           </div>
         )}
-        {category === 'releasing' && (
+        {category === 'releasing' && !isRefreshing && (
           <span className="absolute top-2 right-2 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold z-10">
             בשידור
           </span>
         )}
-        {category === 'error' && (
+        {category === 'error' && !isRefreshing && (
           <span className="absolute top-2 right-2 bg-red-700 text-white text-xs px-1.5 py-0.5 rounded-full font-bold z-10">
             שגיאה
           </span>
         )}
-        {onCardClick && (
+        {isRefreshing && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        {!isRefreshing && onCardClick && (
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
             <span className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-pink-600 px-2 py-1 rounded-lg">
               שנה עונה
@@ -161,6 +168,7 @@ export default function TrackedList({
 }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
   const [refreshing, setRefreshing] = useState<Set<Category>>(new Set())
+  const [refreshingIds, setRefreshingIds] = useState<Set<number>>(new Set())
   const [stableCategories, setStableCategories] = useState<Record<number, Category>>({})
   const [pendingRefreshIds, setPendingRefreshIds] = useState<number[] | null>(null)
   const initialized = useRef(false)
@@ -245,6 +253,7 @@ export default function TrackedList({
     const ids = (grouped[cat] ?? []).map((i) => i.anilistId)
     if (ids.length === 0) return
     setRefreshing((prev) => new Set(prev).add(cat))
+    setRefreshingIds((prev) => new Set([...prev, ...ids]))
     try {
       await onRefreshCategory(ids)
       setPendingRefreshIds(ids)
@@ -252,6 +261,11 @@ export default function TrackedList({
       setRefreshing((prev) => {
         const next = new Set(prev)
         next.delete(cat)
+        return next
+      })
+      setRefreshingIds((prev) => {
+        const next = new Set(prev)
+        ids.forEach((id) => next.delete(id))
         return next
       })
     }
@@ -293,6 +307,7 @@ export default function TrackedList({
                     item={item}
                     info={seasonInfo?.[item.anilistId]}
                     category={cat}
+                    isRefreshing={refreshingIds.has(item.anilistId)}
                     onRemove={onRemove}
                     onCardClick={onCardClick}
                   />
