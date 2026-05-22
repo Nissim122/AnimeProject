@@ -44,31 +44,6 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
 }
 
 type Category = 'behind' | 'available' | 'releasing' | 'upcoming' | 'completed'
-type FilterOption = 'all' | 'airing' | 'upcoming' | 'finished'
-type SortOption = 'date' | 'name'
-
-const FILTER_LABELS: Record<FilterOption, string> = {
-  all:      'הכל',
-  airing:   '🟢 בשידור',
-  upcoming: '📅 עונה הבאה בדרך',
-  finished: '✅ הסתיים',
-}
-
-const SORT_LABELS: Record<SortOption, string> = {
-  date: 'תאריך הוספה',
-  name: 'שם',
-}
-
-function categoryToFilter(cat: Category): Exclude<FilterOption, 'all'> {
-  if (cat === 'releasing' || cat === 'behind') return 'airing'
-  if (cat === 'upcoming' || cat === 'available') return 'upcoming'
-  return 'finished' // completed + unknown
-}
-
-function sortItems(items: TrackedItem[], sort: SortOption): TrackedItem[] {
-  if (sort === 'name') return [...items].sort((a, b) => a.title.localeCompare(b.title, 'he'))
-  return items
-}
 
 function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
   const info = seasonInfo?.[anilistId]
@@ -180,8 +155,6 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
 const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'completed']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
-  const [filter, setFilter] = useState<FilterOption>('all')
-  const [sort, setSort] = useState<SortOption>('date')
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
 
   function toggleSection(cat: Category) {
@@ -217,53 +190,6 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
-  const controls = (
-    <div className="flex flex-wrap justify-between items-center gap-2 mb-5">
-      <div className="flex gap-1 flex-wrap">
-        {(['all', 'airing', 'upcoming', 'finished'] as FilterOption[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filter === f ? 'bg-pink-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            {FILTER_LABELS[f]}
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center gap-1">
-        <span className="text-gray-500 text-xs">מיון:</span>
-        {(['date', 'name'] as SortOption[]).map((s) => (
-          <button
-            key={s}
-            onClick={() => setSort(s)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              sort === s ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            {SORT_LABELS[s]}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-
-  if (filter !== 'all') {
-    const filtered = sortItems(
-      items.filter((item) => categoryToFilter(categorize(item.anilistId, seasonInfo)) === filter),
-      sort,
-    )
-    return (
-      <div className="flex flex-col">
-        {controls}
-        {filtered.length === 0
-          ? <p className="text-gray-500 text-center py-8">אין אנימות בקטגוריה זו</p>
-          : renderGrid(filtered)}
-      </div>
-    )
-  }
-
   const groups: Record<Category, TrackedItem[]> = { behind: [], available: [], releasing: [], upcoming: [], completed: [] }
   for (const item of items) {
     groups[categorize(item.anilistId, seasonInfo)].push(item)
@@ -271,9 +197,8 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
 
   return (
     <div className="flex flex-col gap-8">
-      {controls}
       {CATEGORY_ORDER.map((cat) => {
-        const group = sortItems(groups[cat], sort)
+        const group = groups[cat]
         if (group.length === 0) return null
         const { label, color } = SECTION_CONFIG[cat]
         const isOpen = !collapsed.has(cat)
