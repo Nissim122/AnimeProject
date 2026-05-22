@@ -18,6 +18,7 @@ interface Props {
   seasonInfo?: Record<number, AnimeSeasonInfo>
   onOpenSequel?: (sequel: RelationNode) => void
   onCardClick?: (item: TrackedItem) => void
+  onRefreshCategory?: (anilistIds: number[]) => Promise<void>
 }
 
 const MONTHS_HE = [
@@ -159,8 +160,9 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
 
 const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'upcoming', 'completed']
 
-export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
+export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick, onRefreshCategory }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
+  const [refreshing, setRefreshing] = useState<Set<Category>>(new Set())
 
   function toggleSection(cat: Category) {
     setCollapsed((prev) => {
@@ -168,6 +170,20 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
       next.has(cat) ? next.delete(cat) : next.add(cat)
       return next
     })
+  }
+
+  async function handleRefresh(cat: Category, anilistIds: number[]) {
+    if (!onRefreshCategory || anilistIds.length === 0) return
+    setRefreshing((prev) => new Set(prev).add(cat))
+    try {
+      await onRefreshCategory(anilistIds)
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev)
+        next.delete(cat)
+        return next
+      })
+    }
   }
 
   if (items.length === 0) {
@@ -206,15 +222,29 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
         const group = groups[cat]
         const { label, color } = SECTION_CONFIG[cat]
         const isOpen = !collapsed.has(cat)
+        const isRefreshing = refreshing.has(cat)
+        const groupIds = group.map((item) => item.anilistId)
         return (
           <section key={cat}>
-            <button
-              onClick={() => toggleSection(cat)}
-              className={`flex items-center gap-2 mb-3 text-sm font-semibold ${color} hover:opacity-80 transition-opacity w-full text-right`}
-            >
-              <span className="text-gray-500 text-xs transition-transform duration-200" style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
-              {label} ({group.length})
-            </button>
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={() => toggleSection(cat)}
+                className={`flex items-center gap-2 text-sm font-semibold ${color} hover:opacity-80 transition-opacity flex-1 text-right`}
+              >
+                <span className="text-gray-500 text-xs transition-transform duration-200" style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+                {label} ({group.length})
+              </button>
+              {onRefreshCategory && (
+                <button
+                  onClick={() => handleRefresh(cat, groupIds)}
+                  disabled={isRefreshing || group.length === 0}
+                  title={`רענן סטטוס ${label}`}
+                  className="text-gray-500 hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm px-1.5 py-0.5 rounded"
+                >
+                  <span className={isRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
+                </button>
+              )}
+            </div>
             {isOpen && (
               group.length === 0
                 ? <p className="text-gray-600 text-sm py-2 pr-4">אין אנימות בקטגוריה זו</p>

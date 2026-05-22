@@ -195,6 +195,15 @@ export default function Home() {
     setModalAnime(fakeAnime)
   }
 
+  async function handleRefreshCategory(anilistIds: number[]) {
+    if (anilistIds.length === 0) return
+    const ids = anilistIds.join(',')
+    const res = await fetch(`/api/next-seasons?ids=${ids}`)
+    if (!res.ok) return
+    const data: Record<number, AnimeSeasonInfo> = await res.json()
+    setSeasonInfo((prev) => ({ ...prev, ...data }))
+  }
+
   async function handleCheckUpdates() {
     setChecking(true)
     try {
@@ -287,6 +296,7 @@ export default function Home() {
               seasonInfo={seasonInfo}
               onOpenSequel={handleOpenSequel}
               onCardClick={handleCardClick}
+              onRefreshCategory={handleRefreshCategory}
             />
           )
         )}

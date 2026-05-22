@@ -241,9 +241,14 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
     }
   }
 
-  return results.sort(
-    (a, b) => (a.seasonYear ?? 9999) - (b.seasonYear ?? 9999) || a.id - b.id
-  )
+  const SEASON_ORDER: Record<string, number> = { WINTER: 0, SPRING: 1, SUMMER: 2, FALL: 3 }
+  return results.sort((a, b) => {
+    const yearDiff = (a.seasonYear ?? 9999) - (b.seasonYear ?? 9999)
+    if (yearDiff !== 0) return yearDiff
+    const seasonDiff = (SEASON_ORDER[a.season ?? ''] ?? 4) - (SEASON_ORDER[b.season ?? ''] ?? 4)
+    if (seasonDiff !== 0) return seasonDiff
+    return a.id - b.id
+  })
 }
 
 export function delay(ms: number) {
