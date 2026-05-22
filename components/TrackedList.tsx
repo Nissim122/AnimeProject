@@ -231,7 +231,7 @@ export default function TrackedList({
     <div className="flex flex-col gap-6">
       {activeCategories.map((cat) => {
         const meta = CATEGORY_META[cat]
-        const catItems = grouped[cat]!
+        const catItems = grouped[cat] ?? []
         const isCollapsed = collapsed.has(cat)
         const isRefreshing = refreshing.has(cat)
 
