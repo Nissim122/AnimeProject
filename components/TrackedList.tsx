@@ -31,7 +31,7 @@ interface Props {
   seasonInfoLoading?: boolean
   onOpenSequel?: (sequel: RelationNode) => void
   onCardClick?: (item: TrackedItem) => void
-  onRefreshCategory?: (anilistIds: number[]) => Promise<void>
+  onRefreshCategory?: (anilistIds: number[]) => Promise<Record<number, AnimeSeasonInfo>>
 }
 
 const MONTHS_HE = [
@@ -149,7 +149,8 @@ function AnimeCard({
         )}
         <button
           onClick={() => onRemove(item.anilistId)}
-          className="mt-auto text-xs text-red-400 hover:text-red-300 transition-colors py-1"
+          disabled={isRefreshing}
+          className="mt-auto text-xs text-red-400 hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1"
         >
           הסר מהרשימה
         </button>
@@ -168,9 +169,8 @@ export default function TrackedList({
 }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
   const [refreshing, setRefreshing] = useState<Set<Category>>(new Set())
-  const [refreshingIds, setRefreshingIds] = useState<Set<number>>(new Set())
+  const [refreshingId, setRefreshingId] = useState<number | null>(null)
   const [stableCategories, setStableCategories] = useState<Record<number, Category>>({})
-  const [pendingRefreshIds, setPendingRefreshIds] = useState<number[] | null>(null)
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -183,19 +183,6 @@ export default function TrackedList({
       setStableCategories(cats)
     }
   }, [seasonInfoLoading, seasonInfo, items])
-
-  useEffect(() => {
-    if (!pendingRefreshIds || !seasonInfo) return
-    const ids = pendingRefreshIds
-    setStableCategories((prev) => {
-      const next = { ...prev }
-      for (const id of ids) {
-        next[id] = categorize(seasonInfo[id])
-      }
-      return next
-    })
-    setPendingRefreshIds(null)
-  }, [pendingRefreshIds, seasonInfo])
 
   if (items.length === 0) {
     return (
@@ -253,19 +240,20 @@ export default function TrackedList({
     const ids = (grouped[cat] ?? []).map((i) => i.anilistId)
     if (ids.length === 0) return
     setRefreshing((prev) => new Set(prev).add(cat))
-    setRefreshingIds((prev) => new Set([...prev, ...ids]))
     try {
-      await onRefreshCategory(ids)
-      setPendingRefreshIds(ids)
+      for (const id of ids) {
+        setRefreshingId(id)
+        const newInfo = await onRefreshCategory([id])
+        setStableCategories((prev) => ({
+          ...prev,
+          [id]: categorize(newInfo[id]),
+        }))
+      }
     } finally {
+      setRefreshingId(null)
       setRefreshing((prev) => {
         const next = new Set(prev)
         next.delete(cat)
-        return next
-      })
-      setRefreshingIds((prev) => {
-        const next = new Set(prev)
-        ids.forEach((id) => next.delete(id))
         return next
       })
     }
@@ -276,6 +264,7 @@ export default function TrackedList({
       {activeCategories.map((cat) => {
         const meta = CATEGORY_META[cat]
         const catItems = grouped[cat] ?? []
+        if (catItems.length === 0) return null
         const isCollapsed = collapsed.has(cat)
         const isRefreshing = refreshing.has(cat)
 
@@ -310,7 +299,7 @@ export default function TrackedList({
                     item={item}
                     info={seasonInfo?.[item.anilistId]}
                     category={cat}
-                    isRefreshing={refreshingIds.has(item.anilistId)}
+                    isRefreshing={refreshingId === item.anilistId}
                     onRemove={onRemove}
                     onCardClick={onCardClick}
                   />

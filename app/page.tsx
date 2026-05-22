@@ -206,16 +206,17 @@ export default function Home() {
     setModalAnime(fakeAnime)
   }
 
-  async function handleRefreshCategory(anilistIds: number[]) {
+  async function handleRefreshCategory(anilistIds: number[]): Promise<Record<number, AnimeSeasonInfo>> {
     const ids = anilistIds.join(',')
     const allTrackedIds = tracked.map((t) => t.anilistId).join(',')
     try {
       const r = await fetch(`/api/next-seasons?ids=${ids}&allTrackedIds=${allTrackedIds}`)
-      if (!r.ok) return
-      const d = await r.json()
+      if (!r.ok) return {}
+      const d: Record<number, AnimeSeasonInfo> = await r.json()
       setSeasonInfo((prev) => prev ? { ...prev, ...d } : d)
+      return d
     } catch {
-      // ignore — user can retry via the refresh button again
+      return {}
     }
   }
 
