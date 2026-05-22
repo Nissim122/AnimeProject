@@ -19,8 +19,7 @@ export async function GET(req: NextRequest) {
     try {
       const { status, startDate, sequels } = await getAnimeStatusWithSequels(id, { includeMovies: true })
 
-      const upcoming = pickUpcoming(sequels)
-      const next: RelationNode | null = upcoming ?? (
+      let next: RelationNode | null = pickUpcoming(sequels) ?? (
         status === 'RELEASING'
           ? { id, format: 'TV', title: { romaji: '' }, status: 'RELEASING', startDate }
           : null
@@ -35,16 +34,30 @@ export async function GET(req: NextRequest) {
           const allSeasons = await getAllSeasons(id)
           const trackedIdx = allSeasons.findIndex((s) => trackedSet.has(s.id))
           const laterSeasons = trackedIdx >= 0 ? allSeasons.slice(trackedIdx + 1) : []
-          const untracked = laterSeasons.filter(
-            (s) => s.status === 'FINISHED' && !trackedSet.has(s.id)
+          const laterUntracked = laterSeasons.filter((s) => !trackedSet.has(s.id))
+
+          const finishedLater = laterUntracked.filter((s) => s.status === 'FINISHED')
+          const upcomingLater = laterUntracked.filter(
+            (s) => s.status === 'RELEASING' || s.status === 'NOT_YET_RELEASED'
           )
-          if (untracked.length > 0) {
-            const earliest = untracked[0]
+
+          if (finishedLater.length > 0) {
+            const earliest = finishedLater[0]
             available = {
               id: earliest.id,
               format: earliest.format,
               title: { romaji: earliest.title.english ?? earliest.title.romaji },
               status: 'FINISHED',
+              startDate: { year: earliest.seasonYear ?? null, month: null, day: null },
+            }
+          } else if (upcomingLater.length > 0) {
+            // Season exists in the chain but isn't a direct sequel relation — still expose it
+            const earliest = upcomingLater[0]
+            next = {
+              id: earliest.id,
+              format: earliest.format,
+              title: { romaji: earliest.title.english ?? earliest.title.romaji },
+              status: earliest.status,
               startDate: { year: earliest.seasonYear ?? null, month: null, day: null },
             }
           } else if (trackedIdx >= 0) {
