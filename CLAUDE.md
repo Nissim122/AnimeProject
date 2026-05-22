@@ -232,6 +232,13 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - **מיון:** לפי תאריך הוספה (ברירת מחדל) / לפי שם
 - **קטגוריות מתקפלות** (collapse/expand)
 - גריד רספונסיבי: 2 עמודות → 5
+- **כפתור ריענון לכל קטגוריה (`↻`):**
+  - מופיע ליד כותרת כל קטגוריה, בצבע אפור (`text-gray-500`)
+  - בלחיצה: קורא ל-`GET /api/next-seasons?ids=` **רק** עבור הסדרות שנמצאות תחת אותה קטגוריה בזמן הלחיצה
+  - בזמן הבקשה: הכפתור מציג אנימציית `animate-spin`, disabled
+  - לאחר קבלת תגובה: `seasonInfo` מתעדכן במיזוג (`{ ...prev, ...data }`) — סדרות שסטטוסן השתנה זזות אוטומטית לקטגוריה הנכונה
+  - disabled אם הקטגוריה ריקה (0 פריטים)
+  - מימוש: prop `onRefreshCategory?: (anilistIds: number[]) => Promise<void>` על `TrackedList`; state `refreshing: Set<Category>` בתוך הקומפוננטה; `handleRefreshCategory` ב-`page.tsx` עושה את הקריאה ומעדכן state
 
 ### WatchListView
 - גריד זהה ל-TrackedList
