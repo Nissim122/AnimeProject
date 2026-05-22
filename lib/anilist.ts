@@ -171,74 +171,92 @@ export async function getAnimeStatusWithSequels(
   return { status: media.status, startDate: media.startDate, sequels }
 }
 
-export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
-  const visited = new Set<number>()
-  const queue: number[] = [anilistId]
-  const results: AnimeResult[] = []
-
-  while (queue.length > 0) {
-    const id = queue.shift()!
-    if (visited.has(id)) continue
-    if (visited.size >= 20) break
-    visited.add(id)
-
-    let data: unknown
-    try {
-      data = await gqlFetch(
-        `query GetSeason($id: Int) {
-          Media(id: $id, type: ANIME) {
-            id
-            title { romaji english }
-            coverImage { large }
-            status
-            seasonYear
-            season
-            format
-            episodes
-            relations {
-              edges {
-                relationType
-                node { id format }
-              }
+// Internal: fetch a batch of media nodes in one request (used by getAllSeasons BFS)
+async function batchFetchNodes(ids: number[]): Promise<Array<{
+  id: number
+  title: { romaji: string; english: string | null }
+  coverImage: { large: string }
+  status: string
+  seasonYear: number | null
+  season: string | null
+  format: string | null
+  popularity: number | null
+  episodes: number | null
+  relations: { edges: Array<{ relationType: string; node: { id: number; format: string | null } }> }
+}>> {
+  if (ids.length === 0) return []
+  const data = await gqlFetch(
+    `query BatchNodes($ids: [Int]) {
+      Page(perPage: 50) {
+        media(id_in: $ids, type: ANIME) {
+          id
+          title { romaji english }
+          coverImage { large }
+          status
+          seasonYear
+          season
+          format
+          popularity
+          episodes
+          relations {
+            edges {
+              relationType
+              node { id format }
             }
           }
-        }`,
-        { id }
-      )
+        }
+      }
+    }`,
+    { ids }
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any)?.data?.Page?.media ?? []
+}
+
+export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
+  const visited = new Set<number>()
+  let queue: number[] = [anilistId]
+  const results: AnimeResult[] = []
+
+  while (queue.length > 0 && visited.size < 20) {
+    // Fetch the entire current frontier in one batch request
+    const batch = queue.splice(0, Math.min(queue.length, 20 - visited.size))
+    const toFetch = batch.filter((id) => !visited.has(id))
+    if (toFetch.length === 0) continue
+    toFetch.forEach((id) => visited.add(id))
+
+    let mediaList: Awaited<ReturnType<typeof batchFetchNodes>>
+    try {
+      mediaList = await batchFetchNodes(toFetch)
     } catch (err) {
-      console.error(`[getAllSeasons] fetch failed for id ${id}:`, err)
+      console.error(`[getAllSeasons] batch fetch failed for ids ${toFetch}:`, err)
       continue
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const media = (data as any)?.data?.Media
-    if (!media) continue
+    for (const media of mediaList) {
+      if (media.format === 'TV' || media.format === 'TV_SHORT' || media.format === 'MOVIE') {
+        results.push({
+          id: media.id,
+          title: media.title,
+          coverImage: media.coverImage,
+          status: media.status,
+          seasonYear: media.seasonYear,
+          season: media.season,
+          format: media.format,
+          popularity: media.popularity,
+          episodes: media.episodes,
+        })
+      }
 
-    if (media.format === 'TV' || media.format === 'TV_SHORT' || media.format === 'MOVIE') {
-      results.push({
-        id: media.id,
-        title: media.title,
-        coverImage: media.coverImage,
-        status: media.status,
-        seasonYear: media.seasonYear,
-        season: media.season,
-        format: media.format,
-        popularity: media.popularity ?? null,
-        episodes: media.episodes ?? null,
-      })
-    }
-
-    const edges: Array<{ relationType: string; node: { id: number; format: string | null } }> =
-      media.relations?.edges ?? []
-
-    for (const edge of edges) {
-      const fmt = edge.node.format
-      if (
-        (edge.relationType === 'PREQUEL' || edge.relationType === 'SEQUEL') &&
-        (fmt === null || fmt === 'TV' || fmt === 'TV_SHORT' || fmt === 'MOVIE') &&
-        !visited.has(edge.node.id)
-      ) {
-        queue.push(edge.node.id)
+      for (const edge of media.relations.edges) {
+        const fmt = edge.node.format
+        if (
+          (edge.relationType === 'PREQUEL' || edge.relationType === 'SEQUEL') &&
+          (fmt === null || fmt === 'TV' || fmt === 'TV_SHORT' || fmt === 'MOVIE') &&
+          !visited.has(edge.node.id)
+        ) {
+          queue.push(edge.node.id)
+        }
       }
     }
   }
@@ -251,6 +269,56 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
     if (seasonDiff !== 0) return seasonDiff
     return a.id - b.id
   })
+}
+
+// Batch fetch status + direct sequels for multiple IDs in one request
+export async function batchGetAnimeStatus(
+  ids: number[],
+  { includeMovies = false }: { includeMovies?: boolean } = {}
+): Promise<Map<number, {
+  status: string
+  startDate: { year: number | null; month: number | null; day: number | null }
+  sequels: RelationNode[]
+}>> {
+  if (ids.length === 0) return new Map()
+  const data = await gqlFetch(
+    `query BatchStatus($ids: [Int]) {
+      Page(perPage: 50) {
+        media(id_in: $ids, type: ANIME) {
+          id
+          status
+          startDate { year month day }
+          relations {
+            edges {
+              relationType
+              node {
+                id
+                format
+                title { romaji }
+                status
+                startDate { year month day }
+              }
+            }
+          }
+        }
+      }
+    }`,
+    { ids }
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mediaList: any[] = (data as any)?.data?.Page?.media ?? []
+  const result = new Map<number, { status: string; startDate: { year: number | null; month: number | null; day: number | null }; sequels: RelationNode[] }>()
+  for (const media of mediaList) {
+    const edges: Array<{ relationType: string; node: RelationNode }> = media.relations?.edges ?? []
+    const sequels = edges
+      .filter((e) =>
+        e.relationType === 'SEQUEL' &&
+        (e.node.format === 'TV' || e.node.format === 'TV_SHORT' || (includeMovies && e.node.format === 'MOVIE'))
+      )
+      .map((e) => e.node)
+    result.set(media.id, { status: media.status, startDate: media.startDate, sequels })
+  }
+  return result
 }
 
 export function delay(ms: number) {
