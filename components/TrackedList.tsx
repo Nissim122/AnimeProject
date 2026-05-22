@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { RelationNode } from '@/lib/anilist'
 import type { AnimeSeasonInfo } from '@/app/page'
 
@@ -161,6 +161,33 @@ export default function TrackedList({
 }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
   const [refreshing, setRefreshing] = useState<Set<Category>>(new Set())
+  const [stableCategories, setStableCategories] = useState<Record<number, Category>>({})
+  const [pendingRefreshIds, setPendingRefreshIds] = useState<number[] | null>(null)
+  const initialized = useRef(false)
+
+  useEffect(() => {
+    if (!seasonInfoLoading && !initialized.current && seasonInfo !== undefined) {
+      initialized.current = true
+      const cats: Record<number, Category> = {}
+      for (const item of items) {
+        cats[item.anilistId] = categorize(seasonInfo[item.anilistId])
+      }
+      setStableCategories(cats)
+    }
+  }, [seasonInfoLoading, seasonInfo, items])
+
+  useEffect(() => {
+    if (!pendingRefreshIds || !seasonInfo) return
+    const ids = pendingRefreshIds
+    setStableCategories((prev) => {
+      const next = { ...prev }
+      for (const id of ids) {
+        next[id] = categorize(seasonInfo[id])
+      }
+      return next
+    })
+    setPendingRefreshIds(null)
+  }, [pendingRefreshIds, seasonInfo])
 
   if (items.length === 0) {
     return (
@@ -192,10 +219,12 @@ export default function TrackedList({
     )
   }
 
-  // Group items by category
+  // Group items by category — use stableCategories so only refreshed items move categories
   const grouped: Partial<Record<Category, TrackedItem[]>> = {}
   for (const item of items) {
-    const cat = categorize(seasonInfo?.[item.anilistId])
+    const cat = initialized.current
+      ? (stableCategories[item.anilistId] ?? 'error')
+      : categorize(seasonInfo?.[item.anilistId])
     if (!grouped[cat]) grouped[cat] = []
     grouped[cat]!.push(item)
   }
@@ -218,6 +247,7 @@ export default function TrackedList({
     setRefreshing((prev) => new Set(prev).add(cat))
     try {
       await onRefreshCategory(ids)
+      setPendingRefreshIds(ids)
     } finally {
       setRefreshing((prev) => {
         const next = new Set(prev)
