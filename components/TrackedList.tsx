@@ -43,7 +43,7 @@ function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
   )
 }
 
-type Category = 'behind' | 'available' | 'releasing' | 'upcoming' | 'completed' | 'unknown'
+type Category = 'behind' | 'available' | 'releasing' | 'upcoming' | 'completed'
 type FilterOption = 'all' | 'airing' | 'upcoming' | 'finished'
 type SortOption = 'date' | 'name'
 
@@ -72,14 +72,14 @@ function sortItems(items: TrackedItem[], sort: SortOption): TrackedItem[] {
 
 function categorize(anilistId: number, seasonInfo?: Record<number, AnimeSeasonInfo>): Category {
   const info = seasonInfo?.[anilistId]
-  if (!info) return 'unknown'
+  if (!info) return 'completed'
 
   if (info.available) {
     return info.hasReleasingAhead ? 'behind' : 'available'
   }
 
   const sequel = info.next
-  if (!sequel) return info.allWatched === true ? 'completed' : 'unknown'
+  if (!sequel) return 'completed'
 
   if (sequel.status === 'RELEASING') return 'releasing'
 
@@ -175,10 +175,9 @@ const SECTION_CONFIG: Record<Category, { label: string; color: string }> = {
   available: { label: '📺 המשך זמין לצפייה',             color: 'text-violet-400' },
   upcoming:  { label: '📅 עונה הבאה בדרך',               color: 'text-amber-400' },
   completed: { label: '✅ עדכני — ראית את כל העונות',    color: 'text-teal-400' },
-  unknown:   { label: '❓ אין מידע על עונה הבאה',         color: 'text-gray-400' },
 }
 
-const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'completed', 'unknown']
+const CATEGORY_ORDER: Category[] = ['releasing', 'behind', 'available', 'upcoming', 'completed']
 
 export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel, onCardClick }: Props) {
   const [filter, setFilter] = useState<FilterOption>('all')
@@ -256,7 +255,7 @@ export default function TrackedList({ items, onRemove, seasonInfo, onOpenSequel,
     )
   }
 
-  const groups: Record<Category, TrackedItem[]> = { behind: [], available: [], releasing: [], upcoming: [], completed: [], unknown: [] }
+  const groups: Record<Category, TrackedItem[]> = { behind: [], available: [], releasing: [], upcoming: [], completed: [] }
   for (const item of items) {
     groups[categorize(item.anilistId, seasonInfo)].push(item)
   }
