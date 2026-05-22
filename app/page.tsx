@@ -79,6 +79,7 @@ export default function Home() {
     } catch (err) {
       console.error('[loadTracked]', err)
       setTrackedLoading(false)
+      setSeasonInfoLoading(false)
     }
   }, [])
 
@@ -201,8 +202,9 @@ export default function Home() {
 
   async function handleRefreshCategory(anilistIds: number[]) {
     const ids = anilistIds.join(',')
+    const allTrackedIds = tracked.map((t) => t.anilistId).join(',')
     try {
-      const r = await fetch(`/api/next-seasons?ids=${ids}`)
+      const r = await fetch(`/api/next-seasons?ids=${ids}&allTrackedIds=${allTrackedIds}`)
       if (!r.ok) return
       const d = await r.json()
       setSeasonInfo((prev) => prev ? { ...prev, ...d } : d)

@@ -11,7 +11,11 @@ export async function GET(req: NextRequest) {
     .map(Number)
     .filter((n) => !isNaN(n) && n > 0)
 
-  const trackedSet = new Set(idList)
+  const allTrackedIdsParam = req.nextUrl.searchParams.get('allTrackedIds')
+  const allTrackedIdList = allTrackedIdsParam
+    ? allTrackedIdsParam.split(',').map(Number).filter((n) => !isNaN(n) && n > 0)
+    : idList
+  const trackedSet = new Set(allTrackedIdList)
 
   const entries: Array<readonly [number, { next: RelationNode | null; available: RelationNode | null; hasReleasingAhead: boolean; allWatched: boolean | undefined; error?: boolean }]> = []
 
