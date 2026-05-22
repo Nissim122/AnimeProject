@@ -5,9 +5,9 @@ import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
 import WatchListView from '@/components/WatchListView'
 import AnimeDetailModal from '@/components/AnimeDetailModal'
+import CheckUpdatesModal from '@/components/CheckUpdatesModal'
 import type { AnimeResult, RelationNode } from '@/lib/anilist'
 import type { WatchListItem } from '@/components/WatchListView'
-import type { Category } from '@/components/TrackedList'
 
 interface TrackedItem {
   id: number
@@ -47,7 +47,7 @@ export default function Home() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [trackedLoading, setTrackedLoading] = useState(true)
   const [seasonInfoLoading, setSeasonInfoLoading] = useState(true)
-  const [checkFilterActive, setCheckFilterActive] = useState(false)
+  const [showCheckModal, setShowCheckModal] = useState(false)
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++toastId
@@ -252,7 +252,7 @@ export default function Home() {
   }
 
   function handleCheckUpdates() {
-    setCheckFilterActive(true)
+    setShowCheckModal(true)
   }
 
   return (
@@ -280,23 +280,13 @@ export default function Home() {
       <section className="mb-8">
         {/* Tab nav */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCheckUpdates}
-              disabled={tracked.length === 0 || activeView !== 'tracked'}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              🔄 בדוק עדכונים
-            </button>
-            {checkFilterActive && (
-              <button
-                onClick={() => setCheckFilterActive(false)}
-                className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors"
-              >
-                ✕ הצג הכל
-              </button>
-            )}
-          </div>
+          <button
+            onClick={handleCheckUpdates}
+            disabled={tracked.length === 0 || activeView !== 'tracked'}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            🔄 בדוק עדכונים
+          </button>
           <div className="flex gap-2">
             <button
               onClick={() => setActiveView('tracked')}
@@ -336,7 +326,6 @@ export default function Home() {
               onOpenSequel={handleOpenSequel}
               onCardClick={handleCardClick}
               onRefreshCategory={handleRefreshCategory}
-              filterCategories={checkFilterActive ? ['watching', 'releasing', 'upcoming'] : undefined}
             />
           )
         )}
@@ -344,6 +333,15 @@ export default function Home() {
           <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} />
         )}
       </section>
+
+      {/* Check updates modal */}
+      {showCheckModal && (
+        <CheckUpdatesModal
+          tracked={tracked}
+          seasonInfo={seasonInfo}
+          onClose={() => setShowCheckModal(false)}
+        />
+      )}
 
       {/* Modal for available sequel */}
       {modalAnime && (
