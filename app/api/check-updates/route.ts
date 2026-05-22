@@ -82,95 +82,103 @@ async function collectCheckData(): Promise<CheckOnlyResult & { _queue: PendingNo
 
   for (const anime of tracked) {
     checked++
-    try {
-      const knownIds = new Set(anime.knownSequels.map((s) => s.sequelAnilistId))
-      const allSequels: RelationNode[] = []
-      const seenSequelIds = new Set<number>()
+    let succeeded = false
+    for (let attempt = 0; attempt <= 1 && !succeeded; attempt++) {
+      if (attempt > 0) await delay(4000)
+      try {
+        const knownIds = new Set(anime.knownSequels.map((s) => s.sequelAnilistId))
+        const allSequels: RelationNode[] = []
+        const seenSequelIds = new Set<number>()
 
-      await delay(700)
-      const { status: selfStatus, startDate: selfStartDate, sequels: directSequels } =
-        await getAnimeStatusWithSequels(anime.anilistId)
-      seenSequelIds.add(anime.anilistId)
+        await delay(700)
+        const { status: selfStatus, startDate: selfStartDate, sequels: directSequels } =
+          await getAnimeStatusWithSequels(anime.anilistId)
+        seenSequelIds.add(anime.anilistId)
 
-      if (selfStatus === 'RELEASING') {
-        allSequels.push({
-          id: anime.anilistId,
-          format: 'TV',
-          title: { romaji: anime.title },
-          status: 'RELEASING',
-          startDate: selfStartDate,
-        })
-        if (!seenReleasingIds.has(anime.anilistId)) {
-          seenReleasingIds.add(anime.anilistId)
-          releasingAnimes.push({ id: anime.anilistId, title: anime.title, coverImage: anime.coverImage ?? undefined })
-        }
-      }
-
-      for (const s of directSequels) {
-        if (!seenSequelIds.has(s.id)) { seenSequelIds.add(s.id); allSequels.push(s) }
-      }
-
-      const collectAvailable = (sequels: RelationNode[], label: string) => {
-        for (const s of sequels) {
-          if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
-            seenAvailableIds.add(s.id)
-            availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji })
-            availableSequels.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id })
+        if (selfStatus === 'RELEASING') {
+          allSequels.push({
+            id: anime.anilistId,
+            format: 'TV',
+            title: { romaji: anime.title },
+            status: 'RELEASING',
+            startDate: selfStartDate,
+          })
+          if (!seenReleasingIds.has(anime.anilistId)) {
+            seenReleasingIds.add(anime.anilistId)
+            releasingAnimes.push({ id: anime.anilistId, title: anime.title, coverImage: anime.coverImage ?? undefined })
           }
         }
-      }
 
-      collectAvailable(directSequels, anime.title)
-
-      for (const knownId of knownIds) {
-        await delay(700)
-        const sequels = await getAnimeSequels(knownId)
-        for (const s of sequels) {
+        for (const s of directSequels) {
           if (!seenSequelIds.has(s.id)) { seenSequelIds.add(s.id); allSequels.push(s) }
         }
-        collectAvailable(sequels, anime.title)
-      }
 
-      for (const sequel of allSequels) {
-        if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
-
-        const qualifiesForMonthStart =
-          sequel.status === 'RELEASING' ||
-          (sequel.status === 'NOT_YET_RELEASED' && isCurrentMonth(sequel.startDate))
-
-        if (qualifiesForMonthStart && !(await hasSentNotification(sequel.id, 'MONTH_START'))) {
-          pendingNotifications.push({
-            animeId: anime.anilistId,
-            animeTitle: anime.title,
-            animeCoverImage: anime.coverImage ?? undefined,
-            sequelId: sequel.id,
-            sequelTitle: sequel.title.romaji,
-            type: 'MONTH_START',
-            startDate: sequel.startDate,
-            status: sequel.status,
-          })
+        const collectAvailable = (sequels: RelationNode[], label: string) => {
+          for (const s of sequels) {
+            if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
+              seenAvailableIds.add(s.id)
+              availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji })
+              availableSequels.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id })
+            }
+          }
         }
 
-        if (
-          sequel.status === 'NOT_YET_RELEASED' &&
-          isTomorrow(sequel.startDate) &&
-          !(await hasSentNotification(sequel.id, 'DAY_BEFORE'))
-        ) {
-          pendingNotifications.push({
-            animeId: anime.anilistId,
-            animeTitle: anime.title,
-            animeCoverImage: anime.coverImage ?? undefined,
-            sequelId: sequel.id,
-            sequelTitle: sequel.title.romaji,
-            type: 'DAY_BEFORE',
-            startDate: sequel.startDate,
-            status: sequel.status,
-          })
+        collectAvailable(directSequels, anime.title)
+
+        for (const knownId of knownIds) {
+          await delay(700)
+          const sequels = await getAnimeSequels(knownId)
+          for (const s of sequels) {
+            if (!seenSequelIds.has(s.id)) { seenSequelIds.add(s.id); allSequels.push(s) }
+          }
+          collectAvailable(sequels, anime.title)
+        }
+
+        for (const sequel of allSequels) {
+          if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
+
+          const qualifiesForMonthStart =
+            sequel.status === 'RELEASING' ||
+            (sequel.status === 'NOT_YET_RELEASED' && isCurrentMonth(sequel.startDate))
+
+          if (qualifiesForMonthStart && !(await hasSentNotification(sequel.id, 'MONTH_START'))) {
+            pendingNotifications.push({
+              animeId: anime.anilistId,
+              animeTitle: anime.title,
+              animeCoverImage: anime.coverImage ?? undefined,
+              sequelId: sequel.id,
+              sequelTitle: sequel.title.romaji,
+              type: 'MONTH_START',
+              startDate: sequel.startDate,
+              status: sequel.status,
+            })
+          }
+
+          if (
+            sequel.status === 'NOT_YET_RELEASED' &&
+            isTomorrow(sequel.startDate) &&
+            !(await hasSentNotification(sequel.id, 'DAY_BEFORE'))
+          ) {
+            pendingNotifications.push({
+              animeId: anime.anilistId,
+              animeTitle: anime.title,
+              animeCoverImage: anime.coverImage ?? undefined,
+              sequelId: sequel.id,
+              sequelTitle: sequel.title.romaji,
+              type: 'DAY_BEFORE',
+              startDate: sequel.startDate,
+              status: sequel.status,
+            })
+          }
+        }
+
+        succeeded = true
+      } catch (err) {
+        if (attempt === 1) {
+          console.error(`[check-updates] Error checking ${anime.title}:`, err)
+          errors++
         }
       }
-    } catch (err) {
-      console.error(`[check-updates] Error checking ${anime.title}:`, err)
-      errors++
     }
   }
 
