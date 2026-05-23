@@ -13,6 +13,13 @@ interface Props {
   onRemove: (anilistId: number) => void
 }
 
+function cleanSeriesTitle(title: string): string {
+  return title
+    .replace(/\s+\d+(?:st|nd|rd|th)\s+Season(?:\s+Part\s+\d+)?$/i, '')
+    .replace(/\s+Season\s+\d+(?:\s+Part\s+\d+)?$/i, '')
+    .trim()
+}
+
 export default function WatchListView({ items, onRemove }: Props) {
   if (items.length === 0) {
     return (
@@ -40,7 +47,7 @@ export default function WatchListView({ items, onRemove }: Props) {
             </div>
           )}
           <div className="p-2 flex flex-col gap-1 flex-1">
-            <p className="text-white text-xs font-semibold text-right line-clamp-2">{item.title}</p>
+            <p className="text-white text-xs font-semibold text-right line-clamp-2">{cleanSeriesTitle(item.title)}</p>
             <p className="text-gray-500 text-xs text-right">
               {new Date(item.addedAt).toLocaleDateString('he-IL', {
                 day: 'numeric',

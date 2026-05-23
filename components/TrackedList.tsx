@@ -64,6 +64,13 @@ function categorize(info: AnimeSeasonInfo | undefined): Category {
   return 'completed'
 }
 
+function cleanSeriesTitle(title: string): string {
+  return title
+    .replace(/\s+\d+(?:st|nd|rd|th)\s+Season(?:\s+Part\s+\d+)?$/i, '')
+    .replace(/\s+Season\s+\d+(?:\s+Part\s+\d+)?$/i, '')
+    .trim()
+}
+
 function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
   const isAiring = sequel.status === 'RELEASING'
   return (
@@ -138,7 +145,7 @@ function AnimeCard({
         )}
       </div>
       <div className="p-2 flex flex-col gap-2 flex-1">
-        <p className="text-white text-xs font-medium leading-tight line-clamp-2">{item.title}</p>
+        <p className="text-white text-xs font-medium leading-tight line-clamp-2">{cleanSeriesTitle(item.title)}</p>
         <p className="text-gray-500 text-xs">
           {new Date(item.trackedAt).toLocaleDateString('he-IL')}
         </p>
