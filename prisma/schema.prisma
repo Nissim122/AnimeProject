@@ -14,6 +14,7 @@ model TrackedAnime {
   anilistId    Int
   title        String
   coverImage   String?
+  note         String?
   trackedAt    DateTime      @default(now())
   knownSequels KnownSequel[]
 
