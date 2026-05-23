@@ -262,7 +262,7 @@ export default function Home() {
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#e0176b', borderTopColor: 'transparent' }} />
       </div>
     )
   }
@@ -274,13 +274,13 @@ export default function Home() {
           className="text-3xl sm:text-5xl font-black text-center tracking-tight"
           style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}
         >
-          <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(236,72,153,0.45)]">
+          <span className="bg-gradient-to-r from-[#e0176b] to-[#d1ddf9] bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(224,23,107,0.45)]">
             Anime Tracker
           </span>
         </h1>
-        <p className="text-gray-400/80 text-center text-sm sm:text-base">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
+        <p className="text-[#d1ddf9]/60 text-center text-sm sm:text-base">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
         <SignInButton mode="modal">
-          <button className="px-8 py-3 bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-500 hover:to-fuchsia-500 text-white rounded-xl font-semibold text-lg shadow-[0_4px_20px_rgba(236,72,153,0.35)] hover:shadow-[0_4px_28px_rgba(236,72,153,0.5)] transition-[transform,box-shadow,background] active:scale-95">
+          <button className="px-8 py-3 bg-[#e0176b] hover:bg-[#f5257e] text-white rounded-xl font-semibold text-lg shadow-[0_4px_20px_rgba(224,23,107,0.35)] hover:shadow-[0_4px_28px_rgba(224,23,107,0.5)] transition-[transform,box-shadow,background-color] active:scale-95">
             התחבר / הירשם
           </button>
         </SignInButton>
@@ -298,7 +298,7 @@ export default function Home() {
             className="text-2xl sm:text-4xl font-black mb-1 sm:mb-2 tracking-tight"
             style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}
           >
-            <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(236,72,153,0.4)]">
+            <span className="bg-gradient-to-r from-[#e0176b] to-[#d1ddf9] bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(224,23,107,0.4)]">
               Anime Tracker
             </span>
           </h1>
@@ -324,7 +324,7 @@ export default function Home() {
           <button
             onClick={handleCheckUpdates}
             disabled={tracked.length === 0 || activeView !== 'tracked'}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-700 to-indigo-700 hover:from-violet-600 hover:to-indigo-600 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-xs sm:text-sm font-medium shadow-[0_2px_12px_rgba(109,40,217,0.35)] disabled:shadow-none transition-[transform,box-shadow,opacity] active:scale-95 whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-xs sm:text-sm font-medium shadow-[0_2px_12px_rgba(224,23,107,0.35)] disabled:shadow-none transition-[transform,box-shadow,background-color] active:scale-95 whitespace-nowrap"
           >
             🔄 <span className="hidden xs:inline">בדוק </span>עדכונים
           </button>
@@ -333,8 +333,8 @@ export default function Home() {
               onClick={() => setActiveView('tracked')}
               className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
                 activeView === 'tracked'
-                  ? 'bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-[0_2px_14px_rgba(236,72,153,0.4)]'
-                  : 'bg-[#1a1a2e] text-gray-400 border border-gray-700/50 hover:text-gray-200 hover:border-gray-600'
+                  ? 'bg-[#e0176b] text-white shadow-[0_2px_14px_rgba(224,23,107,0.4)]'
+                  : 'bg-[#1a1a2e] text-[#d1ddf9]/50 border border-[#d1ddf9]/10 hover:text-[#d1ddf9]/80 hover:border-[#d1ddf9]/20'
               }`}
             >
               📋 במעקב ({tracked.length})
@@ -343,8 +343,8 @@ export default function Home() {
               onClick={() => setActiveView('watchlist')}
               className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
                 activeView === 'watchlist'
-                  ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-[0_2px_14px_rgba(20,184,166,0.4)]'
-                  : 'bg-[#1a1a2e] text-gray-400 border border-gray-700/50 hover:text-gray-200 hover:border-gray-600'
+                  ? 'bg-[#d1ddf9] text-[#0f0f1a] shadow-[0_2px_14px_rgba(209,221,249,0.3)]'
+                  : 'bg-[#1a1a2e] text-[#d1ddf9]/50 border border-[#d1ddf9]/10 hover:text-[#d1ddf9]/80 hover:border-[#d1ddf9]/20'
               }`}
             >
               👁 לצפייה ({watchlist.length})
@@ -355,7 +355,7 @@ export default function Home() {
         {activeView === 'tracked' && (
           trackedLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#e0176b', borderTopColor: 'transparent' }} />
               <p className="text-gray-400 text-sm">טוען רשימה...</p>
             </div>
           ) : (

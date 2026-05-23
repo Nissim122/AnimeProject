@@ -4,6 +4,11 @@
 
 :root {
   color-scheme: dark;
+  --brand-primary: #e0176b;
+  --brand-primary-light: #f5257e;
+  --brand-primary-dark: #b3125a;
+  --brand-secondary: #d1ddf9;
+  --brand-secondary-dark: #a8b9e8;
 }
 
 body {

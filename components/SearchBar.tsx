@@ -81,11 +81,11 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="הזן שם של סדרת האנימה"
-          className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:border-pink-500 text-right"
+          className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:border-[#e0176b] text-right"
           dir="auto"
         />
         {loading && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-400 animate-pulse text-sm">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#e0176b] animate-pulse text-sm">
             מחפש...
           </span>
         )}
@@ -102,7 +102,7 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
         <button
           onClick={handleSubmit}
           disabled={loading || query.length < 2}
-          className="px-5 py-3 rounded-xl bg-pink-600 hover:bg-pink-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium transition-colors whitespace-nowrap"
+          className="px-5 py-3 rounded-xl bg-[#e0176b] hover:bg-[#f5257e] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium transition-colors whitespace-nowrap"
         >
           חיפוש
         </button>

@@ -26,7 +26,7 @@ const clerkAppearance = {
     colorInputText: '#ffffff',
     colorText: '#ffffff',
     colorTextSecondary: '#9ca3af',
-    colorPrimary: '#ec4899',
+    colorPrimary: '#e0176b',
     colorDanger: '#f87171',
     borderRadius: '0.75rem',
     fontFamily: 'inherit',

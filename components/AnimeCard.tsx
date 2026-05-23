@@ -19,7 +19,7 @@ export default function AnimeCard({ anime, isTracked, onOpen, isTopResult }: Pro
       className={`bg-gray-800 rounded-xl overflow-hidden border transition-colors flex flex-col cursor-pointer group ${
         isTopResult
           ? 'border-yellow-400 hover:border-yellow-300'
-          : 'border-gray-700 hover:border-pink-500'
+          : 'border-gray-700 hover:border-[#e0176b]'
       }`}
     >
       <div className="relative">
@@ -48,7 +48,7 @@ export default function AnimeCard({ anime, isTracked, onOpen, isTopResult }: Pro
           {title}{year}
         </p>
         <p className="text-gray-400 text-xs capitalize">{anime.format?.toLowerCase() ?? 'anime'}</p>
-        <p className="mt-auto text-pink-400 text-xs font-medium group-hover:text-pink-300 transition-colors">
+        <p className="mt-auto text-[#e0176b] text-xs font-medium group-hover:text-[#f5257e] transition-colors">
           📺 בחר עונה ←
         </p>
       </div>

@@ -127,7 +127,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
                       onClick={() => setSelectedId(season.id)}
                       className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-right w-full ${
                         isSelected
-                          ? 'border-pink-500 bg-gray-800'
+                          ? 'border-[#e0176b] bg-gray-800'
                           : 'border-gray-700 bg-gray-800/40 hover:border-gray-500'
                       }`}
                     >
@@ -166,7 +166,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
                           <span className="text-green-400 text-xs font-medium">✓ במעקב</span>
                         )}
                         {isSelected && (
-                          <span className="w-3 h-3 rounded-full bg-pink-500 inline-block" />
+                          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: '#e0176b' }} />
                         )}
                       </div>
                     </button>
@@ -192,7 +192,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
               <button
                 onClick={handleAddToWatchlist}
                 disabled={loading || fetchError || !selectedAnime || alreadyInWatchlist}
-                className="px-3 py-2 bg-teal-700 hover:bg-teal-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
+                className="px-3 py-2 bg-[#d1ddf9] hover:bg-[#bccef5] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-[#0f0f1a] rounded-lg font-semibold text-xs sm:text-sm transition-colors"
               >
                 {alreadyInWatchlist ? '✓ ברשימת צפיה' : '+ לצפייה'}
               </button>
@@ -200,7 +200,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
             <button
               onClick={handleTrack}
               disabled={loading || fetchError || !selectedAnime || alreadyTracked}
-              className="px-3 py-2 bg-pink-600 hover:bg-pink-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
+              className="px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
             >
               {alreadyTracked ? '✓ כבר במעקב' : 'סמן שראיתי עד עונה זו'}
             </button>

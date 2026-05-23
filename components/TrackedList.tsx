@@ -17,7 +17,7 @@ export type Category = 'watching' | 'releasing' | 'upcoming' | 'completed' | 'er
 const CATEGORY_ORDER: Category[] = ['watching', 'releasing', 'upcoming', 'completed', 'error']
 
 const CATEGORY_META: Record<Category, { label: string; icon: string; headerColor: string; borderColor: string }> = {
-  watching:  { label: 'צופה',                icon: '📺', headerColor: 'text-violet-400', borderColor: 'border-violet-600' },
+  watching:  { label: 'צופה',                icon: '📺', headerColor: 'text-[#d1ddf9]',  borderColor: 'border-[#d1ddf9]/40' },
   releasing: { label: 'יוצאים פרקים חדשים', icon: '🟢', headerColor: 'text-green-400',  borderColor: 'border-green-500'  },
   upcoming:  { label: 'הוכרזה עונה',         icon: '📅', headerColor: 'text-amber-400',  borderColor: 'border-amber-500'  },
   completed: { label: 'הושלם',               icon: '✅', headerColor: 'text-gray-400',   borderColor: 'border-gray-600'   },
@@ -131,7 +131,7 @@ function AnimeCard({
         )}
         {!isRefreshing && onCardClick && (
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
-            <span className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-pink-600 px-2 py-1 rounded-lg">
+            <span className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-[#e0176b] px-2 py-1 rounded-lg">
               שנה עונה
             </span>
           </div>
@@ -143,7 +143,7 @@ function AnimeCard({
           {new Date(item.trackedAt).toLocaleDateString('he-IL')}
         </p>
         {availableSequel ? (
-          <p className="text-violet-400 text-xs font-medium leading-tight line-clamp-2">
+          <p className="text-[#d1ddf9] text-xs font-medium leading-tight line-clamp-2">
             📺 {availableSequel.title.romaji}
           </p>
         ) : (
