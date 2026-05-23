@@ -39,37 +39,23 @@ function buildSeasonRows(seasons: AnimeResult[], highlightId: number): string {
 function buildAvailableSection(available: Array<{ parentTitle: string; sequelTitle: string }>): string {
   if (available.length === 0) return ''
 
-  const rows = available
+  const cards = available
     .map(
-      (a, i) => `
-        <tr style="background:${i % 2 === 0 ? '#16161f' : '#1a1a2a'};">
-          <td style="padding:9px 12px;color:#cdd6f4;border-bottom:1px solid #222;">
-            ${a.sequelTitle}
-          </td>
-          <td style="padding:9px 12px;color:#888;font-size:12px;border-bottom:1px solid #222;text-align:right;">
-            המשך של ${a.parentTitle}
-          </td>
-        </tr>`
+      (a) => `
+        <div style="background:#16161f;border-right:3px solid #e0176b;border-radius:4px;padding:12px 14px;margin-bottom:6px;">
+          <div style="color:#d1ddf9;font-size:15px;font-weight:bold;margin-bottom:3px;">${a.sequelTitle}</div>
+          <div style="color:#888;font-size:12px;">המשך של ${a.parentTitle}</div>
+        </div>`
     )
     .join('')
 
   return `
   <!-- Available/unwatched section -->
   <div style="padding:0 24px 24px;">
-    <div style="font-size:12px;color:#7c3aed;margin-bottom:8px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
+    <div style="font-size:12px;color:#e0176b;margin-bottom:10px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
       📺 ממתין לצפייה · ${available.length} עונות
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;">
-      <thead>
-        <tr style="background:#1e1e2e;">
-          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">עונה</th>
-          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">סדרה</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
+    ${cards}
   </div>`
 }
 
@@ -94,7 +80,8 @@ export async function sendMonthStartEmail(params: {
   const { hebrewTitle, englishTitle, sequelTitle, startDate, status, seasons, sequelId, availableUnwatched } = params
 
   const statusLabel = status === 'RELEASING' ? 'משודרת עכשיו' : 'יוצאת החודש'
-  const statusColor = status === 'RELEASING' ? '#a6e3a1' : '#fab387'
+  const statusBg = status === 'RELEASING' ? '#166534' : '#3d0a1e'
+  const statusColor = status === 'RELEASING' ? '#a6e3a1' : '#d1ddf9'
 
   const dateStr = startDate.day
     ? `${startDate.day}/${startDate.month}/${startDate.year}`
@@ -106,9 +93,29 @@ export async function sendMonthStartEmail(params: {
   const totalSeasons = seasons.length
 
   const sequelCover = seasons.find((s) => s.id === sequelId)?.coverImage?.large ?? ''
+  // Table-based layout replaces float:left (email-safe, works on mobile)
   const coverHtml = sequelCover
-    ? `<img src="${sequelCover}" alt="cover" style="width:100px;border-radius:8px;float:left;margin:0 0 8px 16px;" />`
-    : ''
+    ? `<table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="width:90px;vertical-align:top;">
+            <img src="${sequelCover}" alt="cover" style="width:84px;height:120px;object-fit:cover;border-radius:8px;display:block;" />
+          </td>
+          <td style="vertical-align:top;padding-right:14px;">
+            <div style="margin-bottom:10px;">
+              <span style="background:${statusBg};color:${statusColor};font-size:12px;padding:3px 12px;border-radius:12px;font-weight:bold;">${statusLabel}</span>
+            </div>
+            <div style="font-size:17px;font-weight:bold;color:#d1ddf9;margin-bottom:8px;">${sequelTitle}</div>
+            ${dateStr ? `<div style="color:#d1ddf9;font-size:14px;">📅 ${dateStr}</div>` : ''}
+          </td>
+        </tr>
+      </table>`
+    : `<div>
+        <div style="margin-bottom:10px;">
+          <span style="background:${statusBg};color:${statusColor};font-size:12px;padding:3px 12px;border-radius:12px;font-weight:bold;">${statusLabel}</span>
+        </div>
+        <div style="font-size:17px;font-weight:bold;color:#d1ddf9;margin-bottom:8px;">${sequelTitle}</div>
+        ${dateStr ? `<div style="color:#d1ddf9;font-size:14px;">📅 ${dateStr}</div>` : ''}
+      </div>`
 
   const availableSection = buildAvailableSection(availableUnwatched ?? [])
 
@@ -119,47 +126,43 @@ export async function sendMonthStartEmail(params: {
     html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+</head>
 <body style="margin:0;padding:0;background:#070710;font-family:Arial,sans-serif;">
 <div style="max-width:560px;margin:0 auto;background:#0f0f1a;border-radius:14px;overflow:hidden;border:1px solid #1e1e2e;">
 
   <!-- Header -->
-  <div style="background:linear-gradient(135deg,#9333ea 0%,#e11d48 100%);padding:28px 24px;text-align:center;">
-    <div style="font-size:36px;margin-bottom:6px;">🎌</div>
-    <h1 style="color:white;margin:0;font-size:20px;font-weight:bold;letter-spacing:1px;">עונה חדשה החודש!</h1>
+  <div style="background:linear-gradient(135deg,#e0176b 0%,#8a0d42 100%);padding:32px 24px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">🎌</div>
+    <h1 style="color:white;margin:0;font-size:22px;font-weight:bold;letter-spacing:1px;">עונה חדשה החודש!</h1>
   </div>
 
   <!-- Title block -->
   <div style="padding:24px 24px 0;text-align:center;">
-    <div style="font-size:26px;font-weight:bold;color:#fff;margin-bottom:4px;">${hebrewTitle}</div>
-    <div style="font-size:13px;color:#666;">${englishTitle}</div>
+    <div style="font-size:24px;font-weight:bold;color:#fff;margin-bottom:4px;">${hebrewTitle}</div>
+    <div style="font-size:14px;color:#666;">${englishTitle}</div>
   </div>
 
   <!-- New season card -->
   <div style="padding:20px 24px;">
-    <div style="background:#1a0a1e;border:1px solid #e11d48;border-radius:10px;padding:16px;overflow:hidden;">
+    <div style="background:#1a0a1e;border:1px solid #e0176b;border-radius:10px;padding:16px;">
       ${coverHtml}
-      <div style="overflow:hidden;">
-        <div style="margin-bottom:8px;">
-          <span style="background:${statusColor === '#a6e3a1' ? '#166534' : '#7c2d12'};color:${statusColor};font-size:11px;padding:3px 10px;border-radius:12px;font-weight:bold;">${statusLabel}</span>
-        </div>
-        <div style="font-size:16px;font-weight:bold;color:#f9a8d4;margin-bottom:6px;">${sequelTitle}</div>
-        ${dateStr ? `<div style="color:#89b4fa;font-size:13px;">📅 תאריך: ${dateStr}</div>` : ''}
-      </div>
-      <div style="clear:both;"></div>
     </div>
   </div>
 
   <!-- Seasons table -->
   <div style="padding:0 24px 24px;">
-    <div style="font-size:12px;color:#555;margin-bottom:8px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
+    <div style="font-size:12px;color:#e0176b;margin-bottom:10px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
       כל עונות הסדרה · ${totalSeasons} עונות
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;border-radius:8px;overflow:hidden;">
       <thead>
         <tr style="background:#1e1e2e;">
-          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">שם</th>
-          <th style="padding:8px 12px;text-align:center;color:#888;font-weight:normal;width:60px;">שנה</th>
-          <th style="padding:8px 12px;text-align:center;color:#888;font-weight:normal;width:80px;">פרקים</th>
+          <th style="padding:10px 14px;text-align:right;color:#888;font-weight:normal;">שם</th>
+          <th style="padding:10px 14px;text-align:center;color:#888;font-weight:normal;width:55px;">שנה</th>
+          <th style="padding:10px 14px;text-align:center;color:#888;font-weight:normal;width:75px;">פרקים</th>
         </tr>
       </thead>
       <tbody>
@@ -172,7 +175,7 @@ export async function sendMonthStartEmail(params: {
 
   <!-- Footer -->
   <div style="padding:14px 24px;border-top:1px solid #1a1a2a;text-align:center;">
-    <p style="color:#333;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
+    <p style="color:#555;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
   </div>
 
 </div>
@@ -207,15 +210,38 @@ export async function sendDayBeforeEmail(params: {
     to,
     subject: `⏰ מחר יוצאת: ${params.parentTitle}`,
     html: `
-      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-        <h2 style="color: #f59e0b;">⏰ מחר יוצאת עונה חדשה!</h2>
-        <p>האנימה <strong>${params.parentTitle}</strong> — מחר מתחילה עונה חדשה:</p>
-        <div style="background: #1e1e2e; color: #cdd6f4; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <strong>${params.sequelTitle}</strong><br/>
-          <span style="color: #fab387; font-size: 14px;">📅 ${dateStr}</span>
-        </div>
-        <p style="color: #888; font-size: 12px;">נשלח אוטומטית ע"י Anime Tracker</p>
-      </div>`,
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#070710;font-family:Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#0f0f1a;border-radius:14px;overflow:hidden;border:1px solid #1e1e2e;">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#e0176b 0%,#8a0d42 100%);padding:32px 24px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">⏰</div>
+    <h1 style="color:white;margin:0;font-size:22px;font-weight:bold;letter-spacing:1px;">מחר יוצאת עונה חדשה!</h1>
+  </div>
+
+  <!-- Content -->
+  <div style="padding:24px;">
+    <div style="color:#888;font-size:14px;margin-bottom:16px;text-align:center;">${params.parentTitle}</div>
+    <div style="background:#1a0a1e;border:1px solid #e0176b;border-radius:10px;padding:20px;text-align:center;">
+      <div style="font-size:20px;font-weight:bold;color:#d1ddf9;margin-bottom:12px;">${params.sequelTitle}</div>
+      <div style="color:#d1ddf9;font-size:18px;">📅 ${dateStr}</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:14px 24px;border-top:1px solid #1a1a2a;text-align:center;">
+    <p style="color:#555;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
+  </div>
+
+</div>
+</body>
+</html>`,
   })
 
   console.log(`[mailer] Day-before email sent for ${params.sequelTitle}`)
@@ -235,17 +261,13 @@ export async function sendAvailableSeasonsEmail(params: {
 
   const { available } = params
 
-  const rows = available
+  const cards = available
     .map(
-      (a, i) => `
-        <tr style="background:${i % 2 === 0 ? '#16161f' : '#1a1a2a'};">
-          <td style="padding:10px 14px;color:#cdd6f4;border-bottom:1px solid #222;">
-            📺 ${a.sequelTitle}
-          </td>
-          <td style="padding:10px 14px;color:#888;font-size:12px;border-bottom:1px solid #222;text-align:right;">
-            ${a.parentTitle}
-          </td>
-        </tr>`
+      (a) => `
+        <div style="background:#16161f;border-right:3px solid #e0176b;border-radius:4px;padding:12px 14px;margin-bottom:6px;">
+          <div style="color:#d1ddf9;font-size:15px;font-weight:bold;margin-bottom:3px;">📺 ${a.sequelTitle}</div>
+          <div style="color:#888;font-size:12px;">המשך של ${a.parentTitle}</div>
+        </div>`
     )
     .join('')
 
@@ -256,38 +278,32 @@ export async function sendAvailableSeasonsEmail(params: {
     html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+</head>
 <body style="margin:0;padding:0;background:#070710;font-family:Arial,sans-serif;">
 <div style="max-width:560px;margin:0 auto;background:#0f0f1a;border-radius:14px;overflow:hidden;border:1px solid #1e1e2e;">
 
   <!-- Header -->
-  <div style="background:linear-gradient(135deg,#5b21b6 0%,#7c3aed 100%);padding:28px 24px;text-align:center;">
-    <div style="font-size:36px;margin-bottom:6px;">📺</div>
-    <h1 style="color:white;margin:0;font-size:20px;font-weight:bold;letter-spacing:1px;">עונות שעדיין לא ראית</h1>
+  <div style="background:linear-gradient(135deg,#e0176b 0%,#8a0d42 100%);padding:32px 24px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">📺</div>
+    <h1 style="color:white;margin:0;font-size:22px;font-weight:bold;letter-spacing:1px;">עונות שעדיין לא ראית</h1>
   </div>
 
   <div style="padding:20px 24px 8px;text-align:center;">
-    <p style="color:#a78bfa;font-size:14px;margin:0;">
+    <p style="color:#d1ddf9;font-size:14px;margin:0;">
       הסדרות הבאות יצאו כבר — הגיע הזמן להדביק פערים!
     </p>
   </div>
 
   <div style="padding:12px 24px 24px;">
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;">
-      <thead>
-        <tr style="background:#1e1e2e;">
-          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">עונה זמינה</th>
-          <th style="padding:8px 12px;text-align:right;color:#888;font-weight:normal;">סדרה מקורית</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
+    ${cards}
   </div>
 
   <!-- Footer -->
   <div style="padding:14px 24px;border-top:1px solid #1a1a2a;text-align:center;">
-    <p style="color:#333;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
+    <p style="color:#555;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
   </div>
 
 </div>
@@ -332,11 +348,11 @@ export async function sendUpdatesEmail(params: {
       .map(
         (item, i) => `
         <tr style="background:${i % 2 === 0 ? '#16161f' : '#1a1a2a'};">
-          <td style="padding:10px 12px;border-bottom:1px solid #222;vertical-align:top;width:44px;">
+          <td style="padding:11px 12px;border-bottom:1px solid #222;vertical-align:top;width:44px;">
             ${item.coverImage ? `<img src="${item.coverImage}" alt="" style="width:36px;height:50px;object-fit:cover;border-radius:4px;display:block;" />` : ''}
           </td>
-          <td style="padding:10px 12px;border-bottom:1px solid #222;vertical-align:middle;">
-            <div style="color:#e2e8f0;font-size:13px;font-weight:bold;">${item.title}</div>
+          <td style="padding:11px 12px;border-bottom:1px solid #222;vertical-align:middle;">
+            <div style="color:#e2e8f0;font-size:14px;font-weight:bold;">${item.title}</div>
             ${item.subtitle ? `<div style="color:${subtitleColor};font-size:12px;margin-top:3px;">${item.subtitle}</div>` : ''}
           </td>
         </tr>`,
@@ -347,13 +363,13 @@ export async function sendUpdatesEmail(params: {
       <div style="font-size:11px;color:${headerColor};font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
         ${icon} ${label} · ${items.length}
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;border-radius:8px;overflow:hidden;">
         <tbody>${rows}</tbody>
       </table>
     </div>`
   }
 
-  const watchingSection = buildGroup(watching, '📺', 'צופה', '#a78bfa', '#a78bfa')
+  const watchingSection = buildGroup(watching, '📺', 'צופה', '#e0176b', '#d1ddf9')
   const releasingSection = buildGroup(releasing, '🟢', 'יוצאים פרקים חדשים', '#4ade80', '#4ade80')
   const upcomingSection = buildGroup(upcoming, '📅', 'הוכרזה עונה', '#fbbf24', '#fbbf24')
 
@@ -364,14 +380,18 @@ export async function sendUpdatesEmail(params: {
     html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+</head>
 <body style="margin:0;padding:0;background:#070710;font-family:Arial,sans-serif;">
 <div style="max-width:560px;margin:0 auto;background:#0f0f1a;border-radius:14px;overflow:hidden;border:1px solid #1e1e2e;">
 
   <!-- Header -->
-  <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:28px 24px;text-align:center;">
-    <div style="font-size:36px;margin-bottom:6px;">🎌</div>
-    <h1 style="color:white;margin:0;font-size:20px;font-weight:bold;letter-spacing:1px;">עדכוני אנימה</h1>
-    <p style="color:#c4b5fd;margin:6px 0 0;font-size:13px;">${total} סדרות עם עדכון</p>
+  <div style="background:linear-gradient(135deg,#e0176b 0%,#8a0d42 100%);padding:32px 24px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">🎌</div>
+    <h1 style="color:white;margin:0;font-size:22px;font-weight:bold;letter-spacing:1px;">עדכוני אנימה</h1>
+    <p style="color:#d1ddf9;margin:8px 0 0;font-size:14px;">${total} סדרות עם עדכון</p>
   </div>
 
   <div style="padding:20px 0 4px;">
@@ -382,7 +402,7 @@ export async function sendUpdatesEmail(params: {
 
   <!-- Footer -->
   <div style="padding:14px 24px;border-top:1px solid #1a1a2a;text-align:center;">
-    <p style="color:#333;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
+    <p style="color:#555;font-size:11px;margin:0;">נשלח אוטומטית ע"י Anime Tracker</p>
   </div>
 
 </div>
