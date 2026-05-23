@@ -149,16 +149,22 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
                         </p>
                         <p className="text-gray-400 text-xs truncate">{title}</p>
                         <div className="flex items-center gap-2 justify-end flex-wrap">
-                          {season.seasonYear && (
-                            <p className="text-gray-500 text-xs">{season.seasonYear}</p>
+                          {(season.seasonYear ?? season.startDate?.year) && (
+                            <p className="text-gray-500 text-xs">{season.seasonYear ?? season.startDate?.year}</p>
                           )}
-                          {!isMovie && season.status === 'RELEASING' ? (
+                          {isMovie ? (
+                            season.status === 'RELEASING' ? (
+                              <p className="text-green-400 text-xs">יוצא עכשיו</p>
+                            ) : season.status === 'NOT_YET_RELEASED' ? (
+                              <p className="text-gray-400 text-xs">טרם יצא</p>
+                            ) : null
+                          ) : season.status === 'RELEASING' ? (
                             <p className="text-green-400 text-xs">ממשיך לצאת...</p>
-                          ) : !isMovie && episodeTo != null && (
+                          ) : episodeTo != null ? (
                             <p className="text-gray-500 text-xs">
                               פרקים {episodeFrom}–{episodeTo}
                             </p>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex-shrink-0 flex flex-col items-center gap-1">

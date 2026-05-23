@@ -13,6 +13,7 @@ export interface AnimeResult {
   popularity: number | null
   episodes: number | null
   nextAiringEpisode?: { episode: number; airingAt: number } | null
+  startDate?: { year: number | null; month: number | null; day: number | null } | null
 }
 
 export interface RelationNode {
@@ -184,6 +185,7 @@ async function batchFetchNodes(ids: number[]): Promise<Array<{
   popularity: number | null
   episodes: number | null
   nextAiringEpisode: { episode: number; airingAt: number } | null
+  startDate: { year: number | null; month: number | null; day: number | null } | null
   relations: { edges: Array<{ relationType: string; node: { id: number; format: string | null } }> }
 }>> {
   if (ids.length === 0) return []
@@ -200,6 +202,7 @@ async function batchFetchNodes(ids: number[]): Promise<Array<{
           format
           popularity
           episodes
+          startDate { year month day }
           nextAiringEpisode {
             episode
             airingAt
@@ -252,6 +255,7 @@ export async function getAllSeasons(anilistId: number): Promise<AnimeResult[]> {
           popularity: media.popularity,
           episodes: media.episodes,
           nextAiringEpisode: media.nextAiringEpisode ?? null,
+          startDate: media.startDate ?? null,
         })
       }
 
