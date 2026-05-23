@@ -17,6 +17,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [selectedId, setSelectedId] = useState<number>(anime.id)
+  const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     const controller = new AbortController()
@@ -131,16 +132,17 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
                           : 'border-gray-700 bg-gray-800/40 hover:border-gray-500'
                       }`}
                     >
-                      {season.coverImage?.large ? (
+                      {season.coverImage?.large && !season.coverImage.large.includes('/default.') && !imgErrors.has(season.id) ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={season.coverImage.large}
                           alt={title}
                           className="w-10 h-14 object-cover rounded-lg flex-shrink-0"
+                          onError={() => setImgErrors(prev => new Set(prev).add(season.id))}
                         />
                       ) : (
-                        <div className="w-10 h-14 bg-gray-700 rounded-lg flex-shrink-0 flex items-center justify-center text-lg">
-                          🎌
+                        <div className="w-10 h-14 bg-black rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden p-1">
+                          <span className="text-white text-[9px] text-center leading-tight line-clamp-4">{title}</span>
                         </div>
                       )}
                       <div className="flex-1 min-w-0 text-right">
