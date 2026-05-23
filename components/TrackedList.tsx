@@ -198,19 +198,16 @@ export default function TrackedList({
       return
     }
 
-    // After initialization: re-evaluate all current items so any season change
-    // (tracked anime replaced) immediately lands in the correct category
+    // After initialization: only categorize newly added items.
+    // Existing items keep their stable category until explicitly refreshed.
     setStableCategories((prev) => {
+      const newItems = items.filter((item) => !(item.anilistId in prev))
+      if (newItems.length === 0) return prev
       const next = { ...prev }
-      let changed = false
-      for (const item of items) {
-        const fresh = categorize(seasonInfo[item.anilistId])
-        if (next[item.anilistId] !== fresh) {
-          next[item.anilistId] = fresh
-          changed = true
-        }
+      for (const item of newItems) {
+        next[item.anilistId] = categorize(seasonInfo[item.anilistId])
       }
-      return changed ? next : prev
+      return next
     })
   }, [seasonInfoLoading, seasonInfo, items])
 
