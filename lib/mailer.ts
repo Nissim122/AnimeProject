@@ -1,6 +1,15 @@
 import nodemailer from 'nodemailer'
 import type { AnimeResult } from './anilist'
 
+function unixTimestampToDate(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString('he-IL', {
+    timeZone: 'Asia/Jerusalem',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
 function createTransport() {
   const user = process.env.EMAIL_USER
   const pass = process.env.EMAIL_PASS

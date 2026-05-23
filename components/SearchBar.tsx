@@ -53,15 +53,6 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
     timerRef.current = setTimeout(() => search(val), 700)
   }
 
-  function handleSubmit() {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    search(query)
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') handleSubmit()
-  }
-
   function handleClear() {
     abortRef.current?.abort()
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -73,13 +64,12 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
 
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <div className="flex gap-2 max-w-2xl mx-auto">
-        <div className="relative flex-1">
+      <div className="max-w-2xl mx-auto">
+        <div className="relative">
         <input
           type="text"
           value={query}
           onChange={handleChange}
-          onKeyDown={handleKeyDown}
           placeholder="הזן שם של סדרת האנימה"
           className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:border-[#e0176b] text-right"
           dir="auto"
@@ -99,13 +89,6 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
           </button>
         )}
         </div>
-        <button
-          onClick={handleSubmit}
-          disabled={loading || query.length < 2}
-          className="px-5 py-3 rounded-xl bg-[#e0176b] hover:bg-[#f5257e] disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium transition-colors whitespace-nowrap"
-        >
-          חיפוש
-        </button>
       </div>
 
       {searchError && (
