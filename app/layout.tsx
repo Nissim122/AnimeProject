@@ -1,10 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Anime Tracker',
   description: 'עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 const clerkAppearance = {

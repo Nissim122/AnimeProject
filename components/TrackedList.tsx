@@ -304,19 +304,19 @@ export default function TrackedList({
               <button
                 onClick={() => handleRefresh(cat)}
                 disabled={isRefreshing || !onRefreshCategory}
-                className="absolute left-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white transition-all text-sm font-medium border border-gray-600 hover:border-gray-400"
+                className="absolute left-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white transition-all text-xs sm:text-sm font-medium border border-gray-600 hover:border-gray-400"
                 title="רענן קטגוריה"
               >
-                <span className={isRefreshing ? 'animate-spin inline-block text-base' : 'text-base'}>↻</span>
-                <span>רענן</span>
+                <span className={isRefreshing ? 'animate-spin inline-block text-sm' : 'text-sm'}>↻</span>
+                <span className="hidden sm:inline">רענן</span>
               </button>
               <button
                 onClick={() => toggleCollapse(cat)}
-                className={`flex items-center gap-3 font-bold text-2xl ${meta.headerColor} hover:opacity-80 transition-opacity`}
+                className={`flex items-center gap-2 font-bold text-lg sm:text-2xl ${meta.headerColor} hover:opacity-80 transition-opacity`}
               >
                 {`${meta.icon} ${meta.label} (${catItems.length})`}
                 <span
-                  className={`text-xl transition-transform duration-200 inline-block ${meta.headerColor}`}
+                  className={`text-base sm:text-xl transition-transform duration-200 inline-block ${meta.headerColor}`}
                   style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
                 >▾</span>
               </button>

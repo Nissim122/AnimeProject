@@ -113,7 +113,7 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
       )}
 
       {results.length > 0 && (
-        <div className="mt-3 grid grid-cols-5 gap-3">
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {[...results].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)).map((anime, idx) => (
             <AnimeCard
               key={anime.id}

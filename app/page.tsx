@@ -269,11 +269,11 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
-        <h1 className="text-4xl font-bold text-white">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white text-center">
           🎌 <span className="text-pink-500">Anime Tracker</span>
         </h1>
-        <p className="text-gray-400">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
+        <p className="text-gray-400 text-center text-sm sm:text-base">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
         <SignInButton mode="modal">
           <button className="px-8 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-semibold text-lg transition-colors">
             התחבר / הירשם
@@ -284,22 +284,22 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen p-6 max-w-5xl mx-auto">
+    <main className="min-h-screen p-3 sm:p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-10">
+      <div className="flex items-center justify-between mb-6 sm:mb-10">
         <UserButton />
         <div className="text-center flex-1">
-          <h1 className="text-4xl font-bold text-white mb-2">
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">
             🎌 <span className="text-pink-500">Anime Tracker</span>
           </h1>
-          <p className="text-gray-400">חפש אנימה, סמן עונות שסיימת, קבל התראה לעונות חדשות</p>
+          <p className="text-gray-400 text-xs sm:text-sm hidden sm:block">חפש אנימה, סמן עונות שסיימת, קבל התראה לעונות חדשות</p>
         </div>
         <div className="w-8" />
       </div>
 
       {/* Search */}
-      <section className="mb-10">
-        <h2 className="text-lg font-semibold text-gray-300 mb-3 text-right">🔍 חפש אנימה</h2>
+      <section className="mb-6 sm:mb-10">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-300 mb-3 text-right">🔍 חפש אנימה</h2>
         <SearchBar
           onTrack={handleTrack}
           onAddToWatchlist={handleAddToWatchlist}
@@ -311,18 +311,18 @@ export default function Home() {
       {/* Lists section */}
       <section className="mb-8">
         {/* Tab nav */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-2">
           <button
             onClick={handleCheckUpdates}
             disabled={tracked.length === 0 || activeView !== 'tracked'}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap"
           >
-            🔄 בדוק עדכונים
+            🔄 <span className="hidden xs:inline">בדוק </span>עדכונים
           </button>
           <div className="flex gap-2">
             <button
               onClick={() => setActiveView('tracked')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
                 activeView === 'tracked'
                   ? 'bg-pink-600 text-white'
                   : 'bg-gray-800 text-gray-400 hover:text-white'
@@ -332,7 +332,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveView('watchlist')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
                 activeView === 'watchlist'
                   ? 'bg-teal-600 text-white'
                   : 'bg-gray-800 text-gray-400 hover:text-white'
@@ -388,7 +388,7 @@ export default function Home() {
       )}
 
       {/* Toasts */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
+      <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 flex flex-col gap-2 z-50 max-w-[calc(100vw-1.5rem)]">
         {toasts.map((t) => (
           <div
             key={t.id}

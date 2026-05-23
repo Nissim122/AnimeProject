@@ -178,8 +178,8 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-700 flex items-center justify-between gap-3">
-          <p className="text-gray-400 text-sm">
+        <div className="px-4 py-3 border-t border-gray-700 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <p className="text-gray-400 text-xs sm:text-sm text-right">
             {!loading && selectedIndex >= 0 && (() => {
             const sel = seasons[selectedIndex]
             if (sel?.format === 'MOVIE') return 'נבחר: סרט'
@@ -187,20 +187,20 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
             return `נבחרה: עונה ${tvNum}`
           })()}
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
             {onAddToWatchlist && (
               <button
                 onClick={handleAddToWatchlist}
                 disabled={loading || fetchError || !selectedAnime || alreadyInWatchlist}
-                className="px-4 py-2 bg-teal-700 hover:bg-teal-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm transition-colors"
+                className="px-3 py-2 bg-teal-700 hover:bg-teal-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
               >
-                {alreadyInWatchlist ? '✓ ברשימת צפיה' : '+ רשימת צפיה'}
+                {alreadyInWatchlist ? '✓ ברשימת צפיה' : '+ לצפייה'}
               </button>
             )}
             <button
               onClick={handleTrack}
               disabled={loading || fetchError || !selectedAnime || alreadyTracked}
-              className="px-5 py-2 bg-pink-600 hover:bg-pink-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm transition-colors"
+              className="px-3 py-2 bg-pink-600 hover:bg-pink-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
             >
               {alreadyTracked ? '✓ כבר במעקב' : 'סמן שראיתי עד עונה זו'}
             </button>

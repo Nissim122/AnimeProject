@@ -111,7 +111,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full max-w-lg bg-[#13132a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+      <div className="w-full max-w-lg bg-[#13132a] border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700 shrink-0">
           <div>
@@ -175,24 +175,24 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-700 shrink-0 flex items-center justify-between gap-3">
+        <div className="px-4 py-3 border-t border-gray-700 shrink-0 flex items-center justify-between gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors"
+            className="px-3 py-2 rounded-lg text-xs sm:text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors"
           >
             סגור
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {sendResult === 'success' && (
-              <span className="text-green-400 text-xs">✓ המייל נשלח</span>
+              <span className="text-green-400 text-xs">✓ נשלח</span>
             )}
             {sendResult === 'error' && (
-              <span className="text-red-400 text-xs">שגיאה בשליחה</span>
+              <span className="text-red-400 text-xs">שגיאה</span>
             )}
             <button
               onClick={handleSendEmail}
               disabled={sending || total === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium transition-colors"
             >
               {sending ? (
                 <>
