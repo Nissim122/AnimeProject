@@ -16,20 +16,21 @@ function buildSeasonRows(seasons: AnimeResult[], highlightId: number): string {
   return seasons
     .map((s, i) => {
       const isNew = s.id === highlightId
-      const rowBg = isNew ? '#2a1a2e' : i % 2 === 0 ? '#16161f' : '#1a1a2a'
-      const titleColor = isNew ? '#f9a8d4' : '#cdd6f4'
+      const rowBg = isNew ? '#2a0a1a' : i % 2 === 0 ? '#16161f' : '#1a1a2a'
+      const titleColor = isNew ? '#d1ddf9' : '#cdd6f4'
       const episodesStr = s.episodes ? `${s.episodes} פרקים` : '—'
       const yearStr = s.seasonYear ?? '—'
       const newBadge = isNew
-        ? `<span style="background:#e11d48;color:white;font-size:10px;padding:1px 6px;border-radius:8px;margin-right:6px;">חדש</span>`
+        ? `<span style="background:#e0176b;color:white;font-size:10px;padding:2px 8px;border-radius:8px;margin-left:6px;">חדש</span>`
         : ''
+      const newBorder = isNew ? 'border-right:3px solid #e0176b;' : ''
       return `
         <tr style="background:${rowBg};">
-          <td style="padding:9px 12px;color:${titleColor};border-bottom:1px solid #222;">
+          <td style="padding:11px 14px;color:${titleColor};border-bottom:1px solid #222;${newBorder}">
             ${newBadge}${s.title.english ?? s.title.romaji}
           </td>
-          <td style="padding:9px 12px;text-align:center;color:#89b4fa;border-bottom:1px solid #222;">${yearStr}</td>
-          <td style="padding:9px 12px;text-align:center;color:#a6e3a1;border-bottom:1px solid #222;">${episodesStr}</td>
+          <td style="padding:11px 14px;text-align:center;color:#d1ddf9;border-bottom:1px solid #222;width:55px;">${yearStr}</td>
+          <td style="padding:11px 14px;text-align:center;color:#a6e3a1;border-bottom:1px solid #222;width:75px;">${episodesStr}</td>
         </tr>`
     })
     .join('')

@@ -274,9 +274,9 @@ export default function Home() {
           className="text-3xl sm:text-5xl font-black text-center tracking-tight"
           style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}
         >
-          <span className="bg-gradient-to-r from-[#e0176b] to-[#d1ddf9] bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(224,23,107,0.45)]">
-            Anime Tracker
-          </span>
+          <span style={{ color: '#e0176b', textShadow: '0 0 24px rgba(224,23,107,0.45)' }}>Anime</span>
+          {' '}
+          <span style={{ color: '#d1ddf9', textShadow: '0 0 24px rgba(209,221,249,0.3)' }}>Tracker</span>
         </h1>
         <p className="text-[#d1ddf9]/60 text-center text-sm sm:text-base">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
         <SignInButton mode="modal">
@@ -298,9 +298,9 @@ export default function Home() {
             className="text-2xl sm:text-4xl font-black mb-1 sm:mb-2 tracking-tight"
             style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}
           >
-            <span className="bg-gradient-to-r from-[#e0176b] to-[#d1ddf9] bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(224,23,107,0.4)]">
-              Anime Tracker
-            </span>
+            <span style={{ color: '#e0176b', textShadow: '0 0 20px rgba(224,23,107,0.4)' }}>Anime</span>
+            {' '}
+            <span style={{ color: '#d1ddf9', textShadow: '0 0 20px rgba(209,221,249,0.25)' }}>Tracker</span>
           </h1>
           <p className="text-gray-500 text-xs sm:text-sm hidden sm:block">חפש אנימה, סמן עונות שסיימת, קבל התראה לעונות חדשות</p>
         </div>
