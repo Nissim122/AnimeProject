@@ -3,6 +3,10 @@
     {
       "path": "/api/check-updates",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/refresh-season-cache",
+      "schedule": "0 3 * * 0"
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { batchGetAnimeStatus, getAnimeSequels, getAllSeasons, withRateLimit } from '@/lib/anilist'
+import { batchGetAnimeStatus, getAnimeSequels, withRateLimit } from '@/lib/anilist'
+import { getCachedAllSeasons } from '@/lib/seasonCache'
 import type { RelationNode } from '@/lib/anilist'
 
 export async function GET(req: NextRequest) {
@@ -59,7 +60,7 @@ async function handler(req: NextRequest) {
       // can skip intermediate finished seasons (e.g. S1→S3 direct, S2 finished but hidden).
       if (!available) {
         try {
-          const allSeasons = await getAllSeasons(id)
+          const allSeasons = await getCachedAllSeasons(id)
           const trackedIdx = allSeasons.findIndex((s) => trackedSet.has(s.id))
           const laterSeasons = trackedIdx >= 0 ? allSeasons.slice(trackedIdx + 1) : []
           const laterUntracked = laterSeasons.filter((s) => !trackedSet.has(s.id))
