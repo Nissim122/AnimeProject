@@ -14,6 +14,8 @@ export interface PendingNotification {
   type: 'MONTH_START' | 'DAY_BEFORE'
   startDate: RelationNode['startDate']
   status: string
+  nextAiringEpisode?: { episode: number; airingAt: number } | null
+  sequelEpisodeCount?: number | null
 }
 
 export interface CheckOnlyResult {
@@ -22,7 +24,7 @@ export interface CheckOnlyResult {
   releasingAnimes: Array<{ id: number; title: string; coverImage?: string }>
   availableSequels: Array<{ parentTitle: string; sequelTitle: string; sequelId: number }>
   pendingNotifications: PendingNotification[]
-  availableUnwatched: Array<{ parentTitle: string; sequelTitle: string }>
+  availableUnwatched: Array<{ parentTitle: string; sequelTitle: string; sequelId: number }>
 }
 
 export interface UpdateResult {
@@ -121,7 +123,7 @@ async function collectCheckDataForUser(userId: string): Promise<CheckOnlyResult 
           for (const s of sequels) {
             if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
               seenAvailableIds.add(s.id)
-              availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji })
+              availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id })
               availableSequels.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id })
             }
           }
@@ -185,13 +187,24 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
   const data = await collectCheckDataForUser(userId)
   const result: UpdateResult = { checked: data.checked, notified: 0, errors: data.errors, notifications: [] }
 
+  const seasonsCache = new Map<number, Awaited<ReturnType<typeof getAllSeasons>>>()
+  const getSeasons = async (id: number) => {
+    if (!seasonsCache.has(id)) seasonsCache.set(id, await getAllSeasons(id))
+    return seasonsCache.get(id)!
+  }
+
   for (const item of data._queue) {
     try {
       if (item.type === 'MONTH_START') {
-        const allSeasons = await getAllSeasons(item.animeId)
+        const allSeasons = await getSeasons(item.animeId)
         const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
         const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
         const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
+
+        const totalSeasons = allSeasons.length
+        const sequelEntry = allSeasons.find((s) => s.id === item.sequelId)
+        const nextAiringEpisode = sequelEntry?.nextAiringEpisode ?? null
+        const sequelEpisodeCount = sequelEntry?.episodes ?? null
 
         const sent = await sendMonthStartEmail({
           hebrewTitle,
@@ -203,6 +216,9 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
           seasons: allSeasons,
           availableUnwatched: data.availableUnwatched.length > 0 ? data.availableUnwatched : undefined,
           toEmail,
+          totalSeasons,
+          nextAiringEpisode,
+          sequelEpisodeCount,
         })
         if (sent) {
           try { await recordNotification(userId, item.sequelId, 'MONTH_START', item.sequelTitle, item.animeTitle) }
@@ -211,11 +227,20 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
           result.notifications.push({ parent: item.animeTitle, sequel: item.sequelTitle, type: 'MONTH_START' })
         }
       } else {
+        const allSeasons = await getSeasons(item.animeId)
+        const totalSeasons = allSeasons.length
+        const sequelEntry = allSeasons.find((s) => s.id === item.sequelId)
+        const sequelEpisodeCount = sequelEntry?.episodes ?? null
+        const firstEpAiringAt = sequelEntry?.nextAiringEpisode?.airingAt ?? null
+
         const sent = await sendDayBeforeEmail({
           parentTitle: item.animeTitle,
           sequelTitle: item.sequelTitle,
           startDate: item.startDate,
           toEmail,
+          totalSeasons,
+          sequelEpisodeCount,
+          firstEpAiringAt,
         })
         if (sent) {
           try { await recordNotification(userId, item.sequelId, 'DAY_BEFORE', item.sequelTitle, item.animeTitle) }
@@ -231,7 +256,22 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
   }
 
   if (result.notified === 0 && data.availableUnwatched.length > 0) {
-    const sent = await sendAvailableSeasonsEmail({ available: data.availableUnwatched, toEmail })
+    const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number }> = []
+    for (const item of data.availableUnwatched) {
+      try {
+        const seasons = await getSeasons(item.sequelId)
+        const sequelIndex = seasons.findIndex((s) => s.id === item.sequelId)
+        enrichedAvailable.push({
+          parentTitle: item.parentTitle,
+          sequelTitle: item.sequelTitle,
+          currentSeasonNumber: sequelIndex > 0 ? sequelIndex : undefined,
+          totalSeasons: seasons.length > 0 ? seasons.length : undefined,
+        })
+      } catch {
+        enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle })
+      }
+    }
+    const sent = await sendAvailableSeasonsEmail({ available: enrichedAvailable, toEmail })
     if (sent) {
       result.notified++
       result.notifications.push({ parent: '—', sequel: `${data.availableUnwatched.length} עונות זמינות`, type: 'AVAILABLE' })

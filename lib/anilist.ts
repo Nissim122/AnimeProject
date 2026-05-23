@@ -12,7 +12,7 @@ export interface AnimeResult {
   format: string | null
   popularity: number | null
   episodes: number | null
-  nextAiringEpisode: { episode: number; airingAt: number } | null
+  nextAiringEpisode?: { episode: number; airingAt: number } | null
 }
 
 export interface RelationNode {

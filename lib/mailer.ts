@@ -78,6 +78,9 @@ export async function sendMonthStartEmail(params: {
   seasons: AnimeResult[]
   availableUnwatched?: Array<{ parentTitle: string; sequelTitle: string }>
   toEmail?: string
+  totalSeasons?: number
+  nextAiringEpisode?: { episode: number; airingAt: number } | null
+  sequelEpisodeCount?: number | null
 }): Promise<boolean> {
   const transport = createTransport()
   const to = params.toEmail ?? getTo()
@@ -86,7 +89,40 @@ export async function sendMonthStartEmail(params: {
     return false
   }
 
-  const { hebrewTitle, englishTitle, sequelTitle, startDate, status, seasons, sequelId, availableUnwatched } = params
+  const { hebrewTitle, englishTitle, sequelTitle, startDate, status, seasons, sequelId, availableUnwatched,
+    nextAiringEpisode, sequelEpisodeCount } = params
+
+  let episodeInfoHtml = ''
+  if (status === 'RELEASING' && nextAiringEpisode) {
+    const episodesAired = nextAiringEpisode.episode - 1
+    const nextEpDate = unixTimestampToDate(nextAiringEpisode.airingAt)
+    episodeInfoHtml = `
+      <div style="background:#0d2a1a;border-right:3px solid #4ade80;border-radius:4px;padding:12px 14px;margin-top:12px;">
+        <div style="color:#4ade80;font-size:12px;font-weight:bold;margin-bottom:6px;">📡 מצב שידור</div>
+        <div style="color:#d1ddf9;font-size:13px;margin-bottom:4px;">פרקים שיצאו: <strong>${episodesAired}</strong></div>
+        <div style="color:#d1ddf9;font-size:13px;margin-bottom:4px;">פרק הבא: <strong>${nextAiringEpisode.episode}</strong></div>
+        <div style="color:#d1ddf9;font-size:13px;">תאריך: <strong>${nextEpDate}</strong></div>
+      </div>`
+  }
+
+  const announcedParts: string[] = []
+  if (status !== 'RELEASING') {
+    if (sequelEpisodeCount) {
+      announcedParts.push(`<div style="color:#d1ddf9;font-size:13px;margin-bottom:4px;">פרקים מוכרזים: <strong>${sequelEpisodeCount}</strong></div>`)
+    }
+    if (nextAiringEpisode?.airingAt) {
+      announcedParts.push(`<div style="color:#d1ddf9;font-size:13px;margin-bottom:4px;">פרק ראשון: <strong>${unixTimestampToDate(nextAiringEpisode.airingAt)}</strong></div>`)
+    }
+    if (params.totalSeasons) {
+      announcedParts.push(`<div style="color:#d1ddf9;font-size:13px;">סה"כ עונות: <strong>${params.totalSeasons}</strong></div>`)
+    }
+  }
+  const announcedInfoHtml = announcedParts.length > 0
+    ? `<div style="background:#1a1a0d;border-right:3px solid #fbbf24;border-radius:4px;padding:12px 14px;margin-top:12px;">
+        <div style="color:#fbbf24;font-size:12px;font-weight:bold;margin-bottom:6px;">📅 פרטי הכרזה</div>
+        ${announcedParts.join('')}
+      </div>`
+    : ''
 
   const statusLabel = status === 'RELEASING' ? 'משודרת עכשיו' : 'יוצאת החודש'
   const statusBg = status === 'RELEASING' ? '#166534' : '#3d0a1e'
@@ -158,6 +194,8 @@ export async function sendMonthStartEmail(params: {
   <div style="padding:20px 24px;">
     <div style="background:#1a0a1e;border:1px solid #e0176b;border-radius:10px;padding:16px;">
       ${coverHtml}
+      ${episodeInfoHtml}
+      ${announcedInfoHtml}
     </div>
   </div>
 
@@ -201,6 +239,9 @@ export async function sendDayBeforeEmail(params: {
   sequelTitle: string
   startDate: { year: number | null; month: number | null; day: number | null }
   toEmail?: string
+  totalSeasons?: number
+  sequelEpisodeCount?: number | null
+  firstEpAiringAt?: number | null
 }): Promise<boolean> {
   const transport = createTransport()
   const to = params.toEmail ?? getTo()
@@ -209,10 +250,18 @@ export async function sendDayBeforeEmail(params: {
     return false
   }
 
-  const { startDate } = params
+  const { startDate, totalSeasons, sequelEpisodeCount, firstEpAiringAt } = params
   const dateStr = startDate.day
     ? `${startDate.day}/${startDate.month}/${startDate.year}`
     : 'מחר'
+
+  const enrichmentParts: string[] = []
+  if (totalSeasons && totalSeasons > 1) enrichmentParts.push(`עונה ${totalSeasons} בסדרה`)
+  if (sequelEpisodeCount) enrichmentParts.push(`${sequelEpisodeCount} פרקים`)
+  if (firstEpAiringAt) enrichmentParts.push(`פרק ראשון: ${unixTimestampToDate(firstEpAiringAt)}`)
+  const enrichmentHtml = enrichmentParts.length > 0
+    ? `<div style="color:#888;font-size:13px;margin-top:8px;">${enrichmentParts.join(' · ')}</div>`
+    : ''
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
@@ -240,6 +289,7 @@ export async function sendDayBeforeEmail(params: {
     <div style="background:#1a0a1e;border:1px solid #e0176b;border-radius:10px;padding:20px;text-align:center;">
       <div style="font-size:20px;font-weight:bold;color:#d1ddf9;margin-bottom:12px;">${params.sequelTitle}</div>
       <div style="color:#d1ddf9;font-size:18px;">📅 ${dateStr}</div>
+      ${enrichmentHtml}
     </div>
   </div>
 
@@ -258,7 +308,7 @@ export async function sendDayBeforeEmail(params: {
 }
 
 export async function sendAvailableSeasonsEmail(params: {
-  available: Array<{ parentTitle: string; sequelTitle: string }>
+  available: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number }>
   toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()
@@ -272,11 +322,17 @@ export async function sendAvailableSeasonsEmail(params: {
 
   const cards = available
     .map(
-      (a) => `
+      (a) => {
+        const seasonContext = (a.currentSeasonNumber && a.totalSeasons)
+          ? `<div style="color:#888;font-size:11px;margin-top:4px;">עונה ${a.currentSeasonNumber} מתוך ${a.totalSeasons}</div>`
+          : ''
+        return `
         <div style="background:#16161f;border-right:3px solid #e0176b;border-radius:4px;padding:12px 14px;margin-bottom:6px;">
           <div style="color:#d1ddf9;font-size:15px;font-weight:bold;margin-bottom:3px;">📺 ${a.sequelTitle}</div>
           <div style="color:#888;font-size:12px;">המשך של ${a.parentTitle}</div>
+          ${seasonContext}
         </div>`
+      }
     )
     .join('')
 
