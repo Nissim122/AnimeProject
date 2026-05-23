@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useUser, UserButton, SignInButton } from '@clerk/nextjs'
 import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
 import WatchListView from '@/components/WatchListView'
@@ -39,6 +40,7 @@ let toastId = 0
 type ActiveView = 'tracked' | 'watchlist'
 
 export default function Home() {
+  const { user, isLoaded } = useUser()
   const [tracked, setTracked] = useState<TrackedItem[]>([])
   const [watchlist, setWatchlist] = useState<WatchListItem[]>([])
   const [activeView, setActiveView] = useState<ActiveView>('tracked')
@@ -93,9 +95,11 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    loadTracked()
-    loadWatchlist()
-  }, [loadTracked, loadWatchlist])
+    if (user) {
+      loadTracked()
+      loadWatchlist()
+    }
+  }, [user, loadTracked, loadWatchlist])
 
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
   const watchlistIds = new Set(watchlist.map((w) => w.anilistId))
@@ -255,10 +259,40 @@ export default function Home() {
     setShowCheckModal(true)
   }
 
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#e0176b', borderTopColor: 'transparent' }} />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4">
+        <h1
+          className="text-3xl sm:text-5xl font-black text-center tracking-tight"
+          style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}
+        >
+          <span style={{ color: '#e0176b', textShadow: '0 0 24px rgba(224,23,107,0.45)' }}>Anime</span>
+          {' '}
+          <span style={{ color: '#d1ddf9', textShadow: '0 0 24px rgba(209,221,249,0.3)' }}>Tracker</span>
+        </h1>
+        <p className="text-[#d1ddf9]/60 text-center text-sm sm:text-base">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
+        <SignInButton mode="modal">
+          <button className="px-8 py-3 bg-[#e0176b] hover:bg-[#f5257e] text-white rounded-xl font-semibold text-lg shadow-[0_4px_20px_rgba(224,23,107,0.35)] hover:shadow-[0_4px_28px_rgba(224,23,107,0.5)] transition-[transform,box-shadow,background-color] active:scale-95">
+            התחבר / הירשם
+          </button>
+        </SignInButton>
+      </div>
+    )
+  }
+
   return (
     <main className="min-h-screen p-3 sm:p-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 sm:mb-10">
+        <UserButton />
         <div className="text-center flex-1">
           <h1
             className="text-2xl sm:text-4xl font-black mb-1 sm:mb-2 tracking-tight"
