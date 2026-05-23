@@ -52,61 +52,65 @@ export async function GET(req: NextRequest) {
   return withRateLimit(() => doSearch(q))
 }
 
-async function doSearch(q: string) {
+async function safeSearch(query: string, label: string): Promise<AnimeResult[]> {
   try {
-    if (!isHebrew(q)) {
-      const results = groupBySeries(await searchAnime(q) as RawResult[])
-      return NextResponse.json({ results })
-    }
+    return await searchAnime(query)
+  } catch (err) {
+    console.warn(`[search] AniList call failed (${label}):`, err)
+    return []
+  }
+}
 
-    // 1. Translate the full phrase and search
-    let translated = q
+async function doSearch(q: string) {
+  if (!isHebrew(q)) {
+    const results = await safeSearch(q, 'en')
+    return NextResponse.json({ results: groupBySeries(results as RawResult[]) })
+  }
+
+  // 1. Translate the full phrase and search
+  let translated = q
+  try {
+    translated = await translateHebrewToEnglish(q)
+  } catch (err) {
+    console.warn('[search] translation failed, searching as-is:', err)
+  }
+
+  const phraseDiffers = translated.toLowerCase() !== q.toLowerCase()
+  const [phraseResults, originalResults] = await Promise.all([
+    phraseDiffers ? safeSearch(translated, `he→en:"${translated}"`) : Promise.resolve([]),
+    safeSearch(q, `he-raw:"${q}"`),
+  ])
+
+  // Merge phrase + original, deduplicated
+  const seen = new Set<number>()
+  let results = [...phraseResults, ...originalResults].filter((a) => {
+    if (seen.has(a.id)) return false
+    seen.add(a.id)
+    return true
+  })
+
+  // 2. If few results, also try word-by-word keyword search as fallback
+  if (results.length < 3 && phraseDiffers) {
+    let keywords: string[] = []
     try {
-      translated = await translateHebrewToEnglish(q)
-    } catch {
-      console.warn('[search] translation failed, searching as-is')
+      keywords = await hebrewToKeywords(q)
+    } catch (err) {
+      console.warn('[search] word-level translation failed:', err)
     }
 
-    const phraseDiffers = translated.toLowerCase() !== q.toLowerCase()
-    const [phraseResults, originalResults] = await Promise.all([
-      phraseDiffers ? searchAnime(translated) : Promise.resolve([]),
-      searchAnime(q),
-    ])
-
-    // Merge phrase + original, deduplicated
-    const seen = new Set<number>()
-    let results = [...phraseResults, ...originalResults].filter((a) => {
-      if (seen.has(a.id)) return false
-      seen.add(a.id)
-      return true
-    })
-
-    // 2. If few results, also try word-by-word keyword search as fallback
-    if (results.length < 3 && phraseDiffers) {
-      let keywords: string[] = []
-      try {
-        keywords = await hebrewToKeywords(q)
-      } catch {
-        console.warn('[search] word-level translation failed')
-      }
-
-      if (keywords.length > 0) {
-        const kwQueries = [keywords.join(' '), ...keywords]
-        for (const kw of kwQueries) {
-          const batch = await searchAnime(kw)
-          for (const anime of batch) {
-            if (!seen.has(anime.id)) {
-              seen.add(anime.id)
-              results.push(anime)
-            }
+    if (keywords.length > 0) {
+      const kwQueries = [keywords.join(' '), ...keywords]
+      for (const kw of kwQueries) {
+        const batch = await safeSearch(kw, `kw:"${kw}"`)
+        for (const anime of batch) {
+          if (!seen.has(anime.id)) {
+            seen.add(anime.id)
+            results.push(anime)
           }
         }
       }
     }
-
-    return NextResponse.json({ results: groupBySeries(results as RawResult[]) })
-  } catch (err) {
-    console.error('[search]', err)
-    return NextResponse.json({ error: 'Failed to search AniList' }, { status: 500 })
   }
+
+  return NextResponse.json({ results: groupBySeries(results as RawResult[]) })
 }
