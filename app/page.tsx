@@ -328,27 +328,27 @@ export default function Home() {
           <button
             onClick={handleCheckUpdates}
             disabled={tracked.length === 0 || activeView !== 'tracked'}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-700 to-indigo-700 hover:from-violet-600 hover:to-indigo-600 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-xs sm:text-sm font-medium shadow-[0_2px_12px_rgba(109,40,217,0.35)] disabled:shadow-none transition-[transform,box-shadow,opacity] active:scale-95 whitespace-nowrap"
           >
             🔄 <span className="hidden xs:inline">בדוק </span>עדכונים
           </button>
           <div className="flex gap-2">
             <button
               onClick={() => setActiveView('tracked')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
                 activeView === 'tracked'
-                  ? 'bg-pink-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white shadow-[0_2px_14px_rgba(236,72,153,0.4)]'
+                  : 'bg-[#1a1a2e] text-gray-400 border border-gray-700/50 hover:text-gray-200 hover:border-gray-600'
               }`}
             >
               📋 במעקב ({tracked.length})
             </button>
             <button
               onClick={() => setActiveView('watchlist')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
                 activeView === 'watchlist'
-                  ? 'bg-teal-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-[0_2px_14px_rgba(20,184,166,0.4)]'
+                  : 'bg-[#1a1a2e] text-gray-400 border border-gray-700/50 hover:text-gray-200 hover:border-gray-600'
               }`}
             >
               👁 לצפייה ({watchlist.length})
