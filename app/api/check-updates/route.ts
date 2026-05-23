@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { getAnimeSequels, getAnimeStatusWithSequels, getAllSeasons, delay, RelationNode } from '@/lib/anilist'
-import { sendMonthStartEmail, sendDayBeforeEmail, sendAvailableSeasonsEmail } from '@/lib/mailer'
+import { sendConsolidatedMonthlyEmail } from '@/lib/mailer'
 import { translateToHebrew } from '@/lib/translate'
 
 export interface PendingNotification {
@@ -187,95 +187,91 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
   const data = await collectCheckDataForUser(userId)
   const result: UpdateResult = { checked: data.checked, notified: 0, errors: data.errors, notifications: [] }
 
+  if (data._queue.length === 0 && data.availableUnwatched.length === 0) return result
+
   const seasonsCache = new Map<number, Awaited<ReturnType<typeof getAllSeasons>>>()
   const getSeasons = async (id: number) => {
     if (!seasonsCache.has(id)) seasonsCache.set(id, await getAllSeasons(id))
     return seasonsCache.get(id)!
   }
 
+  // Collect enrichment for all pending notifications
+  type ConsolidatedItem = {
+    hebrewTitle: string; englishTitle: string; sequelTitle: string; coverImage?: string
+    status: string; nextAiringEpisode?: { episode: number; airingAt: number } | null
+    sequelEpisodeCount?: number | null; totalSeasons?: number; sequelId: number
+    startDate: { year: number | null; month: number | null; day: number | null }
+    seasons: Awaited<ReturnType<typeof getAllSeasons>>
+  }
+  const consolidatedItems: ConsolidatedItem[] = []
+  const recordQueue: Array<{ sequelId: number; type: string; sequelTitle: string; animeTitle: string }> = []
+
   for (const item of data._queue) {
     try {
-      if (item.type === 'MONTH_START') {
-        const allSeasons = await getSeasons(item.animeId)
-        const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
-        const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
-        const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
-
-        const totalSeasons = allSeasons.length
-        const sequelEntry = allSeasons.find((s) => s.id === item.sequelId)
-        const nextAiringEpisode = sequelEntry?.nextAiringEpisode ?? null
-        const sequelEpisodeCount = sequelEntry?.episodes ?? null
-
-        const sent = await sendMonthStartEmail({
-          hebrewTitle,
-          englishTitle,
-          sequelId: item.sequelId,
-          sequelTitle: item.sequelTitle,
-          startDate: item.startDate,
-          status: item.status,
-          seasons: allSeasons,
-          availableUnwatched: data.availableUnwatched.length > 0 ? data.availableUnwatched : undefined,
-          toEmail,
-          totalSeasons,
-          nextAiringEpisode,
-          sequelEpisodeCount,
-        })
-        if (sent) {
-          try { await recordNotification(userId, item.sequelId, 'MONTH_START', item.sequelTitle, item.animeTitle) }
-          catch (e) { console.error(`[check-updates] CRITICAL: failed to record MONTH_START for ${item.sequelTitle}`, e) }
-          result.notified++
-          result.notifications.push({ parent: item.animeTitle, sequel: item.sequelTitle, type: 'MONTH_START' })
-        }
-      } else {
-        const allSeasons = await getSeasons(item.animeId)
-        const totalSeasons = allSeasons.length
-        const sequelEntry = allSeasons.find((s) => s.id === item.sequelId)
-        const sequelEpisodeCount = sequelEntry?.episodes ?? null
-        const firstEpAiringAt = sequelEntry?.nextAiringEpisode?.airingAt ?? null
-
-        const sent = await sendDayBeforeEmail({
-          parentTitle: item.animeTitle,
-          sequelTitle: item.sequelTitle,
-          startDate: item.startDate,
-          toEmail,
-          totalSeasons,
-          sequelEpisodeCount,
-          firstEpAiringAt,
-        })
-        if (sent) {
-          try { await recordNotification(userId, item.sequelId, 'DAY_BEFORE', item.sequelTitle, item.animeTitle) }
-          catch (e) { console.error(`[check-updates] CRITICAL: failed to record DAY_BEFORE for ${item.sequelTitle}`, e) }
-          result.notified++
-          result.notifications.push({ parent: item.animeTitle, sequel: item.sequelTitle, type: 'DAY_BEFORE' })
-        }
-      }
+      const allSeasons = await getSeasons(item.animeId)
+      const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
+      const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
+      const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
+      const sequelEntry = allSeasons.find((s) => s.id === item.sequelId)
+      consolidatedItems.push({
+        hebrewTitle,
+        englishTitle,
+        sequelTitle: item.sequelTitle,
+        coverImage: sequelEntry?.coverImage?.large ?? item.animeCoverImage,
+        status: item.status,
+        nextAiringEpisode: sequelEntry?.nextAiringEpisode ?? null,
+        sequelEpisodeCount: sequelEntry?.episodes ?? null,
+        totalSeasons: allSeasons.length,
+        sequelId: item.sequelId,
+        startDate: item.startDate,
+        seasons: allSeasons,
+      })
+      recordQueue.push({ sequelId: item.sequelId, type: item.type, sequelTitle: item.sequelTitle, animeTitle: item.animeTitle })
     } catch (err) {
-      console.error(`[check-updates] Error sending notification for ${item.sequelTitle}:`, err)
+      console.error(`[check-updates] Error preparing ${item.sequelTitle}:`, err)
       result.errors++
     }
   }
 
-  if (result.notified === 0 && data.availableUnwatched.length > 0) {
-    const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number }> = []
-    for (const item of data.availableUnwatched) {
-      try {
-        const seasons = await getSeasons(item.sequelId)
-        const sequelIndex = seasons.findIndex((s) => s.id === item.sequelId)
-        enrichedAvailable.push({
-          parentTitle: item.parentTitle,
-          sequelTitle: item.sequelTitle,
-          currentSeasonNumber: sequelIndex > 0 ? sequelIndex : undefined,
-          totalSeasons: seasons.length > 0 ? seasons.length : undefined,
-        })
-      } catch {
-        enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle })
-      }
+  // Enrich available (unwatched) items
+  const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number }> = []
+  for (const item of data.availableUnwatched) {
+    try {
+      const seasons = await getSeasons(item.sequelId)
+      const sequelIndex = seasons.findIndex((s) => s.id === item.sequelId)
+      enrichedAvailable.push({
+        parentTitle: item.parentTitle,
+        sequelTitle: item.sequelTitle,
+        currentSeasonNumber: sequelIndex > 0 ? sequelIndex : undefined,
+        totalSeasons: seasons.length > 0 ? seasons.length : undefined,
+      })
+    } catch {
+      enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle })
     }
-    const sent = await sendAvailableSeasonsEmail({ available: enrichedAvailable, toEmail })
+  }
+
+  if (consolidatedItems.length === 0 && enrichedAvailable.length === 0) return result
+
+  try {
+    const sent = await sendConsolidatedMonthlyEmail({
+      items: consolidatedItems,
+      available: enrichedAvailable.length > 0 ? enrichedAvailable : undefined,
+      toEmail,
+    })
     if (sent) {
-      result.notified++
-      result.notifications.push({ parent: '—', sequel: `${data.availableUnwatched.length} עונות זמינות`, type: 'AVAILABLE' })
+      for (const rec of recordQueue) {
+        try { await recordNotification(userId, rec.sequelId, rec.type, rec.sequelTitle, rec.animeTitle) }
+        catch (e) { console.error(`[check-updates] CRITICAL: failed to record ${rec.type} for ${rec.sequelTitle}`, e) }
+      }
+      result.notified = 1
+      result.notifications = [
+        ...consolidatedItems.map((i) => ({ parent: i.hebrewTitle, sequel: i.sequelTitle, type: 'CONSOLIDATED' })),
+        ...(enrichedAvailable.length > 0 ? [{ parent: '—', sequel: `${enrichedAvailable.length} עונות זמינות`, type: 'AVAILABLE' }] : []),
+      ]
     }
+  } catch (err) {
+    console.error('[check-updates] Error sending consolidated email:', err)
+    result.errors++
   }
 
   return result
