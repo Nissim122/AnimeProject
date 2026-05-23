@@ -9,14 +9,11 @@ datasource db {
 
 model TrackedAnime {
   id           Int           @id @default(autoincrement())
-  userId       String
-  anilistId    Int
+  anilistId    Int           @unique
   title        String
   coverImage   String?
   trackedAt    DateTime      @default(now())
   knownSequels KnownSequel[]
-
-  @@unique([userId, anilistId])
 }
 
 model KnownSequel {
@@ -30,23 +27,19 @@ model KnownSequel {
 
 model SentNotification {
   id              Int      @id @default(autoincrement())
-  userId          String
   sequelAnilistId Int
   type            String   @default("MONTH_START")
   sequelTitle     String
   parentTitle     String
   sentAt          DateTime @default(now())
 
-  @@unique([userId, sequelAnilistId, type])
+  @@unique([sequelAnilistId, type])
 }
 
 model WatchListItem {
   id         Int      @id @default(autoincrement())
-  userId     String
-  anilistId  Int
+  anilistId  Int      @unique
   title      String
   coverImage String?
   addedAt    DateTime @default(now())
-
-  @@unique([userId, anilistId])
 }

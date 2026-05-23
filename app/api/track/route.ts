@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { getAnimeSequels } from '@/lib/anilist'
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   try {
     const body = await req.json()
     const { anilistId, title, coverImage } = body as {
@@ -20,14 +16,14 @@ export async function POST(req: NextRequest) {
     }
 
     const existing = await prisma.trackedAnime.findUnique({
-      where: { userId_anilistId: { userId, anilistId } },
+      where: { anilistId },
     })
     if (existing) {
       return NextResponse.json({ message: 'Already tracked', anime: existing })
     }
 
     const anime = await prisma.trackedAnime.create({
-      data: { userId, anilistId, title, coverImage },
+      data: { anilistId, title, coverImage },
     })
 
     try {
@@ -52,9 +48,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   try {
     const anilistId = Number(req.nextUrl.searchParams.get('anilistId'))
     if (!anilistId) {
@@ -62,7 +55,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.trackedAnime.delete({
-      where: { userId_anilistId: { userId, anilistId } },
+      where: { anilistId },
     })
     return NextResponse.json({ success: true })
   } catch (err) {

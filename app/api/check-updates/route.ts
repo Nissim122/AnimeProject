@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { getAnimeSequels, getAnimeStatusWithSequels, getAllSeasons, delay, RelationNode } from '@/lib/anilist'
 import { sendConsolidatedMonthlyEmail } from '@/lib/mailer'
@@ -34,45 +33,26 @@ export interface UpdateResult {
   notifications: Array<{ parent: string; sequel: string; type: string }>
 }
 
-function isCurrentMonth(startDate: RelationNode['startDate']): boolean {
-  if (!startDate.year || !startDate.month) return false
-  const now = new Date()
-  return startDate.year === now.getFullYear() && startDate.month === now.getMonth() + 1
-}
-
-function isTomorrow(startDate: RelationNode['startDate']): boolean {
-  if (!startDate.year || !startDate.month || !startDate.day) return false
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  return (
-    startDate.year === tomorrow.getFullYear() &&
-    startDate.month === tomorrow.getMonth() + 1 &&
-    startDate.day === tomorrow.getDate()
-  )
-}
-
-export async function hasSentNotification(userId: string, sequelId: number, type: string): Promise<boolean> {
+export async function hasSentNotification(sequelId: number, type: string): Promise<boolean> {
   const existing = await prisma.sentNotification.findUnique({
-    where: { userId_sequelAnilistId_type: { userId, sequelAnilistId: sequelId, type } },
+    where: { sequelAnilistId_type: { sequelAnilistId: sequelId, type } },
   })
   return !!existing
 }
 
 export async function recordNotification(
-  userId: string,
   sequelId: number,
   type: string,
   sequelTitle: string,
   parentTitle: string
 ): Promise<void> {
   await prisma.sentNotification.create({
-    data: { userId, sequelAnilistId: sequelId, type, sequelTitle, parentTitle },
+    data: { sequelAnilistId: sequelId, type, sequelTitle, parentTitle },
   })
 }
 
-async function collectCheckDataForUser(userId: string): Promise<CheckOnlyResult & { _queue: PendingNotification[] }> {
+async function collectCheckData(): Promise<CheckOnlyResult & { _queue: PendingNotification[] }> {
   const tracked = await prisma.trackedAnime.findMany({
-    where: { userId },
     include: { knownSequels: true },
   })
   const trackedIdsSet = new Set(tracked.map((a) => a.anilistId))
@@ -143,7 +123,7 @@ async function collectCheckDataForUser(userId: string): Promise<CheckOnlyResult 
         for (const sequel of allSequels) {
           if (sequel.status !== 'RELEASING') continue
 
-          if (!(await hasSentNotification(userId, sequel.id, 'MONTH_START'))) {
+          if (!(await hasSentNotification(sequel.id, 'MONTH_START'))) {
             pendingNotifications.push({
               animeId: anime.anilistId,
               animeTitle: anime.title,
@@ -170,9 +150,9 @@ async function collectCheckDataForUser(userId: string): Promise<CheckOnlyResult 
   return { checked, errors, releasingAnimes, availableSequels, pendingNotifications, availableUnwatched, _queue: pendingNotifications }
 }
 
-export async function runCheckOnly(userId: string): Promise<CheckOnlyResult> {
-  const data = await collectCheckDataForUser(userId)
-  console.log(`[check-updates] Check only (user ${userId}) — checked: ${data.checked}, pending: ${data.pendingNotifications.length}`)
+export async function runCheckOnly(): Promise<CheckOnlyResult> {
+  const data = await collectCheckData()
+  console.log(`[check-updates] Check only — checked: ${data.checked}, pending: ${data.pendingNotifications.length}`)
   return {
     checked: data.checked,
     errors: data.errors,
@@ -183,8 +163,15 @@ export async function runCheckOnly(userId: string): Promise<CheckOnlyResult> {
   }
 }
 
-async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<UpdateResult> {
-  const data = await collectCheckDataForUser(userId)
+export async function runUpdateCheck(): Promise<UpdateResult> {
+  const toEmail = process.env.NOTIFY_EMAIL
+  if (!toEmail) {
+    console.warn('[check-updates] NOTIFY_EMAIL not set, skipping email')
+    const data = await collectCheckData()
+    return { checked: data.checked, notified: 0, errors: data.errors, notifications: [] }
+  }
+
+  const data = await collectCheckData()
   const result: UpdateResult = { checked: data.checked, notified: 0, errors: data.errors, notifications: [] }
 
   if (data._queue.length === 0 && data.availableUnwatched.length === 0) return result
@@ -195,7 +182,6 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
     return seasonsCache.get(id)!
   }
 
-  // Collect enrichment for all pending notifications
   type ConsolidatedItem = {
     hebrewTitle: string; englishTitle: string; sequelTitle: string; coverImage?: string
     status: string; nextAiringEpisode?: { episode: number; airingAt: number } | null
@@ -233,7 +219,6 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
     }
   }
 
-  // Enrich available (unwatched) items
   const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number }> = []
   for (const item of data.availableUnwatched) {
     try {
@@ -260,7 +245,7 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
     })
     if (sent) {
       for (const rec of recordQueue) {
-        try { await recordNotification(userId, rec.sequelId, rec.type, rec.sequelTitle, rec.animeTitle) }
+        try { await recordNotification(rec.sequelId, rec.type, rec.sequelTitle, rec.animeTitle) }
         catch (e) { console.error(`[check-updates] CRITICAL: failed to record ${rec.type} for ${rec.sequelTitle}`, e) }
       }
       result.notified = 1
@@ -277,42 +262,9 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
   return result
 }
 
-// Cron: runs for all users
-export async function runUpdateCheck(): Promise<UpdateResult> {
-  const userRows = await prisma.trackedAnime.findMany({
-    select: { userId: true },
-    distinct: ['userId'],
-  })
-
-  const totals: UpdateResult = { checked: 0, notified: 0, errors: 0, notifications: [] }
-  const clerk = await clerkClient()
-
-  for (const { userId } of userRows) {
-    try {
-      const user = await clerk.users.getUser(userId)
-      const email = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress
-      if (!email) {
-        console.warn(`[check-updates] No email for user ${userId}, skipping`)
-        continue
-      }
-      const result = await runUpdateCheckForUser(userId, email)
-      totals.checked += result.checked
-      totals.notified += result.notified
-      totals.errors += result.errors
-      totals.notifications.push(...result.notifications)
-    } catch (err) {
-      console.error(`[check-updates] Error processing user ${userId}:`, err)
-      totals.errors++
-    }
-  }
-
-  console.log(`[check-updates] Done — checked: ${totals.checked}, notified: ${totals.notified}, errors: ${totals.errors}`)
-  return totals
-}
-
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({})) as { sendEmails?: boolean; userId?: string }
+    const body = await req.json().catch(() => ({})) as { sendEmails?: boolean }
     const sendEmails = body.sendEmails !== false
 
     if (sendEmails) {
@@ -320,10 +272,7 @@ export async function POST(req: Request) {
       return NextResponse.json(result)
     }
 
-    // check-only called from the UI button — requires userId in body
-    const { userId } = body
-    if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
-    const result = await runCheckOnly(userId)
+    const result = await runCheckOnly()
     return NextResponse.json(result)
   } catch (err) {
     console.error('[check-updates]', err)
@@ -331,7 +280,6 @@ export async function POST(req: Request) {
   }
 }
 
-// Vercel Cron Jobs send GET requests
 export async function GET() {
   try {
     const result = await runUpdateCheck()
