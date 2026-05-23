@@ -182,51 +182,53 @@ function AnimeCard({
           nextSequel && <NextSeasonBadge sequel={nextSequel} />
         )}
 
-        {/* Note section */}
-        {noteOpen ? (
-          <div className="flex flex-col gap-1.5">
-            <textarea
-              ref={textareaRef}
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder="הוסף הערה..."
-              rows={3}
-              className="w-full text-xs bg-gray-700 text-white rounded-lg px-2 py-1.5 resize-none border border-gray-600 focus:border-[#e0176b] focus:outline-none placeholder-gray-500"
-            />
-            <div className="flex gap-1">
-              <button
-                onClick={saveNote}
-                disabled={noteSaving}
-                className="flex-1 text-xs bg-[#e0176b] hover:bg-[#f5257e] disabled:opacity-50 text-white rounded-lg py-1 transition-colors"
-              >
-                {noteSaving ? '...' : 'שמור'}
-              </button>
-              <button
-                onClick={() => { setNoteText(item.note ?? ''); setNoteOpen(false) }}
-                className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg py-1 transition-colors"
-              >
-                ביטול
-              </button>
+        <div className="mt-auto flex flex-col gap-1.5">
+          {/* Note section */}
+          {noteOpen ? (
+            <div className="flex flex-col gap-1.5">
+              <textarea
+                ref={textareaRef}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="הוסף הערה..."
+                rows={3}
+                className="w-full text-xs bg-gray-700 text-white rounded-lg px-2 py-1.5 resize-none border border-gray-600 focus:border-[#e0176b] focus:outline-none placeholder-gray-500"
+              />
+              <div className="flex gap-1">
+                <button
+                  onClick={saveNote}
+                  disabled={noteSaving}
+                  className="flex-1 text-xs bg-[#e0176b] hover:bg-[#f5257e] disabled:opacity-50 text-white rounded-lg py-1 transition-colors"
+                >
+                  {noteSaving ? '...' : 'שמור'}
+                </button>
+                <button
+                  onClick={() => { setNoteText(item.note ?? ''); setNoteOpen(false) }}
+                  className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg py-1 transition-colors"
+                >
+                  ביטול
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setNoteOpen(true)}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors text-right w-full"
-            title="הוסף הערה"
-          >
-            <span className="text-xs">✏️</span>
-            <span className="truncate">{item.note ? item.note : 'הוסף הערה'}</span>
-          </button>
-        )}
+          ) : (
+            <button
+              onClick={() => setNoteOpen(true)}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-200 bg-gray-700/50 hover:bg-gray-700 rounded-lg px-2 py-1.5 transition-colors w-full border border-gray-600/40 hover:border-gray-500"
+              title="הוסף הערה"
+            >
+              <span>✏️</span>
+              <span className="truncate">{item.note ? item.note : 'הוסף הערה'}</span>
+            </button>
+          )}
 
-        <button
-          onClick={() => onRemove(item.anilistId)}
-          disabled={isRefreshing}
-          className="mt-auto text-xs text-red-400 hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1"
-        >
-          הסר מהרשימה
-        </button>
+          <button
+            onClick={() => onRemove(item.anilistId)}
+            disabled={isRefreshing}
+            className="text-xs text-red-400 hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1"
+          >
+            הסר מהרשימה
+          </button>
+        </div>
       </div>
     </div>
   )
