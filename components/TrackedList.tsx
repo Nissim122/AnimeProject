@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { RelationNode } from '@/lib/anilist'
 import type { AnimeSeasonInfo } from '@/app/page'
 
@@ -9,6 +9,7 @@ interface TrackedItem {
   anilistId: number
   title: string
   coverImage: string | null
+  note: string | null
   trackedAt: string
 }
 
@@ -27,6 +28,7 @@ const CATEGORY_META: Record<Category, { label: string; icon: string; headerColor
 interface Props {
   items: TrackedItem[]
   onRemove: (anilistId: number) => void
+  onNoteUpdate?: (anilistId: number, note: string) => Promise<void>
   seasonInfo?: Record<number, AnimeSeasonInfo>
   seasonInfoLoading?: boolean
   onOpenSequel?: (sequel: RelationNode) => void
@@ -90,6 +92,7 @@ function AnimeCard({
   isRefreshing,
   onRemove,
   onCardClick,
+  onNoteUpdate,
 }: {
   item: TrackedItem
   info: AnimeSeasonInfo | undefined
@@ -97,10 +100,31 @@ function AnimeCard({
   isRefreshing?: boolean
   onRemove: (id: number) => void
   onCardClick?: (item: TrackedItem) => void
+  onNoteUpdate?: (anilistId: number, note: string) => Promise<void>
 }) {
   const availableSequel = info?.available ?? null
   const nextSequel = info?.next ?? null
   const { borderColor } = CATEGORY_META[category]
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteText, setNoteText] = useState(item.note ?? '')
+  const [noteSaving, setNoteSaving] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    setNoteText(item.note ?? '')
+  }, [item.note])
+
+  useEffect(() => {
+    if (noteOpen) textareaRef.current?.focus()
+  }, [noteOpen])
+
+  const saveNote = useCallback(async () => {
+    if (!onNoteUpdate) return
+    setNoteSaving(true)
+    await onNoteUpdate(item.anilistId, noteText)
+    setNoteSaving(false)
+    setNoteOpen(false)
+  }, [onNoteUpdate, item.anilistId, noteText])
 
   return (
     <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${borderColor} ${isRefreshing ? 'opacity-60' : ''}`}>
@@ -157,6 +181,45 @@ function AnimeCard({
         ) : (
           nextSequel && <NextSeasonBadge sequel={nextSequel} />
         )}
+
+        {/* Note section */}
+        {noteOpen ? (
+          <div className="flex flex-col gap-1.5">
+            <textarea
+              ref={textareaRef}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="הוסף הערה..."
+              rows={3}
+              className="w-full text-xs bg-gray-700 text-white rounded-lg px-2 py-1.5 resize-none border border-gray-600 focus:border-[#e0176b] focus:outline-none placeholder-gray-500"
+            />
+            <div className="flex gap-1">
+              <button
+                onClick={saveNote}
+                disabled={noteSaving}
+                className="flex-1 text-xs bg-[#e0176b] hover:bg-[#f5257e] disabled:opacity-50 text-white rounded-lg py-1 transition-colors"
+              >
+                {noteSaving ? '...' : 'שמור'}
+              </button>
+              <button
+                onClick={() => { setNoteText(item.note ?? ''); setNoteOpen(false) }}
+                className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg py-1 transition-colors"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setNoteOpen(true)}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors text-right w-full"
+            title="הוסף הערה"
+          >
+            <span className="text-xs">✏️</span>
+            <span className="truncate">{item.note ? item.note : 'הוסף הערה'}</span>
+          </button>
+        )}
+
         <button
           onClick={() => onRemove(item.anilistId)}
           disabled={isRefreshing}
@@ -172,6 +235,7 @@ function AnimeCard({
 export default function TrackedList({
   items,
   onRemove,
+  onNoteUpdate,
   seasonInfo,
   seasonInfoLoading,
   onCardClick,
@@ -236,6 +300,7 @@ export default function TrackedList({
               category="completed"
               isRefreshing={true}
               onRemove={onRemove}
+              onNoteUpdate={onNoteUpdate}
             />
           ))}
         </div>
@@ -337,6 +402,7 @@ export default function TrackedList({
                     isRefreshing={refreshingId === item.anilistId}
                     onRemove={onRemove}
                     onCardClick={onCardClick}
+                    onNoteUpdate={onNoteUpdate}
                   />
                 ))}
               </div>

@@ -15,6 +15,7 @@ interface TrackedItem {
   anilistId: number
   title: string
   coverImage: string | null
+  note: string | null
   trackedAt: string
 }
 
@@ -143,6 +144,7 @@ export default function Home() {
         anilistId: data.anime.anilistId,
         title: data.anime.title,
         coverImage: data.anime.coverImage ?? null,
+        note: data.anime.note ?? null,
         trackedAt: data.anime.trackedAt,
       }
 
@@ -255,6 +257,19 @@ export default function Home() {
     }
   }
 
+  async function handleNoteUpdate(anilistId: number, note: string) {
+    const res = await fetch('/api/track', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId, note }),
+    })
+    if (res.ok) {
+      setTracked((prev) =>
+        prev.map((t) => (t.anilistId === anilistId ? { ...t, note: note.trim() || null } : t))
+      )
+    }
+  }
+
   function handleCheckUpdates() {
     setShowCheckModal(true)
   }
@@ -362,6 +377,7 @@ export default function Home() {
             <TrackedList
               items={tracked}
               onRemove={handleRemove}
+              onNoteUpdate={handleNoteUpdate}
               seasonInfo={seasonInfo}
               seasonInfoLoading={seasonInfoLoading}
               onOpenSequel={handleOpenSequel}
