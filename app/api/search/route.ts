@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchAnime, type AnimeResult } from '@/lib/anilist'
+import { searchAnime, withRateLimit, type AnimeResult } from '@/lib/anilist'
 import { isHebrew, translateHebrewToEnglish, hebrewToKeywords } from '@/lib/translate'
 
 type RawResult = AnimeResult & {
@@ -49,6 +49,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ results: [] })
   }
 
+  return withRateLimit(() => doSearch(q))
+}
+
+async function doSearch(q: string) {
   try {
     if (!isHebrew(q)) {
       const results = groupBySeries(await searchAnime(q) as RawResult[])

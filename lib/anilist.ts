@@ -1,6 +1,15 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 const ANILIST_URL = 'https://graphql.anilist.co'
-let _lastGqlCall = 0
-const GQL_MIN_INTERVAL = 1000
+const GQL_MIN_INTERVAL = 700
+
+// Per-request rate limiter — each withRateLimit() context has its own lastCall,
+// so concurrent API routes (e.g. search vs next-seasons) don't block each other.
+const _rlStorage = new AsyncLocalStorage<{ lastCall: number }>()
+
+export function withRateLimit<T>(fn: () => Promise<T>): Promise<T> {
+  return _rlStorage.run({ lastCall: 0 }, fn)
+}
 
 export interface AnimeResult {
   id: number
@@ -25,9 +34,12 @@ export interface RelationNode {
 }
 
 async function gqlFetch(query: string, variables: Record<string, unknown>, attempt = 0): Promise<unknown> {
-  const wait = _lastGqlCall + GQL_MIN_INTERVAL - Date.now()
-  if (wait > 0) await delay(wait)
-  _lastGqlCall = Date.now()
+  const ctx = _rlStorage.getStore()
+  if (ctx) {
+    const wait = ctx.lastCall + GQL_MIN_INTERVAL - Date.now()
+    if (wait > 0) await delay(wait)
+    ctx.lastCall = Date.now()
+  }
 
   const res = await fetch(ANILIST_URL, {
     method: 'POST',

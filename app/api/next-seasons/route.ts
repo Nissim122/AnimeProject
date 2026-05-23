@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { batchGetAnimeStatus, getAnimeSequels, getAllSeasons } from '@/lib/anilist'
+import { batchGetAnimeStatus, getAnimeSequels, getAllSeasons, withRateLimit } from '@/lib/anilist'
 import type { RelationNode } from '@/lib/anilist'
 
 export async function GET(req: NextRequest) {
+  return withRateLimit(() => handler(req))
+}
+
+async function handler(req: NextRequest) {
   const ids = req.nextUrl.searchParams.get('ids')
   if (!ids) return NextResponse.json({})
 

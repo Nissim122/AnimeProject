@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { getAnimeSequels, getAnimeStatusWithSequels, getAllSeasons, delay, RelationNode } from '@/lib/anilist'
+import { getAnimeSequels, getAnimeStatusWithSequels, getAllSeasons, delay, withRateLimit, RelationNode } from '@/lib/anilist'
 import { sendConsolidatedMonthlyEmail } from '@/lib/mailer'
 import { translateToHebrew } from '@/lib/translate'
 
@@ -54,6 +54,10 @@ async function recordNotification(
 }
 
 async function collectCheckDataForUser(userId: string): Promise<CheckOnlyResult & { _queue: PendingNotification[] }> {
+  return withRateLimit(() => _collectCheckDataForUser(userId))
+}
+
+async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult & { _queue: PendingNotification[] }> {
   const tracked = await prisma.trackedAnime.findMany({
     where: { userId },
     include: { knownSequels: true },

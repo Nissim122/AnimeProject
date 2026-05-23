@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllSeasons } from '@/lib/anilist'
+import { getAllSeasons, withRateLimit } from '@/lib/anilist'
 
 export async function GET(req: NextRequest) {
   const idParam = req.nextUrl.searchParams.get('id')
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
   }
   try {
-    const seasons = await getAllSeasons(id)
+    const seasons = await withRateLimit(() => getAllSeasons(id))
     return NextResponse.json({ seasons })
   } catch (err) {
     console.error('[seasons] getAllSeasons failed:', err)
