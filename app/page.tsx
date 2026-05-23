@@ -287,7 +287,7 @@ export default function Home() {
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-10">
-        <UserButton afterSignOutUrl="/" />
+        <UserButton />
         <div className="text-center flex-1">
           <h1 className="text-4xl font-bold text-white mb-2">
             🎌 <span className="text-pink-500">Anime Tracker</span>
