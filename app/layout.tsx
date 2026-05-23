@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
+import { Exo_2 } from 'next/font/google'
 import './globals.css'
+
+const exo2 = Exo_2({
+  subsets: ['latin'],
+  weight: ['700', '800', '900'],
+  variable: '--font-heading',
+})
 
 export const metadata: Metadata = {
   title: 'Anime Tracker',
@@ -40,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider appearance={clerkAppearance}>
       <html lang="he" dir="rtl">
-        <body className="min-h-screen bg-[#0f0f1a]">{children}</body>
+        <body className={`min-h-screen bg-[#0f0f1a] ${exo2.variable}`}>{children}</body>
       </html>
     </ClerkProvider>
   )

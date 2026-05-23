@@ -270,12 +270,17 @@ export default function Home() {
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4">
-        <h1 className="text-3xl sm:text-4xl font-bold text-white text-center">
-          🎌 <span className="text-pink-500">Anime Tracker</span>
+        <h1
+          className="text-3xl sm:text-5xl font-black text-center tracking-tight"
+          style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}
+        >
+          <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(236,72,153,0.45)]">
+            Anime Tracker
+          </span>
         </h1>
-        <p className="text-gray-400 text-center text-sm sm:text-base">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
+        <p className="text-gray-400/80 text-center text-sm sm:text-base">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
         <SignInButton mode="modal">
-          <button className="px-8 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-semibold text-lg transition-colors">
+          <button className="px-8 py-3 bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-500 hover:to-fuchsia-500 text-white rounded-xl font-semibold text-lg shadow-[0_4px_20px_rgba(236,72,153,0.35)] hover:shadow-[0_4px_28px_rgba(236,72,153,0.5)] transition-[transform,box-shadow,background] active:scale-95">
             התחבר / הירשם
           </button>
         </SignInButton>
@@ -289,17 +294,25 @@ export default function Home() {
       <div className="flex items-center justify-between mb-6 sm:mb-10">
         <UserButton />
         <div className="text-center flex-1">
-          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">
-            🎌 <span className="text-pink-500">Anime Tracker</span>
+          <h1
+            className="text-2xl sm:text-4xl font-black mb-1 sm:mb-2 tracking-tight"
+            style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}
+          >
+            <span className="bg-gradient-to-r from-pink-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(236,72,153,0.4)]">
+              Anime Tracker
+            </span>
           </h1>
-          <p className="text-gray-400 text-xs sm:text-sm hidden sm:block">חפש אנימה, סמן עונות שסיימת, קבל התראה לעונות חדשות</p>
+          <p className="text-gray-500 text-xs sm:text-sm hidden sm:block">חפש אנימה, סמן עונות שסיימת, קבל התראה לעונות חדשות</p>
         </div>
         <div className="w-8" />
       </div>
 
       {/* Search */}
       <section className="mb-6 sm:mb-10">
-        <h2 className="text-base sm:text-lg font-semibold text-gray-300 mb-3 text-right">🔍 חפש אנימה</h2>
+        <h2 className="text-base sm:text-lg font-bold text-gray-200 mb-3 text-right flex items-center justify-end gap-2">
+          <span>חפש אנימה</span>
+          <span className="w-1 h-5 rounded-full bg-gradient-to-b from-pink-400 to-fuchsia-500 inline-block" />
+        </h2>
         <SearchBar
           onTrack={handleTrack}
           onAddToWatchlist={handleAddToWatchlist}

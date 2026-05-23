@@ -80,7 +80,7 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="חפש אנימה..."
+          placeholder="הזן שם של סדרת האנימה"
           className="w-full px-4 py-3 rounded-xl bg-gray-800 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:border-pink-500 text-right"
           dir="auto"
         />
