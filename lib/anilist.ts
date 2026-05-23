@@ -69,7 +69,7 @@ export async function searchAnime(search: string): Promise<AnimeResult[]> {
   const query = `
     query SearchAnime($search: String) {
       Page(perPage: 10) {
-        media(search: $search, type: ANIME, format_in: [TV, TV_SHORT]) {
+        media(search: $search, type: ANIME, format_in: [TV, TV_SHORT, ONA]) {
           id
           title { romaji english }
           coverImage { large }
