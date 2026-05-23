@@ -52,3 +52,9 @@ model WatchListItem {
 
   @@unique([userId, anilistId])
 }
+
+model SeasonCache {
+  anilistId   Int      @id
+  seasonsJson String
+  updatedAt   DateTime @updatedAt
+}
