@@ -309,10 +309,6 @@ export default function Home() {
 
       {/* Search */}
       <section className="mb-6 sm:mb-10">
-        <h2 className="text-base sm:text-lg font-bold text-gray-200 mb-3 text-right flex items-center justify-end gap-2">
-          <span>חפש אנימה</span>
-          <span className="w-1 h-5 rounded-full bg-gradient-to-b from-pink-400 to-fuchsia-500 inline-block" />
-        </h2>
         <SearchBar
           onTrack={handleTrack}
           onAddToWatchlist={handleAddToWatchlist}
