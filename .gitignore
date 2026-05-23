@@ -14,3 +14,6 @@ prisma/dev.db-journal
 
 # Build artifacts
 tsconfig.tsbuildinfo
+
+# clerk configuration (can include secrets)
+/.clerk/

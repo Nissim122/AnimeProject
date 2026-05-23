@@ -81,9 +81,10 @@ export async function sendMonthStartEmail(params: {
   status: string
   seasons: AnimeResult[]
   availableUnwatched?: Array<{ parentTitle: string; sequelTitle: string }>
+  toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()
-  const to = getTo()
+  const to = params.toEmail ?? getTo()
   if (!transport || !to) {
     console.warn('[mailer] Missing email config — skipping')
     return false
@@ -186,9 +187,10 @@ export async function sendDayBeforeEmail(params: {
   parentTitle: string
   sequelTitle: string
   startDate: { year: number | null; month: number | null; day: number | null }
+  toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()
-  const to = getTo()
+  const to = params.toEmail ?? getTo()
   if (!transport || !to) {
     console.warn('[mailer] Missing email config — skipping')
     return false
@@ -221,9 +223,10 @@ export async function sendDayBeforeEmail(params: {
 
 export async function sendAvailableSeasonsEmail(params: {
   available: Array<{ parentTitle: string; sequelTitle: string }>
+  toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()
-  const to = getTo()
+  const to = params.toEmail ?? getTo()
   if (!transport || !to) {
     console.warn('[mailer] Missing email config — skipping')
     return false

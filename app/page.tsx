@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useUser, UserButton, SignInButton } from '@clerk/nextjs'
 import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
 import WatchListView from '@/components/WatchListView'
@@ -39,6 +40,7 @@ let toastId = 0
 type ActiveView = 'tracked' | 'watchlist'
 
 export default function Home() {
+  const { user, isLoaded } = useUser()
   const [tracked, setTracked] = useState<TrackedItem[]>([])
   const [watchlist, setWatchlist] = useState<WatchListItem[]>([])
   const [activeView, setActiveView] = useState<ActiveView>('tracked')
@@ -93,9 +95,11 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    loadTracked()
-    loadWatchlist()
-  }, [loadTracked, loadWatchlist])
+    if (user) {
+      loadTracked()
+      loadWatchlist()
+    }
+  }, [user, loadTracked, loadWatchlist])
 
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
   const watchlistIds = new Set(watchlist.map((w) => w.anilistId))
@@ -255,14 +259,42 @@ export default function Home() {
     setShowCheckModal(true)
   }
 
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+        <h1 className="text-4xl font-bold text-white">
+          🎌 <span className="text-pink-500">Anime Tracker</span>
+        </h1>
+        <p className="text-gray-400">עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה</p>
+        <SignInButton mode="modal">
+          <button className="px-8 py-3 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-semibold text-lg transition-colors">
+            התחבר / הירשם
+          </button>
+        </SignInButton>
+      </div>
+    )
+  }
+
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-white mb-2">
-          🎌 <span className="text-pink-500">Anime Tracker</span>
-        </h1>
-        <p className="text-gray-400">חפש אנימה, סמן עונות שסיימת, קבל התראה לעונות חדשות</p>
+      <div className="flex items-center justify-between mb-10">
+        <UserButton afterSignOutUrl="/" />
+        <div className="text-center flex-1">
+          <h1 className="text-4xl font-bold text-white mb-2">
+            🎌 <span className="text-pink-500">Anime Tracker</span>
+          </h1>
+          <p className="text-gray-400">חפש אנימה, סמן עונות שסיימת, קבל התראה לעונות חדשות</p>
+        </div>
+        <div className="w-8" />
       </div>
 
       {/* Search */}
