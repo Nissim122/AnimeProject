@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import PendingApprovalBadge from '@/components/PendingApprovalBadge'
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com').toLowerCase().trim()
 
@@ -20,7 +21,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ).toLowerCase().trim()
 
   if (email === ADMIN_EMAIL) {
-    return <>{children}</>
+    const pendingCount = await prisma.userApproval.count({
+      where: { status: 'PENDING' },
+    })
+    return (
+      <>
+        {children}
+        <PendingApprovalBadge count={pendingCount} />
+      </>
+    )
   }
 
   const approval = await prisma.userApproval.findUnique({
