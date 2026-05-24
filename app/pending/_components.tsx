@@ -14,7 +14,11 @@ export function AutoRefresh() {
         const res = await fetch('/api/check-approval', { cache: 'no-store' })
         const data = await res.json()
         if (data.status === 'APPROVED') {
+          if (timerRef.current) clearInterval(timerRef.current)
           router.push('/')
+        } else if (data.status === 'DENIED') {
+          if (timerRef.current) clearInterval(timerRef.current)
+          router.refresh()
         }
       } catch {
         // network error — ignore, try again next tick
@@ -37,6 +41,8 @@ export function RefreshButton() {
       const data = await res.json()
       if (data.status === 'APPROVED') {
         router.push('/')
+      } else if (data.status === 'DENIED') {
+        router.refresh()
       }
     } catch {
       // ignore
