@@ -73,6 +73,14 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  if (approval.status === 'APPROVED') {
+    return htmlPage(
+      'כבר מאושר',
+      `<div class="icon">✅</div><h1>לא ניתן לדחות</h1><p>המשתמש <strong style="color:#d1ddf9">${approval.email}</strong> כבר קיבל גישה ואושר. לדחייה השתמש בפאנל הניהול.</p>`,
+      '#f59e0b'
+    )
+  }
+
   await prisma.userApproval.update({
     where: { clerkUserId: userId },
     data: { status: 'DENIED' },

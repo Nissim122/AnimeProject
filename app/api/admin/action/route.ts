@@ -3,16 +3,17 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { sendUserApprovedEmail } from '@/lib/mailer'
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com'
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com').toLowerCase().trim()
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const clerkUser = await currentUser()
-  const email =
+  const email = (
     clerkUser?.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
       ?.emailAddress ?? ''
+  ).toLowerCase().trim()
   if (email !== ADMIN_EMAIL) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { targetUserId, action } = (await req.json()) as {

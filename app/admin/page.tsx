@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ActionButtons } from './_components'
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com'
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com').toLowerCase().trim()
 
 type Approval = {
   clerkUserId: string
@@ -97,9 +97,10 @@ export default async function AdminPage() {
   if (!userId) redirect('/sign-in')
 
   const clerkUser = await currentUser()
-  const email =
+  const email = (
     clerkUser?.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
       ?.emailAddress ?? ''
+  ).toLowerCase().trim()
 
   if (email !== ADMIN_EMAIL) redirect('/')
 

@@ -86,7 +86,7 @@ export default async function PendingPage() {
       const baseUrl = getBaseUrl()
       const token = generateApprovalToken(userId)
       try {
-        await sendApprovalRequestEmail({
+        const sent = await sendApprovalRequestEmail({
           toAdmin: ADMIN_EMAIL,
           userEmail: primaryEmail,
           userName,
@@ -94,11 +94,13 @@ export default async function PendingPage() {
           approveUrl: `${baseUrl}/api/admin/approve?userId=${userId}&token=${token}`,
           denyUrl: `${baseUrl}/api/admin/deny?userId=${userId}&token=${token}`,
         })
-        // Mark as sent only after successful delivery so failed sends are retried
-        await prisma.userApproval.update({
-          where: { clerkUserId: userId },
-          data: { emailSentAt: new Date() },
-        })
+        // Only mark as sent if email was actually delivered (function returns false when config missing)
+        if (sent) {
+          await prisma.userApproval.update({
+            where: { clerkUserId: userId },
+            data: { emailSentAt: new Date() },
+          })
+        }
       } catch (err) {
         console.error('[pending] Failed to send approval request email:', err)
       }
