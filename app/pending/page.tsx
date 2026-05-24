@@ -53,16 +53,23 @@ export default async function PendingPage() {
           emailSentAt: new Date(),
         },
       })
-
-      await sendApprovalRequestEmail({
-        toAdmin: ADMIN_EMAIL,
-        userEmail: primaryEmail,
-        userName,
-        adminUrl: `${baseUrl}/admin`,
-      })
     } catch {
       // Race condition — another render already created the record
       approval = await prisma.userApproval.findUnique({ where: { clerkUserId: userId } })
+    }
+
+    // Send notification email to admin regardless of whether record was just created or already existed
+    if (approval?.status === 'PENDING') {
+      try {
+        await sendApprovalRequestEmail({
+          toAdmin: ADMIN_EMAIL,
+          userEmail: primaryEmail,
+          userName,
+          adminUrl: `${baseUrl}/admin`,
+        })
+      } catch (err) {
+        console.error('[pending] Failed to send approval request email:', err)
+      }
     }
   }
 
