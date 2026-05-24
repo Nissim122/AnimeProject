@@ -79,8 +79,11 @@ export async function GET(req: NextRequest) {
     data: { status: 'APPROVED' },
   })
 
-  // Send notification to the approved user
-  await sendUserApprovedEmail({ userEmail: approval.email, userName: approval.name ?? '' })
+  try {
+    await sendUserApprovedEmail({ userEmail: approval.email, userName: approval.name ?? '' })
+  } catch (e) {
+    console.error('[approve] Failed to send approval notification email:', e)
+  }
 
   return htmlPage(
     'אושר בהצלחה',
