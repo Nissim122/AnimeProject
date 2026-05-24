@@ -107,20 +107,20 @@ export default function Home() {
   const watchlistIds = new Set(watchlist.map((w) => w.anilistId))
 
   async function handleTrack(anime: AnimeResult, seriesIds?: number[]): Promise<boolean> {
-    if (seriesIds && seriesIds.length > 0) {
-      const toRemove = seriesIds.filter((id) => id !== anime.id && trackedIds.has(id))
+    const toRemove = seriesIds
+      ? seriesIds.filter((id) => id !== anime.id && trackedIds.has(id))
+      : []
+    if (toRemove.length > 0) {
       await Promise.all(
         toRemove.map((id) => fetch(`/api/track?anilistId=${id}`, { method: 'DELETE' }))
       )
-      if (toRemove.length > 0) {
-        setTracked((prev) => prev.filter((t) => !toRemove.includes(t.anilistId)))
-        setSeasonInfo((prev) => {
-          if (!prev) return prev
-          const next = { ...prev }
-          toRemove.forEach((id) => delete next[id])
-          return next
-        })
-      }
+      setTracked((prev) => prev.filter((t) => !toRemove.includes(t.anilistId)))
+      setSeasonInfo((prev) => {
+        if (!prev) return prev
+        const next = { ...prev }
+        toRemove.forEach((id) => delete next[id])
+        return next
+      })
     }
 
     const res = await fetch('/api/track', {
