@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { sendApprovalRequestEmail } from '@/lib/mailer'
 import { AutoRefresh, RefreshButton, SignOutButton } from './_components'
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com'
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com').toLowerCase().trim()
 
 export default async function PendingPage() {
   const { userId } = await auth()
@@ -23,7 +23,7 @@ export default async function PendingPage() {
     [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || primaryEmail
 
   // Admin auto-approve
-  if (primaryEmail === ADMIN_EMAIL) {
+  if (primaryEmail.toLowerCase().trim() === ADMIN_EMAIL) {
     await prisma.userApproval.upsert({
       where: { clerkUserId: userId },
       update: { status: 'APPROVED', email: primaryEmail, name: userName },

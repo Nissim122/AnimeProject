@@ -2,7 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com'
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com').toLowerCase().trim()
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth()
@@ -12,9 +12,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const clerkUser = await currentUser()
-  const email =
+  const email = (
     clerkUser?.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
-      ?.emailAddress ?? ''
+      ?.emailAddress ??
+    clerkUser?.emailAddresses[0]?.emailAddress ??
+    ''
+  ).toLowerCase().trim()
 
   if (email === ADMIN_EMAIL) {
     return <>{children}</>
