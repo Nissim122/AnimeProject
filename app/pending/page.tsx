@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { sendApprovalRequestEmail } from '@/lib/mailer'
 import { AutoRefresh, RefreshButton, SignOutButton } from './_components'
-import crypto from 'crypto'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com'
 
@@ -42,8 +41,6 @@ export default async function PendingPage() {
   let approval = await prisma.userApproval.findUnique({ where: { clerkUserId: userId } })
 
   if (!approval) {
-    const secret = process.env.ADMIN_SECRET || 'change-this-secret'
-    const token = crypto.createHmac('sha256', secret).update(userId).digest('hex')
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     try {
@@ -61,8 +58,7 @@ export default async function PendingPage() {
         toAdmin: ADMIN_EMAIL,
         userEmail: primaryEmail,
         userName,
-        approveUrl: `${baseUrl}/api/admin/approve?userId=${encodeURIComponent(userId)}&token=${token}`,
-        denyUrl: `${baseUrl}/api/admin/deny?userId=${encodeURIComponent(userId)}&token=${token}`,
+        adminUrl: `${baseUrl}/admin`,
       })
     } catch {
       // Race condition — another render already created the record

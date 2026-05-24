@@ -246,8 +246,7 @@ export async function sendApprovalRequestEmail(params: {
   toAdmin: string
   userEmail: string
   userName: string
-  approveUrl: string
-  denyUrl: string
+  adminUrl: string
 }): Promise<boolean> {
   const transport = createTransport()
   if (!transport) {
@@ -255,7 +254,7 @@ export async function sendApprovalRequestEmail(params: {
     return false
   }
 
-  const { toAdmin, userEmail, userName, approveUrl, denyUrl } = params
+  const { toAdmin, userEmail, userName, adminUrl } = params
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
@@ -280,10 +279,7 @@ export async function sendApprovalRequestEmail(params: {
     </div>
   </div>
 
-  <div style="display:flex;gap:12px;flex-direction:column;">
-    <a href="${approveUrl}" style="display:block;text-align:center;padding:14px;background:linear-gradient(90deg,#16a34a,#15803d);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">✅ אשר גישה</a>
-    <a href="${denyUrl}" style="display:block;text-align:center;padding:14px;background:rgba(248,113,113,0.12);color:#f87171;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;border:1px solid rgba(248,113,113,0.25);">✕ דחה בקשה</a>
-  </div>
+  <a href="${adminUrl}" style="display:block;text-align:center;padding:14px;background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">סקור את הבקשה ←</a>
 </div>
 </body>
 </html>`,
