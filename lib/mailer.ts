@@ -242,6 +242,100 @@ export async function sendConsolidatedMonthlyEmail(params: {
   return true
 }
 
+export async function sendApprovalRequestEmail(params: {
+  toAdmin: string
+  userEmail: string
+  userName: string
+  approveUrl: string
+  denyUrl: string
+}): Promise<boolean> {
+  const transport = createTransport()
+  if (!transport) {
+    console.warn('[mailer] Missing email config — skipping approval request email')
+    return false
+  }
+
+  const { toAdmin, userEmail, userName, approveUrl, denyUrl } = params
+
+  await transport.sendMail({
+    from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
+    to: toAdmin,
+    subject: `🔔 בקשת גישה חדשה — ${userName || userEmail}`,
+    html: `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#070710;font-family:system-ui,Arial,sans-serif;direction:rtl;">
+<div style="max-width:480px;margin:0 auto;padding:32px 16px;">
+  <h1 style="color:#d1ddf9;font-size:22px;margin:0 0 8px;">בקשת גישה חדשה</h1>
+  <p style="color:#888;font-size:14px;margin:0 0 24px;">משתמש חדש מבקש גישה ל-Anime Tracker.</p>
+
+  <div style="background:#13131f;border:1px solid rgba(224,23,107,0.2);border-radius:16px;padding:20px 18px;margin-bottom:24px;">
+    <div style="margin-bottom:10px;">
+      <span style="font-size:12px;color:#888;">שם:</span>
+      <span style="font-size:15px;color:#d1ddf9;font-weight:700;margin-right:8px;">${userName || '—'}</span>
+    </div>
+    <div>
+      <span style="font-size:12px;color:#888;">מייל:</span>
+      <span style="font-size:15px;color:#e0176b;font-weight:700;margin-right:8px;">${userEmail}</span>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-direction:column;">
+    <a href="${approveUrl}" style="display:block;text-align:center;padding:14px;background:linear-gradient(90deg,#16a34a,#15803d);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">✅ אשר גישה</a>
+    <a href="${denyUrl}" style="display:block;text-align:center;padding:14px;background:rgba(248,113,113,0.12);color:#f87171;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;border:1px solid rgba(248,113,113,0.25);">✕ דחה בקשה</a>
+  </div>
+</div>
+</body>
+</html>`,
+  })
+
+  console.log(`[mailer] Approval request email sent for ${userEmail}`)
+  return true
+}
+
+export async function sendUserApprovedEmail(params: {
+  userEmail: string
+  userName: string
+}): Promise<boolean> {
+  const transport = createTransport()
+  if (!transport) {
+    console.warn('[mailer] Missing email config — skipping user approved email')
+    return false
+  }
+
+  const { userEmail, userName } = params
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+  await transport.sendMail({
+    from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
+    to: userEmail,
+    subject: `✅ הגישה שלך אושרה — Anime Tracker`,
+    html: `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#070710;font-family:system-ui,Arial,sans-serif;direction:rtl;">
+<div style="max-width:480px;margin:0 auto;padding:32px 16px;text-align:center;">
+  <h1 style="color:#d1ddf9;font-size:24px;margin:0 0 8px;">
+    <span style="color:#e0176b;">Anime</span> Tracker
+  </h1>
+
+  <div style="background:#13131f;border:1px solid rgba(74,222,128,0.25);border-radius:20px;padding:32px 24px;margin:24px 0;">
+    <div style="font-size:48px;margin-bottom:16px;">✅</div>
+    <h2 style="color:#4ade80;font-size:20px;margin:0 0 12px;">הגישה אושרה!</h2>
+    <p style="color:rgba(255,255,255,0.55);font-size:14px;line-height:1.6;margin:0 0 24px;">
+      ${userName ? `שלום ${userName}, ` : ''}הבקשה שלך אושרה ועכשיו יש לך גישה מלאה ל-Anime Tracker.
+    </p>
+    <a href="${appUrl}" style="display:inline-block;padding:14px 28px;background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">כניסה לאפליקציה ↗</a>
+  </div>
+</div>
+</body>
+</html>`,
+  })
+
+  console.log(`[mailer] User approved email sent to ${userEmail}`)
+  return true
+}
+
 export function isEmailConfigured(): boolean {
   return !!(process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.NOTIFY_EMAIL)
 }
