@@ -11,6 +11,7 @@ export interface WatchListItem {
 interface Props {
   items: WatchListItem[]
   onRemove: (anilistId: number) => void
+  onMoveToTracked?: (item: WatchListItem) => void
 }
 
 function cleanSeriesTitle(title: string): string {
@@ -21,7 +22,7 @@ function cleanSeriesTitle(title: string): string {
     .trim()
 }
 
-export default function WatchListView({ items, onRemove }: Props) {
+export default function WatchListView({ items, onRemove, onMoveToTracked }: Props) {
   if (items.length === 0) {
     return (
       <div className="text-center py-16 text-gray-500">
@@ -56,12 +57,22 @@ export default function WatchListView({ items, onRemove }: Props) {
                 year: 'numeric',
               })}
             </p>
-            <button
-              onClick={() => onRemove(item.anilistId)}
-              className="mt-auto w-full py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition-colors"
-            >
-              הסר
-            </button>
+            <div className="mt-auto flex flex-col gap-1">
+              {onMoveToTracked && (
+                <button
+                  onClick={() => onMoveToTracked(item)}
+                  className="w-full py-1 text-xs text-[#e0176b] hover:text-pink-300 hover:bg-pink-900/30 rounded transition-colors"
+                >
+                  העבר למעקב
+                </button>
+              )}
+              <button
+                onClick={() => onRemove(item.anilistId)}
+                className="w-full py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition-colors"
+              >
+                הסר
+              </button>
+            </div>
           </div>
         </div>
       ))}

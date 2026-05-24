@@ -51,6 +51,7 @@ export default function Home() {
   const [trackedLoading, setTrackedLoading] = useState(true)
   const [seasonInfoLoading, setSeasonInfoLoading] = useState(true)
   const [showCheckModal, setShowCheckModal] = useState(false)
+  const [watchlistModalItem, setWatchlistModalItem] = useState<WatchListItem | null>(null)
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++toastId
@@ -105,7 +106,7 @@ export default function Home() {
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
   const watchlistIds = new Set(watchlist.map((w) => w.anilistId))
 
-  async function handleTrack(anime: AnimeResult, seriesIds?: number[]) {
+  async function handleTrack(anime: AnimeResult, seriesIds?: number[]): Promise<boolean> {
     if (seriesIds && seriesIds.length > 0) {
       const toRemove = seriesIds.filter((id) => id !== anime.id && trackedIds.has(id))
       await Promise.all(
@@ -135,7 +136,7 @@ export default function Home() {
     if (res.ok) {
       if (data.message === 'Already tracked') {
         addToast(`${anime.title.english ?? anime.title.romaji} כבר במעקב`, 'info')
-        return
+        return false
       }
       addToast(`✓ ${anime.title.english ?? anime.title.romaji} נוסף למעקב!`, 'success')
 
@@ -160,8 +161,38 @@ export default function Home() {
 
       setSeasonInfo((prev) => ({ ...(prev ?? {}), ...newSeasonInfo }))
       setTracked((prev) => [newItem, ...prev])
+      return true
     } else {
       addToast(data.error ?? 'שגיאה בהוספה', 'error')
+      return false
+    }
+  }
+
+  function handleMoveToTracked(item: WatchListItem) {
+    const fakeAnime: AnimeResult = {
+      id: item.anilistId,
+      title: { romaji: item.title, english: null },
+      coverImage: { large: item.coverImage ?? '' },
+      status: 'FINISHED',
+      seasonYear: null,
+      season: null,
+      format: null,
+      popularity: null,
+      episodes: null,
+    }
+    setWatchlistModalItem(item)
+    setModalAnime(fakeAnime)
+  }
+
+  async function handleTrackFromWatchlist(anime: AnimeResult, seriesIds?: number[]) {
+    const success = await handleTrack(anime, seriesIds)
+    if (success && watchlistModalItem) {
+      const anilistId = watchlistModalItem.anilistId
+      const res = await fetch(`/api/watchlist?anilistId=${anilistId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setWatchlist((prev) => prev.filter((w) => w.anilistId !== anilistId))
+      }
+      setActiveView('tracked')
     }
   }
 
@@ -387,7 +418,7 @@ export default function Home() {
           )
         )}
         {activeView === 'watchlist' && (
-          <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} />
+          <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} onMoveToTracked={handleMoveToTracked} />
         )}
       </section>
 
@@ -400,15 +431,15 @@ export default function Home() {
         />
       )}
 
-      {/* Modal for available sequel */}
+      {/* Modal for available sequel / move-from-watchlist */}
       {modalAnime && (
         <AnimeDetailModal
           anime={modalAnime}
           trackedIds={trackedIds}
           watchlistIds={watchlistIds}
-          onTrack={handleTrack}
-          onAddToWatchlist={handleAddToWatchlist}
-          onClose={() => setModalAnime(null)}
+          onTrack={watchlistModalItem ? handleTrackFromWatchlist : handleTrack}
+          onAddToWatchlist={watchlistModalItem ? undefined : handleAddToWatchlist}
+          onClose={() => { setModalAnime(null); setWatchlistModalItem(null) }}
         />
       )}
 

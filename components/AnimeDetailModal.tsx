@@ -46,8 +46,20 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
   // Any other season in this series that is already tracked (besides the selected one)
   const otherTrackedCount = seasons.filter((s) => s.id !== selectedId && trackedIds.has(s.id)).length
 
+  const isFutureRelease = (() => {
+    if (!selectedAnime) return false
+    if (selectedAnime.status === 'NOT_YET_RELEASED') return true
+    const now = new Date()
+    const year = selectedAnime.startDate?.year ?? selectedAnime.seasonYear
+    const month = selectedAnime.startDate?.month
+    if (!year) return false
+    if (year > now.getFullYear()) return true
+    if (year === now.getFullYear() && month && month > now.getMonth() + 1) return true
+    return false
+  })()
+
   function handleTrack() {
-    if (selectedAnime && !alreadyTracked) {
+    if (selectedAnime && !alreadyTracked && !isFutureRelease) {
       onTrack(selectedAnime, seasons.map((s) => s.id))
       onClose()
     }
@@ -207,10 +219,10 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
             )}
             <button
               onClick={handleTrack}
-              disabled={loading || fetchError || !selectedAnime || alreadyTracked}
-              className="px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
+              disabled={loading || fetchError || !selectedAnime || alreadyTracked || isFutureRelease}
+              className="px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
             >
-              {alreadyTracked ? '✓ כבר במעקב' : 'סמן שראיתי עד עונה זו'}
+              {alreadyTracked ? '✓ כבר במעקב' : isFutureRelease ? 'טרם יצאה' : 'סמן שראיתי עד עונה זו'}
             </button>
           </div>
         </div>

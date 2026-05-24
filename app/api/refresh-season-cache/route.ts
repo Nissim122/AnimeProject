@@ -18,7 +18,7 @@ async function run() {
   })
   const ids = rows.map((r) => r.anilistId)
   const result = await withRateLimit(() => refreshCacheForIds(ids))
-  console.log(`[refresh-season-cache] refreshed=${result.refreshed} errors=${result.errors} total=${ids.length}`)
+  console.log(`[refresh-season-cache] refreshed=${result.refreshed} errors=${result.errors} skipped=${result.skipped} total=${ids.length}`)
   return NextResponse.json({ ...result, total: ids.length })
 }
 
