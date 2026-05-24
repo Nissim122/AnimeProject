@@ -128,7 +128,7 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
         }
 
         for (const sequel of allSequels) {
-          if (sequel.status !== 'RELEASING') continue
+          if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
           if (!(await hasSentNotification(userId, sequel.id, 'MONTH_START'))) {
             pendingNotifications.push({
               animeId: anime.anilistId,
