@@ -1,6 +1,7 @@
 'use client'
 
 import type { AnimeResult } from '@/lib/anilist'
+import { cleanSeriesTitle } from '@/lib/titleUtils'
 
 interface Props {
   anime: AnimeResult
@@ -10,7 +11,7 @@ interface Props {
 }
 
 export default function AnimeCard({ anime, isTracked, onOpen, isTopResult }: Props) {
-  const title = anime.title.english ?? anime.title.romaji
+  const title = cleanSeriesTitle(anime.title.english ?? anime.title.romaji)
   const year = anime.seasonYear ? ` (${anime.seasonYear})` : ''
 
   return (

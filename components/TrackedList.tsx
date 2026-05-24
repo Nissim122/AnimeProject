@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { RelationNode } from '@/lib/anilist'
 import type { AnimeSeasonInfo } from '@/app/page'
+import { cleanSeriesTitle } from '@/lib/titleUtils'
 
 interface TrackedItem {
   id: number
@@ -66,13 +67,6 @@ function categorize(info: AnimeSeasonInfo | undefined): Category {
   return 'completed'
 }
 
-function cleanSeriesTitle(title: string): string {
-  return title
-    .replace(/\s+\d+(?:st|nd|rd|th)\s+Season(?:\s+Part\s+\d+)?$/i, '')
-    .replace(/\s+(?:Final\s+)?Season(?:\s+\d+)?(?:\s+Part\s+\d+)?$/i, '')
-    .replace(/\s+Part\s+\d+$/i, '')
-    .trim()
-}
 
 function NextSeasonBadge({ sequel }: { sequel: RelationNode }) {
   const isAiring = sequel.status === 'RELEASING'

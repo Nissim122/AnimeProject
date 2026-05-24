@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { AnimeSeasonInfo } from '@/app/page'
 import type { RelationNode } from '@/lib/anilist'
+import { cleanSeriesTitle } from '@/lib/titleUtils'
 
 interface TrackedItem {
   id: number
@@ -53,13 +54,6 @@ const GROUP_META: Record<Group, { label: string; icon: string; color: string }> 
 
 const GROUP_ORDER: Group[] = ['watching', 'releasing', 'upcoming']
 
-function cleanSeriesTitle(title: string): string {
-  return title
-    .replace(/\s+\d+(?:st|nd|rd|th)\s+Season(?:\s+Part\s+\d+)?$/i, '')
-    .replace(/\s+(?:Final\s+)?Season(?:\s+\d+)?(?:\s+Part\s+\d+)?$/i, '')
-    .replace(/\s+Part\s+\d+$/i, '')
-    .trim()
-}
 
 export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Props) {
   const [sending, setSending] = useState(false)
