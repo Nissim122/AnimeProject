@@ -58,3 +58,11 @@ model SeasonCache {
   seasonsJson String
   updatedAt   DateTime @updatedAt
 }
+
+model StatusCache {
+  anilistId    Int      @id
+  status       String
+  startDateJson String
+  sequelsJson  String
+  updatedAt    DateTime @updatedAt
+}

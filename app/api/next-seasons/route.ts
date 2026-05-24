@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { batchGetAnimeStatus, getAnimeSequels, withRateLimit } from '@/lib/anilist'
 import { getCachedAllSeasons } from '@/lib/seasonCache'
+import { getStatusCacheBatch, setStatusCacheBatch } from '@/lib/statusCache'
 import type { RelationNode } from '@/lib/anilist'
 
 export async function GET(req: NextRequest) {
@@ -24,10 +25,19 @@ async function handler(req: NextRequest) {
 
   const entries: Array<readonly [number, { next: RelationNode | null; available: RelationNode | null; hasReleasingAhead: boolean; allWatched: boolean | undefined; error?: boolean }]> = []
 
-  // Fetch status + direct sequels for all IDs in a single request
+  // Fetch status + direct sequels — check StatusCache first, fall back to AniList for misses
   let statusMap: Awaited<ReturnType<typeof batchGetAnimeStatus>>
   try {
-    statusMap = await batchGetAnimeStatus(idList, { includeMovies: true })
+    const cached = await getStatusCacheBatch(idList)
+    const missingIds = idList.filter((id) => !cached.has(id))
+    if (missingIds.length > 0) {
+      const fresh = await batchGetAnimeStatus(missingIds, { includeMovies: true })
+      // Persist the fresh data so the next request is instant
+      setStatusCacheBatch([...fresh.entries()]).catch(() => {})
+      statusMap = new Map([...cached, ...fresh])
+    } else {
+      statusMap = cached
+    }
   } catch {
     return NextResponse.json(
       Object.fromEntries(
