@@ -149,9 +149,6 @@ export default function Home() {
         trackedAt: data.anime.trackedAt,
       }
 
-      // Fetch season info for ONLY the new anime, then update both states together.
-      // Pass all currently-tracked IDs (minus removals, plus the new anime) so the server
-      // correctly excludes already-tracked sequels when computing "available".
       const allTrackedAfterChange = tracked
         .filter((t) => !toRemove.includes(t.anilistId))
         .map((t) => t.anilistId)

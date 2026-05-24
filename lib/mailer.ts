@@ -72,42 +72,40 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const seasonNum = idx >= 0 ? idx + 1 : 1
     const isNewSeason = (item.totalSeasons ?? 1) > 1
     const badgeNew = isNewSeason
-      ? `<span style="display:inline-block;background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:0.07em;text-transform:uppercase;">⬡ עונה ${seasonNum}</span>`
-      : `<span style="display:inline-block;background:#2a0a1a;color:#e0176b;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid rgba(224,23,107,0.35);letter-spacing:0.07em;text-transform:uppercase;">עונה 1</span>`
+      ? `<span style="background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:0.07em;text-transform:uppercase;">⬡ עונה ${seasonNum}</span>`
+      : `<span style="background:#2a0a1a;color:#e0176b;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid rgba(224,23,107,0.35);letter-spacing:0.07em;text-transform:uppercase;">עונה 1</span>`
     const badgeTotal = (item.totalSeasons ?? 0) > 1
-      ? `<span style="display:inline-block;background:rgba(255,255,255,0.06);color:#888;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,0.1);">מתוך ${item.totalSeasons} עונות</span>`
+      ? `<span style="background:rgba(255,255,255,0.06);color:#888;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,0.1);">מתוך ${item.totalSeasons} עונות</span>`
       : ''
-    const badgeGap = badgeTotal ? `<span style="display:inline-block;width:5px;"></span>` : ''
     const coverHtml = item.coverImage
-      ? `<img src="${item.coverImage}" alt="" style="width:96px;height:100%;min-height:140px;object-fit:cover;display:block;" />`
-      : `<div style="width:96px;min-height:140px;background:linear-gradient(160deg,#2a0a1a,#1f2937);display:flex;align-items:center;justify-content:center;font-size:32px;">🎌</div>`
+      ? `<img src="${item.coverImage}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:100%;height:100%;background:linear-gradient(160deg,#2a0a1a,#1f2937);display:flex;align-items:center;justify-content:center;font-size:32px;">🎌</div>`
     const aired = item.nextAiringEpisode ? item.nextAiringEpisode.episode - 1 : (item.sequelEpisodeCount ?? 0)
     const total_ = item.sequelEpisodeCount
     const pct = total_ && total_ > 0 ? Math.round((aired / total_) * 100) : 40
-    const emptyPct = 100 - pct
     const fractionHtml = total_
-      ? `<span style="font-family:'Courier New',monospace;font-size:11px;color:#888;flex-shrink:0;">${aired} / ${total_}</span>`
-      : `<span style="font-size:11px;color:#555;flex-shrink:0;">? ס"כ</span>`
+      ? `<span style="font-family:'Courier New',monospace;font-size:11px;color:#888;">${aired} / ${total_}</span>`
+      : `<span style="font-size:11px;color:#888;font-style:italic;">? ס"כ</span>`
     const nextRowHtml = item.nextAiringEpisode
       ? `<div style="display:flex;align-items:center;gap:7px;">
           <div style="width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 5px #4ade80;flex-shrink:0;"></div>
-          <div style="font-size:13px;color:#888;flex:1;min-width:0;">פרק <strong style="color:#4ade80;">${item.nextAiringEpisode.episode}</strong> · ${formatAiringDate(item.nextAiringEpisode.airingAt)}</div>
-          <span style="font-family:'Courier New',monospace;font-size:11px;color:#555;flex-shrink:0;">ep.${String(item.nextAiringEpisode.episode).padStart(2,'0')}</span>
+          <div style="font-size:13px;color:#888;flex:1;">פרק <strong style="color:#4ade80;">${item.nextAiringEpisode.episode}</strong> → ${formatAiringDate(item.nextAiringEpisode.airingAt)}</div>
+          <span style="font-family:'Courier New',monospace;font-size:11px;color:#555;">ep.${String(item.nextAiringEpisode.episode).padStart(2,'0')}</span>
         </div>`
       : ''
     return `
     <div style="margin:0 10px 10px;background:#1f2937;border-radius:16px;border:1px solid rgba(224,23,107,0.2);overflow:hidden;display:flex;min-height:140px;">
       <div style="flex:1;min-width:0;padding:14px 14px 12px;display:flex;flex-direction:column;justify-content:space-between;">
         <div>
-          <div style="margin-bottom:7px;line-height:2;">${badgeNew}${badgeGap}${badgeTotal}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px;">${badgeNew}${badgeTotal}</div>
           <div style="font-size:17px;font-weight:700;color:#d1ddf9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.hebrewTitle}</div>
           <div style="font-family:'Courier New',monospace;font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:right;margin-top:1px;">${item.sequelTitle}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:9px;margin-top:10px;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <div style="font-size:13px;color:#888;white-space:nowrap;flex-shrink:0;"><strong style="color:#d1ddf9;">${aired}</strong> פרקים</div>
+            <div style="font-size:13px;color:#888;white-space:nowrap;"><strong style="color:#d1ddf9;">${aired}</strong> פרקים</div>
             <div style="flex:1;height:5px;background:rgba(255,255,255,0.09);border-radius:3px;overflow:hidden;">
-              <div style="margin-left:${emptyPct}%;width:${pct}%;height:100%;border-radius:3px;background:linear-gradient(to left,#e0176b,#8a0d42);"></div>
+              <div style="width:${pct}%;height:100%;border-radius:3px;background:linear-gradient(to left,#e0176b,#8a0d42);"></div>
             </div>
             ${fractionHtml}
           </div>
@@ -115,7 +113,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
           <div style="display:flex;align-items:center;gap:0;">${buildSeasonDots(item.seasons, item.sequelId)}</div>
         </div>
       </div>
-      <div style="width:96px;flex-shrink:0;overflow:hidden;min-height:140px;">${coverHtml}</div>
+      <div style="width:96px;flex-shrink:0;overflow:hidden;">${coverHtml}</div>
     </div>`
   }).join('')
 
@@ -127,24 +125,24 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const dateColor = dateVal === 'TBA' ? '#555' : '#fbbf24'
     return `
     <div style="margin:0 10px 8px;background:#1f2937;border-radius:14px;border:1px solid rgba(251,191,36,0.22);padding:14px 14px 12px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
         <div style="min-width:0;flex:1;">
           <div style="font-size:16px;font-weight:700;color:#d1ddf9;">${item.hebrewTitle}</div>
           <div style="font-family:'Courier New',monospace;font-size:11px;color:#888;margin-top:3px;">${item.englishTitle}</div>
         </div>
-        <span style="display:inline-block;font-size:10px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);padding:3px 9px;border-radius:5px;white-space:nowrap;flex-shrink:0;margin-left:8px;">עונה ${seasonNum} הוכרזה</span>
+        <span style="font-size:10px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);padding:3px 9px;border-radius:5px;white-space:nowrap;flex-shrink:0;margin-right:8px;">עונה ${seasonNum} הוכרזה</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="text-align:center;flex:1;padding:6px 0;">
           <div style="font-size:20px;font-weight:900;color:#d1ddf9;line-height:1.1;">${prevSeasons}</div>
           <div style="font-size:10px;color:#888;margin-top:3px;">עונות קודמות</div>
         </div>
-        <div style="width:1px;background:rgba(251,191,36,0.13);flex-shrink:0;align-self:stretch;"></div>
+        <div style="width:1px;background:rgba(251,191,36,0.13);flex-shrink:0;margin:4px 0;"></div>
         <div style="text-align:center;flex:1;padding:6px 0;">
           <div style="font-size:20px;font-weight:900;color:#d1ddf9;line-height:1.1;">${item.sequelEpisodeCount ?? '—'}</div>
           <div style="font-size:10px;color:#888;margin-top:3px;">פרקים ס"כ</div>
         </div>
-        <div style="width:1px;background:rgba(251,191,36,0.13);flex-shrink:0;align-self:stretch;"></div>
+        <div style="width:1px;background:rgba(251,191,36,0.13);flex-shrink:0;margin:4px 0;"></div>
         <div style="text-align:center;flex:1;padding:6px 0;">
           <div style="font-size:${dateVal === 'TBA' ? '15px' : '20px'};font-weight:900;color:${dateColor};line-height:1.1;">${dateVal}</div>
           <div style="font-size:10px;color:#888;margin-top:3px;">${dateVal === 'TBA' ? 'תאריך לא ידוע' : 'תחילת שידור'}</div>
@@ -158,13 +156,13 @@ export async function sendConsolidatedMonthlyEmail(params: {
       ? `עונה ${a.currentSeasonNumber} מתוך ${a.totalSeasons} · כל הפרקים זמינים`
       : 'כל הפרקים זמינים'
     return `
-    <div style="margin:0 10px 8px;background:#1f2937;border-radius:14px;border:1px solid rgba(74,222,128,0.2);padding:14px 14px;display:flex;align-items:center;gap:10px;">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:700;color:#d1ddf9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.sequelTitle}</div>
-        <div style="font-size:12px;color:#888;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">המשך של ${a.parentTitle} · ${seasonCtx}</div>
+    <div style="margin:0 10px 8px;background:#1f2937;border-radius:14px;border:1px solid rgba(74,222,128,0.2);padding:14px 14px;display:flex;align-items:center;gap:12px;">
+      <div style="width:42px;height:42px;border-radius:11px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;color:#4ade80;order:2;">▶</div>
+      <div style="flex:1;order:1;min-width:0;">
+        <div style="font-size:15px;font-weight:700;color:#d1ddf9;">${a.sequelTitle}</div>
+        <div style="font-size:12px;color:#888;margin-top:3px;">המשך של ${a.parentTitle} · ${seasonCtx}</div>
       </div>
-      <div style="width:36px;height:36px;border-radius:10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:#4ade80;">▶</div>
-      <a href="#" style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;padding:7px 12px;border:1px solid rgba(74,222,128,0.28);border-radius:9px;text-decoration:none;background:rgba(74,222,128,0.08);display:inline-block;flex-shrink:0;">צפה ↗</a>
+      <a href="#" style="font-size:12px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.07em;order:3;white-space:nowrap;padding:8px 14px;border:1px solid rgba(74,222,128,0.28);border-radius:9px;text-decoration:none;background:rgba(74,222,128,0.08);display:inline-block;">צפה עכשיו ↗</a>
     </div>`
   }).join('')
 

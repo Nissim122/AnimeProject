@@ -66,3 +66,14 @@ model StatusCache {
   sequelsJson  String
   updatedAt    DateTime @updatedAt
 }
+
+model UserApproval {
+  id          Int       @id @default(autoincrement())
+  clerkUserId String    @unique
+  email       String
+  name        String?
+  status      String    @default("PENDING")
+  emailSentAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
