@@ -3,6 +3,19 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { sendApprovalRequestEmail } from '@/lib/mailer'
 import { AutoRefresh, RefreshButton, SignOutButton } from './_components'
+import crypto from 'crypto'
+
+function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return 'http://localhost:3000'
+}
+
+function generateApprovalToken(userId: string): string {
+  const secret = process.env.ADMIN_SECRET || 'change-this-secret'
+  return crypto.createHmac('sha256', secret).update(userId).digest('hex')
+}
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'nisimelec77@gmail.com').toLowerCase().trim()
 
@@ -41,7 +54,8 @@ export default async function PendingPage() {
   let approval = await prisma.userApproval.findUnique({ where: { clerkUserId: userId } })
 
   if (!approval) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = getBaseUrl()
+    const token = generateApprovalToken(userId)
 
     try {
       approval = await prisma.userApproval.create({
@@ -66,6 +80,8 @@ export default async function PendingPage() {
           userEmail: primaryEmail,
           userName,
           adminUrl: `${baseUrl}/admin`,
+          approveUrl: `${baseUrl}/api/admin/approve?userId=${userId}&token=${token}`,
+          denyUrl: `${baseUrl}/api/admin/deny?userId=${userId}&token=${token}`,
         })
       } catch (err) {
         console.error('[pending] Failed to send approval request email:', err)

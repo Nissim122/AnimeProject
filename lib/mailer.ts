@@ -2,6 +2,13 @@ import nodemailer from 'nodemailer'
 import type { AnimeResult } from './anilist'
 
 
+function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return 'http://localhost:3000'
+}
+
 function createTransport() {
   const user = process.env.EMAIL_USER
   const pass = process.env.EMAIL_PASS
@@ -247,6 +254,8 @@ export async function sendApprovalRequestEmail(params: {
   userEmail: string
   userName: string
   adminUrl: string
+  approveUrl?: string
+  denyUrl?: string
 }): Promise<boolean> {
   const transport = createTransport()
   if (!transport) {
@@ -254,7 +263,15 @@ export async function sendApprovalRequestEmail(params: {
     return false
   }
 
-  const { toAdmin, userEmail, userName, adminUrl } = params
+  const { toAdmin, userEmail, userName, adminUrl, approveUrl, denyUrl } = params
+
+  const actionButtons = approveUrl && denyUrl
+    ? `<div style="display:flex;gap:12px;margin-top:8px;">
+        <a href="${approveUrl}" style="flex:1;display:block;text-align:center;padding:14px;background:linear-gradient(90deg,#16a34a,#15803d);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">✓ אשר גישה</a>
+        <a href="${denyUrl}" style="flex:1;display:block;text-align:center;padding:14px;background:linear-gradient(90deg,#dc2626,#991b1b);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">✕ דחה בקשה</a>
+      </div>
+      <p style="text-align:center;margin:16px 0 0;"><a href="${adminUrl}" style="color:#888;font-size:13px;text-decoration:underline;">פתח פאנל ניהול</a></p>`
+    : `<a href="${adminUrl}" style="display:block;text-align:center;padding:14px;background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">סקור את הבקשה ←</a>`
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
@@ -279,7 +296,7 @@ export async function sendApprovalRequestEmail(params: {
     </div>
   </div>
 
-  <a href="${adminUrl}" style="display:block;text-align:center;padding:14px;background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">סקור את הבקשה ←</a>
+  ${actionButtons}
 </div>
 </body>
 </html>`,
@@ -300,7 +317,7 @@ export async function sendUserApprovedEmail(params: {
   }
 
   const { userEmail, userName } = params
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = getBaseUrl()
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
