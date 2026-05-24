@@ -53,6 +53,14 @@ const GROUP_META: Record<Group, { label: string; icon: string; color: string }> 
 
 const GROUP_ORDER: Group[] = ['watching', 'releasing', 'upcoming']
 
+function cleanSeriesTitle(title: string): string {
+  return title
+    .replace(/\s+\d+(?:st|nd|rd|th)\s+Season(?:\s+Part\s+\d+)?$/i, '')
+    .replace(/\s+(?:Final\s+)?Season(?:\s+\d+)?(?:\s+Part\s+\d+)?$/i, '')
+    .replace(/\s+Part\s+\d+$/i, '')
+    .trim()
+}
+
 export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Props) {
   const [sending, setSending] = useState(false)
   const [sendResult, setSendResult] = useState<'success' | 'error' | null>(null)
@@ -153,7 +161,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                             <img src={item.coverImage} alt="" className="w-8 h-11 object-cover rounded shrink-0" />
                           )}
                           <div className="flex flex-col gap-0.5 min-w-0">
-                            <span className="text-sm text-gray-100 truncate">{item.title}</span>
+                            <span className="text-sm text-gray-100 truncate">{cleanSeriesTitle(item.title)}</span>
                             {g === 'watching' && info?.available && (
                               <span className="text-xs text-violet-400 truncate">📺 {info.available.title.romaji}</span>
                             )}
