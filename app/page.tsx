@@ -149,10 +149,18 @@ export default function Home() {
         trackedAt: data.anime.trackedAt,
       }
 
-      // Fetch season info for ONLY the new anime, then update both states together
+      // Fetch season info for ONLY the new anime, then update both states together.
+      // Pass all currently-tracked IDs (minus removals, plus the new anime) so the server
+      // correctly excludes already-tracked sequels when computing "available".
+      const allTrackedAfterChange = tracked
+        .filter((t) => !toRemove.includes(t.anilistId))
+        .map((t) => t.anilistId)
+      const allTrackedIds = [...allTrackedAfterChange, anime.id]
       let newSeasonInfo: Record<number, AnimeSeasonInfo> = {}
       try {
-        const r = await fetch(`/api/next-seasons?ids=${anime.id}`)
+        const r = await fetch(
+          `/api/next-seasons?ids=${anime.id}&allTrackedIds=${allTrackedIds.join(',')}`
+        )
         if (r.ok) newSeasonInfo = await r.json()
         else newSeasonInfo = { [anime.id]: { next: null, available: null, error: true } }
       } catch {

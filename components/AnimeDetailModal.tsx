@@ -49,6 +49,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
   const isFutureRelease = (() => {
     if (!selectedAnime) return false
     if (selectedAnime.status === 'NOT_YET_RELEASED') return true
+    if (selectedAnime.status === 'RELEASING') return false
     const now = new Date()
     const year = selectedAnime.startDate?.year ?? selectedAnime.seasonYear
     const month = selectedAnime.startDate?.month
