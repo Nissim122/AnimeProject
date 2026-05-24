@@ -80,31 +80,25 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
     setSending(true)
     setSendResult(null)
     try {
-      const watching = (grouped['watching'] ?? []).map((item) => {
+      const releasing = (grouped['releasing'] ?? []).flatMap((item) => {
         const info = seasonInfo?.[item.anilistId]
-        return {
-          title: item.title,
-          coverImage: item.coverImage ?? undefined,
-          subtitle: info?.available ? `📺 ${info.available.title.romaji}` : undefined,
-        }
+        if (!info?.next) return []
+        return [{ title: item.title, coverImage: item.coverImage ?? undefined, sequelTitle: info.next.title.romaji, sequelId: info.next.id, startDate: info.next.startDate }]
       })
-      const releasing = (grouped['releasing'] ?? []).map((item) => ({
-        title: item.title,
-        coverImage: item.coverImage ?? undefined,
-        subtitle: '🟢 משודר כעת',
-      }))
-      const upcoming = (grouped['upcoming'] ?? []).map((item) => {
+      const upcoming = (grouped['upcoming'] ?? []).flatMap((item) => {
         const info = seasonInfo?.[item.anilistId]
-        return {
-          title: item.title,
-          coverImage: item.coverImage ?? undefined,
-          subtitle: info?.next ? `📅 ${formatDate(info.next.startDate)}` : undefined,
-        }
+        if (!info?.next) return []
+        return [{ title: item.title, coverImage: item.coverImage ?? undefined, sequelTitle: info.next.title.romaji, sequelId: info.next.id, startDate: info.next.startDate }]
+      })
+      const available = (grouped['watching'] ?? []).flatMap((item) => {
+        const info = seasonInfo?.[item.anilistId]
+        if (!info?.available) return []
+        return [{ parentTitle: item.title, sequelTitle: info.available.title.romaji }]
       })
       const res = await fetch('/api/send-updates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ watching, releasing, upcoming }),
+        body: JSON.stringify({ releasing, upcoming, available }),
       })
       setSendResult(res.ok ? 'success' : 'error')
     } catch {
