@@ -61,7 +61,7 @@ export default function WatchListView({ items, onRemove, onMoveToTracked }: Prop
               {onMoveToTracked && (
                 <button
                   onClick={() => onMoveToTracked(item)}
-                  className="w-full py-1 text-xs text-[#e0176b] hover:text-pink-300 hover:bg-pink-900/30 rounded transition-colors"
+                  className="w-full py-1 text-xs text-white bg-green-700 hover:bg-green-600 rounded transition-colors"
                 >
                   העבר למעקב
                 </button>
