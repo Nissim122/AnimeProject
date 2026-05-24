@@ -11,7 +11,7 @@ export function AutoRefresh() {
   useEffect(() => {
     timerRef.current = setInterval(() => {
       router.refresh()
-    }, 30000)
+    }, 5000)
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }

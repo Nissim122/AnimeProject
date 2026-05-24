@@ -54,9 +54,6 @@ export default async function PendingPage() {
   let approval = await prisma.userApproval.findUnique({ where: { clerkUserId: userId } })
 
   if (!approval) {
-    const baseUrl = getBaseUrl()
-    const token = generateApprovalToken(userId)
-
     try {
       approval = await prisma.userApproval.create({
         data: {
@@ -64,17 +61,32 @@ export default async function PendingPage() {
           email: primaryEmail,
           name: userName,
           status: 'PENDING',
-          emailSentAt: new Date(),
+          emailSentAt: null,
         },
       })
     } catch {
       // Race condition — another render already created the record
       approval = await prisma.userApproval.findUnique({ where: { clerkUserId: userId } })
     }
+  }
 
-    // Send notification email to admin regardless of whether record was just created or already existed
-    if (approval?.status === 'PENDING') {
+  if (approval?.status === 'APPROVED') {
+    redirect('/')
+  }
+
+  // Send email on every sign-in attempt when PENDING, throttled to once per hour
+  if (approval?.status === 'PENDING') {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    const shouldSendEmail = !approval.emailSentAt || approval.emailSentAt < oneHourAgo
+
+    if (shouldSendEmail) {
+      const baseUrl = getBaseUrl()
+      const token = generateApprovalToken(userId)
       try {
+        await prisma.userApproval.update({
+          where: { clerkUserId: userId },
+          data: { emailSentAt: new Date() },
+        })
         await sendApprovalRequestEmail({
           toAdmin: ADMIN_EMAIL,
           userEmail: primaryEmail,
@@ -87,10 +99,6 @@ export default async function PendingPage() {
         console.error('[pending] Failed to send approval request email:', err)
       }
     }
-  }
-
-  if (approval?.status === 'APPROVED') {
-    redirect('/')
   }
 
   const isDenied = approval?.status === 'DENIED'
@@ -186,7 +194,7 @@ export default async function PendingPage() {
             <div className="flex flex-col items-center gap-3">
               <RefreshButton />
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                הדף מתרענן אוטומטית כל 30 שניות
+                הדף מתרענן אוטומטית כל מספר שניות
               </p>
               <SignOutButton />
             </div>
