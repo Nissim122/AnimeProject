@@ -4,7 +4,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/pending(.*)',
-  '/api/admin/(.*)',
+  '/api/admin/approve(.*)',
+  '/api/admin/deny(.*)',
   '/api/search(.*)',
   '/api/check-updates(.*)',
 ])
