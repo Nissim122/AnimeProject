@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { RelationNode } from '@/lib/anilist'
-import type { AnimeSeasonInfo } from '@/app/page'
+import type { AnimeSeasonInfo } from '@/app/(app)/page'
 import { cleanSeriesTitle } from '@/lib/titleUtils'
 
 interface TrackedItem {

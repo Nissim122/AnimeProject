@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { AnimeSeasonInfo } from '@/app/page'
+import type { AnimeSeasonInfo } from '@/app/(app)/page'
 import type { RelationNode } from '@/lib/anilist'
 import { cleanSeriesTitle } from '@/lib/titleUtils'
 
