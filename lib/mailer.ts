@@ -237,6 +237,119 @@ export async function sendConsolidatedMonthlyEmail(params: {
   return true
 }
 
+const MONTHS_HE_MAIL = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+
+function formatDateHe(d: { year: number | null; month: number | null; day: number | null }): string {
+  if (!d.year) return 'בקרוב'
+  if (d.month && d.day) return `${d.day} ${MONTHS_HE_MAIL[d.month - 1]} ${d.year}`
+  if (d.month) return `${MONTHS_HE_MAIL[d.month - 1]} ${d.year}`
+  return String(d.year)
+}
+
+export async function sendUpdatesEmail(params: {
+  watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }>
+  releasing: Array<{ parentTitle: string; coverImage?: string }>
+  upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null } }>
+  toEmail: string
+}): Promise<boolean> {
+  const transport = createTransport()
+  const { watching, releasing, upcoming, toEmail } = params
+  if (!transport || !toEmail) {
+    console.warn('[mailer] Missing email config — skipping')
+    return false
+  }
+
+  const total = watching.length + releasing.length + upcoming.length
+  if (total === 0) return false
+
+  function coverImg(url?: string): string {
+    return url
+      ? `<img src="${url}" alt="" style="width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0;" />`
+      : `<div style="width:32px;height:44px;background:#1f2937;border-radius:4px;flex-shrink:0;"></div>`
+  }
+
+  function item(coverImage: string | undefined, title: string, statusColor: string, statusLine: string): string {
+    return `
+    <div style="display:flex;align-items:center;gap:12px;background:rgba(31,41,55,0.5);border-radius:10px;padding:8px 12px;margin-bottom:8px;">
+      ${coverImg(coverImage)}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</div>
+        <div style="font-size:12px;color:${statusColor};margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${statusLine}</div>
+      </div>
+    </div>`
+  }
+
+  function section(icon: string, label: string, color: string, count: number, cards: string): string {
+    return `
+    <div style="padding:16px 12px 4px;">
+      <div style="font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.12em;display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+        ${icon} ${label}
+        <span style="background:#1f2937;border-radius:9999px;padding:1px 8px;">${count}</span>
+      </div>
+      ${cards}
+    </div>`
+  }
+
+  const watchingSection = watching.length > 0 ? section(
+    '📺', 'צופה', '#a78bfa', watching.length,
+    watching.map(i => item(i.coverImage, i.parentTitle, '#a78bfa', `📺 ${i.sequelTitle}`)).join('')
+  ) : ''
+
+  const releasingSection = releasing.length > 0 ? section(
+    '🟢', 'יוצאים פרקים חדשים', '#4ade80', releasing.length,
+    releasing.map(i => item(i.coverImage, i.parentTitle, '#4ade80', '🟢 משודר כעת')).join('')
+  ) : ''
+
+  const upcomingSection = upcoming.length > 0 ? section(
+    '📅', 'הוכרזה עונה', '#fbbf24', upcoming.length,
+    upcoming.map(i => item(i.coverImage, i.parentTitle, '#fbbf24', `📅 ${formatDateHe(i.startDate)}`)).join('')
+  ) : ''
+
+  const pills = [
+    watching.length  > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:20px;font-size:11px;font-weight:700;color:#a78bfa;">📺 ${watching.length} לצפייה</span>` : '',
+    releasing.length > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.18);border-radius:20px;font-size:11px;font-weight:700;color:#4ade80;">🟢 ${releasing.length} בשידור</span>` : '',
+    upcoming.length  > 0 ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.18);border-radius:20px;font-size:11px;font-weight:700;color:#fbbf24;">📅 ${upcoming.length} הוכרזו</span>` : '',
+  ].filter(Boolean).join(' ')
+
+  await transport.sendMail({
+    from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: `🎌 עדכונים — ${total} סדרות`,
+    html: `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#070710;font-family:'Heebo',Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%;">
+<div style="max-width:480px;margin:0 auto;padding-bottom:32px;">
+
+  <div style="padding:28px 20px 16px;">
+    <div style="font-size:10px;color:#e0176b;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px;font-family:'Courier New',monospace;">ANIME TRACKER</div>
+    <div style="font-size:28px;font-weight:900;color:#f1f5f9;line-height:1.1;">עדכונים</div>
+    <div style="font-size:13px;color:#64748b;margin-top:6px;font-weight:300;">${total} סדרות עם עדכון</div>
+  </div>
+
+  <div style="padding:0 12px 8px;display:flex;gap:8px;flex-wrap:wrap;">${pills}</div>
+
+  ${watchingSection}
+  ${releasingSection}
+  ${upcomingSection}
+
+  <div style="margin:20px 12px 0;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.05);text-align:center;">
+    <span style="font-size:10px;color:#374151;letter-spacing:0.15em;font-family:'Courier New',monospace;">ANIME TRACKER</span>
+  </div>
+
+</div>
+</body>
+</html>`,
+  })
+
+  console.log(`[mailer] Updates email sent (${total} items)`)
+  return true
+}
+
 export async function sendApprovalRequestEmail(params: {
   toAdmin: string
   userEmail: string

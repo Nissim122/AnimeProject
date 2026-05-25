@@ -62,29 +62,26 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
     if (emailState === 'sending') return
     setEmailState('sending')
 
-    // Build payload from already-loaded data — no extra AniList calls needed
-    const releasing: Array<{ parentTitle: string; coverImage?: string; status: string; nextTitle: string; nextId: number; startDate: { year: number | null; month: number | null; day: number | null } }> = []
-    const available: Array<{ parentTitle: string; sequelTitle: string; anilistId: number }> = []
+    const watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }> = []
+    const releasing: Array<{ parentTitle: string; coverImage?: string }> = []
+    const upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null } }> = []
 
     for (const item of tracked) {
       const info = seasonInfo?.[item.anilistId]
       if (!info || info.error) continue
       const g = classify(info)
+      const title = cleanSeriesTitle(item.title)
+      const cover = item.coverImage ?? undefined
       if (g === 'watching' && info.available) {
-        available.push({ parentTitle: item.title, sequelTitle: info.available.title.romaji, anilistId: info.available.id })
-      } else if ((g === 'releasing' || g === 'upcoming') && info.next) {
-        releasing.push({
-          parentTitle: item.title,
-          coverImage: item.coverImage ?? undefined,
-          status: info.next.status,
-          nextTitle: info.next.title.romaji || item.title,
-          nextId: info.next.id,
-          startDate: info.next.startDate,
-        })
+        watching.push({ parentTitle: title, coverImage: cover, sequelTitle: info.available.title.romaji })
+      } else if (g === 'releasing') {
+        releasing.push({ parentTitle: title, coverImage: cover })
+      } else if (g === 'upcoming' && info.next) {
+        upcoming.push({ parentTitle: title, coverImage: cover, startDate: info.next.startDate })
       }
     }
 
-    if (releasing.length === 0 && available.length === 0) {
+    if (watching.length === 0 && releasing.length === 0 && upcoming.length === 0) {
       setEmailState('nothing')
       return
     }
@@ -93,7 +90,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
       const res = await fetch('/api/send-update-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ releasing, available }),
+        body: JSON.stringify({ watching, releasing, upcoming }),
       })
       const data = await res.json()
       if (!res.ok) { setEmailState('error'); return }

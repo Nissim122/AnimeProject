@@ -1,22 +1,12 @@
 import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
-import { sendConsolidatedMonthlyEmail } from '@/lib/mailer'
-import { translateToHebrew } from '@/lib/translate'
+import { sendUpdatesEmail } from '@/lib/mailer'
 
-interface ReleasingInput {
-  parentTitle: string
-  coverImage?: string
-  status: string
-  nextTitle: string
-  nextId: number
-  startDate: { year: number | null; month: number | null; day: number | null }
-}
+interface StartDate { year: number | null; month: number | null; day: number | null }
 
-interface AvailableInput {
-  parentTitle: string
-  sequelTitle: string
-  anilistId: number
-}
+interface WatchingInput  { parentTitle: string; coverImage?: string; sequelTitle: string }
+interface ReleasingInput { parentTitle: string; coverImage?: string }
+interface UpcomingInput  { parentTitle: string; coverImage?: string; startDate: StartDate }
 
 export async function POST(req: Request) {
   const { userId } = await auth()
@@ -28,40 +18,19 @@ export async function POST(req: Request) {
   if (!email) return NextResponse.json({ error: 'No email found' }, { status: 400 })
 
   const body = await req.json().catch(() => ({})) as {
+    watching?: WatchingInput[]
     releasing?: ReleasingInput[]
-    available?: AvailableInput[]
+    upcoming?: UpcomingInput[]
   }
 
+  const watching  = body.watching  ?? []
   const releasing = body.releasing ?? []
-  const available = body.available ?? []
+  const upcoming  = body.upcoming  ?? []
 
-  if (releasing.length === 0 && available.length === 0) {
+  if (watching.length === 0 && releasing.length === 0 && upcoming.length === 0) {
     return NextResponse.json({ sent: false, reason: 'nothing_to_send' })
   }
 
-  const items: Parameters<typeof sendConsolidatedMonthlyEmail>[0]['items'] = []
-  for (const item of releasing) {
-    const hebrewTitle = await translateToHebrew(item.nextTitle).catch(() => item.nextTitle)
-    items.push({
-      hebrewTitle,
-      englishTitle: item.nextTitle,
-      sequelTitle: item.nextTitle,
-      coverImage: item.coverImage,
-      status: item.status,
-      nextAiringEpisode: null,
-      sequelEpisodeCount: null,
-      totalSeasons: undefined,
-      sequelId: item.nextId,
-      startDate: item.startDate,
-      seasons: [],
-    })
-  }
-
-  const sent = await sendConsolidatedMonthlyEmail({
-    items,
-    available: available.length > 0 ? available : undefined,
-    toEmail: email,
-  })
-
+  const sent = await sendUpdatesEmail({ watching, releasing, upcoming, toEmail: email })
   return NextResponse.json({ sent })
 }
