@@ -61,15 +61,43 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
   async function handleSendEmail() {
     if (emailState === 'sending') return
     setEmailState('sending')
+
+    // Build payload from already-loaded data — no extra AniList calls needed
+    const releasing: Array<{ parentTitle: string; coverImage?: string; status: string; nextTitle: string; nextId: number; startDate: { year: number | null; month: number | null; day: number | null } }> = []
+    const available: Array<{ parentTitle: string; sequelTitle: string; anilistId: number }> = []
+
+    for (const item of tracked) {
+      const info = seasonInfo?.[item.anilistId]
+      if (!info || info.error) continue
+      const g = classify(info)
+      if (g === 'watching' && info.available) {
+        available.push({ parentTitle: item.title, sequelTitle: info.available.title.romaji, anilistId: info.available.id })
+      } else if ((g === 'releasing' || g === 'upcoming') && info.next) {
+        releasing.push({
+          parentTitle: item.title,
+          coverImage: item.coverImage ?? undefined,
+          status: info.next.status,
+          nextTitle: info.next.title.romaji || item.title,
+          nextId: info.next.id,
+          startDate: info.next.startDate,
+        })
+      }
+    }
+
+    if (releasing.length === 0 && available.length === 0) {
+      setEmailState('nothing')
+      return
+    }
+
     try {
-      const res = await fetch('/api/check-updates', {
+      const res = await fetch('/api/send-update-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sendEmails: true, userOnly: true }),
+        body: JSON.stringify({ releasing, available }),
       })
       const data = await res.json()
       if (!res.ok) { setEmailState('error'); return }
-      setEmailState((data.notified ?? 0) > 0 ? 'sent' : 'nothing')
+      setEmailState(data.sent ? 'sent' : 'nothing')
     } catch {
       setEmailState('error')
     }
