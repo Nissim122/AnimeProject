@@ -194,10 +194,10 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
   for (const item of data._queue) {
     try {
       const allSeasons = await getSeasons(item.animeId)
-      const baseTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
-      const hebrewTitle = await translateToHebrew(baseTitle).catch(() => baseTitle)
-      const englishTitle = allSeasons[0]?.title.english ?? allSeasons[0]?.title.romaji ?? item.animeTitle
       const sequelEntry = allSeasons.find((s) => s.id === item.sequelId)
+      const sequelBaseTitle = sequelEntry?.title.english ?? sequelEntry?.title.romaji ?? item.sequelTitle
+      const hebrewTitle = await translateToHebrew(sequelBaseTitle).catch(() => sequelBaseTitle)
+      const englishTitle = sequelEntry?.title.english ?? sequelEntry?.title.romaji ?? item.sequelTitle
       consolidatedItems.push({
         hebrewTitle, englishTitle,
         sequelTitle: item.sequelTitle,
@@ -217,7 +217,7 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
     }
   }
 
-  const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number }> = []
+  const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number }> = []
   for (const item of data.availableUnwatched) {
     try {
       const seasons = await getSeasons(item.sequelId)
@@ -227,9 +227,10 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
         sequelTitle: item.sequelTitle,
         currentSeasonNumber: sequelIndex > 0 ? sequelIndex : undefined,
         totalSeasons: seasons.length > 0 ? seasons.length : undefined,
+        anilistId: item.sequelId,
       })
     } catch {
-      enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle })
+      enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle, anilistId: item.sequelId })
     }
   }
 

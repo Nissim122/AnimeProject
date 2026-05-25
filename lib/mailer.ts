@@ -37,7 +37,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
     startDate: { year: number | null; month: number | null; day: number | null }
     seasons: AnimeResult[]
   }>
-  available?: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number }>
+  available?: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number }>
   toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()
@@ -87,9 +87,11 @@ export async function sendConsolidatedMonthlyEmail(params: {
       ? `<img src="${item.coverImage}" alt="" style="width:100%;height:100%;min-height:140px;object-fit:cover;display:block;" />`
       : `<div style="width:100%;min-height:140px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
 
-    const aired = item.nextAiringEpisode ? item.nextAiringEpisode.episode - 1 : (item.sequelEpisodeCount ?? 0)
+    const aired = item.nextAiringEpisode
+      ? item.nextAiringEpisode.episode - 1
+      : item.sequelEpisodeCount
     const total_ = item.sequelEpisodeCount
-    const hasEps = total_ && total_ > 0
+    const hasEps = aired != null && total_ != null && total_ > 0
     const pct = hasEps ? Math.min(100, Math.round((aired / total_) * 100)) : 0
 
     const progressHtml = hasEps ? `
@@ -159,7 +161,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
           <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
           <div style="font-size:11px;color:#4b5563;margin-top:3px;">המשך של <span style="color:#64748b;">${a.parentTitle}</span>${seasonCtx} · כל הפרקים זמינים</div>
         </div>
-        <a href="#" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:8px;text-decoration:none;color:#4ade80;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;">צפה ↗</a>
+        <a href="${a.anilistId ? `https://anilist.co/anime/${a.anilistId}` : '#'}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:8px;text-decoration:none;color:#4ade80;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;">צפה ↗</a>
       </div>
     </div>`
   }).join('')
