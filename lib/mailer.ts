@@ -103,7 +103,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
         <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;direction:ltr;">
           <div style="width:${pct || 2}%;height:100%;background:linear-gradient(to right,#8a0d42,#e0176b);border-radius:2px;"></div>
         </div>
-      </div>` : aired > 0 ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">${aired} פרקים</div>` : ''
+      </div>` : (aired != null && aired > 0) ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">${aired} פרקים</div>` : ''
 
     const nextHtml = item.nextAiringEpisode ? `
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding:7px 10px;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.12);border-radius:8px;">
