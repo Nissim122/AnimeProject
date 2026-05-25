@@ -18,7 +18,6 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
   const [fetchError, setFetchError] = useState(false)
   const [selectedId, setSelectedId] = useState<number>(anime.id)
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
-  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'nothing' | 'error'>('idle')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -64,23 +63,6 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
     if (selectedAnime && !alreadyTracked && !isFutureRelease) {
       onTrack(selectedAnime, seasons.map((s) => s.id))
       onClose()
-    }
-  }
-
-  async function handleSendEmail() {
-    if (emailState === 'sending') return
-    setEmailState('sending')
-    try {
-      const res = await fetch('/api/send-anime-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ anilistId: selectedId }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setEmailState('error'); return }
-      setEmailState(data.sent === false ? 'nothing' : 'sent')
-    } catch {
-      setEmailState('error')
     }
   }
 
@@ -226,19 +208,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
             return `נבחרה: עונה ${tvNum}`
           })()}
           </p>
-          <div className="flex gap-2 justify-end flex-wrap">
-            <button
-              onClick={handleSendEmail}
-              disabled={loading || fetchError || emailState === 'sending' || emailState === 'sent'}
-              title="שלח עדכון עונות למייל (תבנית חודשית)"
-              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-gray-200 rounded-lg font-semibold text-xs sm:text-sm transition-colors"
-            >
-              {emailState === 'sending' ? '⟳ שולח...' :
-               emailState === 'sent'    ? '✓ נשלח' :
-               emailState === 'nothing' ? '— אין עדכונים' :
-               emailState === 'error'   ? '✕ שגיאה' :
-               '📧 שלח עדכון'}
-            </button>
+          <div className="flex gap-2 justify-end">
             {onAddToWatchlist && (
               <button
                 onClick={handleAddToWatchlist}

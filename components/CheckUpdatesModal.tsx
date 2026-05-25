@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { AnimeSeasonInfo } from '@/app/(app)/page'
 import type { RelationNode } from '@/lib/anilist'
 import { cleanSeriesTitle } from '@/lib/titleUtils'
@@ -55,6 +56,25 @@ const GROUP_ORDER: Group[] = ['watching', 'releasing', 'upcoming']
 
 
 export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Props) {
+  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'nothing' | 'error'>('idle')
+
+  async function handleSendEmail() {
+    if (emailState === 'sending') return
+    setEmailState('sending')
+    try {
+      const res = await fetch('/api/check-updates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sendEmails: true, userOnly: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setEmailState('error'); return }
+      setEmailState((data.notified ?? 0) > 0 ? 'sent' : 'nothing')
+    } catch {
+      setEmailState('error')
+    }
+  }
+
   const grouped: Partial<Record<Group, TrackedItem[]>> = {}
 
   for (const item of tracked) {
@@ -135,7 +155,19 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-700 shrink-0 flex justify-end">
+        <div className="px-4 py-3 border-t border-gray-700 shrink-0 flex items-center justify-between gap-2">
+          <button
+            onClick={handleSendEmail}
+            disabled={emailState === 'sending' || emailState === 'sent' || total === 0}
+            title="שלח עדכון עונות למייל (תבנית חודשית)"
+            className="px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-gray-200 transition-colors"
+          >
+            {emailState === 'sending' ? '⟳ שולח...' :
+             emailState === 'sent'    ? '✓ נשלח' :
+             emailState === 'nothing' ? '— אין עדכונים לשליחה' :
+             emailState === 'error'   ? '✕ שגיאה' :
+             '📧 שלח עדכון במייל'}
+          </button>
           <button
             onClick={onClose}
             className="px-3 py-2 rounded-lg text-xs sm:text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors"

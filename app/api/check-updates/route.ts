@@ -296,8 +296,20 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({})) as { sendEmails?: boolean }
+    const body = await req.json().catch(() => ({})) as { sendEmails?: boolean; userOnly?: boolean }
     const sendEmails = body.sendEmails !== false
+
+    if (sendEmails && body.userOnly) {
+      // Manual send from UI — logged-in user only
+      const { userId } = await auth()
+      if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const clerk = await clerkClient()
+      const user = await clerk.users.getUser(userId)
+      const email = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress
+      if (!email) return NextResponse.json({ error: 'No email found' }, { status: 400 })
+      const result = await runUpdateCheckForUser(userId, email)
+      return NextResponse.json(result)
+    }
 
     if (sendEmails) {
       const result = await runUpdateCheck()
