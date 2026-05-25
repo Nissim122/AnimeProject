@@ -66,113 +66,101 @@ export async function sendConsolidatedMonthlyEmail(params: {
   }
 
   function buildSeasonDots(seasons: AnimeResult[], currentId: number): string {
-    return seasons.slice(0, 10).map(s => {
+    if (seasons.length <= 1) return ''
+    return seasons.slice(0, 12).map(s => {
       const isCurrent = s.id === currentId
       const isDone = s.status === 'FINISHED'
-      const cls = isCurrent ? 'current' : isDone ? 'done' : ''
-      const w = isCurrent ? '20px' : '10px'
-      return `<div class="sdot ${cls}" style="width:${w};height:4px;border-radius:2px;flex-shrink:0;background:${isCurrent ? '#e0176b' : isDone ? 'rgba(224,23,107,0.35)' : 'rgba(255,255,255,0.1)'};${isCurrent ? 'box-shadow:0 0 6px #e0176b99;' : ''}"></div>`
+      const w = isCurrent ? '18px' : '8px'
+      return `<div style="width:${w};height:4px;border-radius:2px;flex-shrink:0;background:${isCurrent ? '#e0176b' : isDone ? 'rgba(224,23,107,0.4)' : 'rgba(255,255,255,0.08)'};${isCurrent ? 'box-shadow:0 0 5px rgba(224,23,107,0.5);' : ''}"></div>`
     }).join('')
   }
 
   const releasingCards = releasing.map(item => {
     const idx = item.seasons.findIndex(s => s.id === item.sequelId)
-    const seasonNum = idx >= 0 ? idx + 1 : 1
-    const isNewSeason = (item.totalSeasons ?? 1) > 1
-    const badgeNew = isNewSeason
-      ? `<span style="display:inline-block;background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:0.07em;text-transform:uppercase;">⬡ עונה ${seasonNum}</span>`
-      : `<span style="display:inline-block;background:#2a0a1a;color:#e0176b;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid rgba(224,23,107,0.35);letter-spacing:0.07em;text-transform:uppercase;">עונה 1</span>`
-    const badgeTotal = (item.totalSeasons ?? 0) > 1
-      ? `<span style="display:inline-block;background:rgba(255,255,255,0.06);color:#888;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,0.1);">מתוך ${item.totalSeasons} עונות</span>`
-      : ''
-    const badgeGap = badgeTotal ? `<span style="display:inline-block;width:5px;"></span>` : ''
+    const seasonNum = idx >= 0 ? idx + 1 : null
+
+    const badge = seasonNum
+      ? `<span style="display:inline-block;background:rgba(224,23,107,0.1);border:1px solid rgba(224,23,107,0.28);color:#e0176b;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;">▶ AIRING · עונה ${seasonNum}</span>`
+      : `<span style="display:inline-block;background:rgba(224,23,107,0.1);border:1px solid rgba(224,23,107,0.28);color:#e0176b;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;">▶ בשידור</span>`
+
     const coverHtml = item.coverImage
-      ? `<img src="${item.coverImage}" alt="" style="width:100%;height:100%;min-height:140px;max-height:200px;object-fit:cover;display:block;" />`
-      : `<div style="width:100%;min-height:140px;max-height:200px;background:linear-gradient(160deg,#2a0a1a,#1f2937);display:flex;align-items:center;justify-content:center;font-size:32px;">🎌</div>`
+      ? `<img src="${item.coverImage}" alt="" style="width:100%;height:100%;min-height:140px;object-fit:cover;display:block;" />`
+      : `<div style="width:100%;min-height:140px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
+
     const aired = item.nextAiringEpisode ? item.nextAiringEpisode.episode - 1 : (item.sequelEpisodeCount ?? 0)
     const total_ = item.sequelEpisodeCount
-    const pct = total_ && total_ > 0 ? Math.round((aired / total_) * 100) : 40
-    const emptyPct = 100 - pct
-    const fractionHtml = total_
-      ? `<span style="font-family:'Courier New',monospace;font-size:11px;color:#888;flex-shrink:0;">${aired} / ${total_}</span>`
-      : `<span style="font-size:11px;color:#555;flex-shrink:0;">? ס"כ</span>`
-    const nextRowHtml = item.nextAiringEpisode
-      ? `<div style="display:flex;align-items:center;gap:7px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 5px #4ade80;flex-shrink:0;"></div>
-          <div style="font-size:13px;color:#888;flex:1;min-width:0;">פרק <strong style="color:#4ade80;">${item.nextAiringEpisode.episode}</strong> · ${formatAiringDate(item.nextAiringEpisode.airingAt)}</div>
-          <span style="font-family:'Courier New',monospace;font-size:11px;color:#555;flex-shrink:0;">ep.${String(item.nextAiringEpisode.episode).padStart(2,'0')}</span>
-        </div>`
-      : ''
+    const hasEps = total_ && total_ > 0
+    const pct = hasEps ? Math.min(100, Math.round((aired / total_) * 100)) : 0
+
+    const progressHtml = hasEps ? `
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-size:11px;color:#64748b;">${aired}<span style="color:#374151;"> / ${total_} פרקים</span></span>
+          <span style="font-size:10px;color:#374151;font-family:'Courier New',monospace;">${pct}%</span>
+        </div>
+        <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;direction:ltr;">
+          <div style="width:${pct || 2}%;height:100%;background:linear-gradient(to right,#8a0d42,#e0176b);border-radius:2px;"></div>
+        </div>
+      </div>` : aired > 0 ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">${aired} פרקים</div>` : ''
+
+    const nextHtml = item.nextAiringEpisode ? `
+      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding:7px 10px;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.12);border-radius:8px;">
+        <div style="width:5px;height:5px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div>
+        <span style="font-size:12px;color:#64748b;">פרק <strong style="color:#4ade80;">${item.nextAiringEpisode.episode}</strong> · ${formatAiringDate(item.nextAiringEpisode.airingAt)}</span>
+      </div>` : ''
+
+    const dotsHtml = item.seasons.length > 1 ? `
+      <div style="display:flex;gap:3px;margin-top:10px;flex-wrap:wrap;">${buildSeasonDots(item.seasons, item.sequelId)}</div>` : ''
+
     return `
-    <div class="rc-wrap card-margin" style="margin:0 10px 10px;background:#1f2937;border-radius:16px;border:1px solid rgba(224,23,107,0.2);overflow:hidden;display:flex;min-height:140px;">
-      <div class="rc-cover-col" style="width:96px;flex-shrink:0;overflow:hidden;min-height:140px;">${coverHtml}</div>
-      <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 12px;display:flex;flex-direction:column;justify-content:space-between;">
-        <div>
-          <div style="margin-bottom:7px;line-height:2;">${badgeNew}${badgeGap}${badgeTotal}</div>
-          <div class="rc-title" style="font-size:17px;font-weight:700;color:#d1ddf9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.hebrewTitle}</div>
-          <div style="font-family:'Courier New',monospace;font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:right;margin-top:1px;">${item.sequelTitle}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:9px;margin-top:10px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="font-size:13px;color:#888;white-space:nowrap;flex-shrink:0;"><strong style="color:#d1ddf9;">${aired}</strong> פרקים</div>
-            <div style="flex:1;height:5px;background:rgba(255,255,255,0.09);border-radius:3px;overflow:hidden;">
-              <div style="margin-right:${emptyPct}%;width:${pct}%;height:100%;border-radius:3px;background:linear-gradient(to right,#e0176b,#8a0d42);"></div>
-            </div>
-            ${fractionHtml}
-          </div>
-          ${nextRowHtml}
-          <div class="sdots-row" style="display:flex;align-items:center;gap:3px;">${buildSeasonDots(item.seasons, item.sequelId)}</div>
-        </div>
+    <div class="rc-wrap card" style="margin:0 12px 10px;background:#111827;border-radius:14px;border:1px solid rgba(224,23,107,0.15);overflow:hidden;display:flex;">
+      <div class="rc-cover" style="width:90px;flex-shrink:0;overflow:hidden;min-height:140px;">${coverHtml}</div>
+      <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 12px;">
+        ${badge}
+        <div class="rc-title" style="font-size:16px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
+        ${item.sequelTitle ? `<div style="font-size:10px;color:#374151;font-family:'Courier New',monospace;direction:ltr;text-align:right;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.sequelTitle}</div>` : ''}
+        ${nextHtml}
+        ${progressHtml}
+        ${dotsHtml}
       </div>
     </div>`
   }).join('')
 
   const announcedCards = announced.map(item => {
     const idx = item.seasons.findIndex(s => s.id === item.sequelId)
-    const seasonNum = idx >= 0 ? idx + 1 : 1
-    const prevSeasons = item.seasons.filter(s => s.status === 'FINISHED').length
+    const seasonNum = idx >= 0 ? idx + 1 : null
     const dateVal = formatMonthYear(item.startDate.year, item.startDate.month)
-    const dateColor = dateVal === 'TBA' ? '#555' : '#fbbf24'
+    const hasTBA = dateVal === 'TBA'
     return `
-    <div class="card-margin" style="margin:0 10px 8px;background:#1f2937;border-radius:14px;border:1px solid rgba(251,191,36,0.22);padding:14px 14px 12px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
-        <div style="min-width:0;flex:1;">
-          <div style="font-size:16px;font-weight:700;color:#d1ddf9;">${item.hebrewTitle}</div>
-          <div style="font-family:'Courier New',monospace;font-size:11px;color:#888;margin-top:3px;">${item.englishTitle}</div>
+    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(251,191,36,0.15);padding:14px 14px 12px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          ${seasonNum ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:2px 7px;border-radius:4px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">עונה ${seasonNum}</span>` : ''}
+          <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
+          ${item.englishTitle && item.englishTitle !== item.hebrewTitle ? `<div style="font-size:10px;color:#374151;font-family:'Courier New',monospace;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.englishTitle}</div>` : ''}
         </div>
-        <span style="display:inline-block;font-size:10px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);padding:3px 9px;border-radius:5px;white-space:nowrap;flex-shrink:0;margin-left:8px;">עונה ${seasonNum} הוכרזה</span>
-      </div>
-      <div style="display:flex;align-items:stretch;">
-        <div style="text-align:center;flex:1;padding:6px 0;">
-          <div class="ac-stat-num" style="font-size:20px;font-weight:900;color:#d1ddf9;line-height:1.1;">${prevSeasons}</div>
-          <div style="font-size:10px;color:#888;margin-top:3px;">עונות קודמות</div>
-        </div>
-        <div class="ac-divider" style="width:1px;background:rgba(251,191,36,0.13);flex-shrink:0;align-self:stretch;"></div>
-        <div style="text-align:center;flex:1;padding:6px 0;">
-          <div class="ac-stat-num" style="font-size:20px;font-weight:900;color:#d1ddf9;line-height:1.1;">${item.sequelEpisodeCount ?? '—'}</div>
-          <div style="font-size:10px;color:#888;margin-top:3px;">פרקים ס"כ</div>
-        </div>
-        <div class="ac-divider" style="width:1px;background:rgba(251,191,36,0.13);flex-shrink:0;align-self:stretch;"></div>
-        <div style="text-align:center;flex:1;padding:6px 0;">
-          <div class="ac-stat-num" style="font-size:${dateVal === 'TBA' ? '15px' : '20px'};font-weight:900;color:${dateColor};line-height:1.1;">${dateVal}</div>
-          <div style="font-size:10px;color:#888;margin-top:3px;">${dateVal === 'TBA' ? 'תאריך לא ידוע' : 'תחילת שידור'}</div>
+        <div style="flex-shrink:0;text-align:center;min-width:52px;">
+          <div style="font-size:${hasTBA ? '12px' : '17px'};font-weight:800;color:${hasTBA ? '#4b5563' : '#fbbf24'};line-height:1.1;">${dateVal}</div>
+          <div style="font-size:9px;color:#4b5563;margin-top:3px;">${hasTBA ? 'TBA' : 'פרסום'}</div>
         </div>
       </div>
+      ${item.sequelEpisodeCount ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.04);"><span style="font-size:11px;color:#4b5563;">${item.sequelEpisodeCount} פרקים צפויים</span></div>` : ''}
     </div>`
   }).join('')
 
   const availableCards = avail.map(a => {
     const seasonCtx = (a.currentSeasonNumber && a.totalSeasons)
-      ? `עונה ${a.currentSeasonNumber} מתוך ${a.totalSeasons} · כל הפרקים זמינים`
-      : 'כל הפרקים זמינים'
+      ? ` · עונה ${a.currentSeasonNumber}/${a.totalSeasons}`
+      : ''
     return `
-    <div class="av-wrap card-margin" style="margin:0 10px 8px;background:#1f2937;border-radius:14px;border:1px solid rgba(74,222,128,0.2);padding:14px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:700;color:#d1ddf9;overflow:hidden;text-overflow:ellipsis;">${a.sequelTitle}</div>
-        <div style="font-size:12px;color:#888;margin-top:3px;overflow:hidden;text-overflow:ellipsis;">המשך של ${a.parentTitle} · ${seasonCtx}</div>
+    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);padding:13px 14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:150px;">
+          <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
+          <div style="font-size:11px;color:#4b5563;margin-top:3px;">המשך של <span style="color:#64748b;">${a.parentTitle}</span>${seasonCtx} · כל הפרקים זמינים</div>
+        </div>
+        <a href="#" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:8px;text-decoration:none;color:#4ade80;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;">צפה ↗</a>
       </div>
-      <div class="av-icon" style="width:36px;height:36px;border-radius:10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:#4ade80;">▶</div>
-      <a class="av-btn" href="#" style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.06em;padding:7px 12px;border:1px solid rgba(74,222,128,0.28);border-radius:9px;text-decoration:none;background:rgba(74,222,128,0.08);display:inline-block;flex-shrink:0;">צפה ↗</a>
     </div>`
   }).join('')
 
@@ -181,31 +169,19 @@ export async function sendConsolidatedMonthlyEmail(params: {
   if (announced.length > 0) subtitleParts.push(`${announced.length} הוכרזו`)
   if (avail.length > 0) subtitleParts.push(`${avail.length} ממתין`)
 
-  const releasingSection = releasing.length > 0 ? `
-    <div class="section-hdr" style="display:flex;align-items:center;gap:8px;padding:22px 16px 10px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:#e0176b;box-shadow:0 0 7px rgba(224,23,107,0.67);flex-shrink:0;"></div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:0.13em;text-transform:uppercase;color:#d1ddf9;">בשידור כעת</div>
-      <div class="section-hdr-count" style="font-family:'Courier New',monospace;font-size:11px;color:#888;margin-left:auto;">${releasing.length} סדרות</div>
-    </div>
-    ${releasingCards}` : ''
+  const pillsHtml = [
+    releasing.length > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(224,23,107,0.09);border:1px solid rgba(224,23,107,0.2);border-radius:20px;"><div style="width:6px;height:6px;border-radius:50%;background:#e0176b;flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#e0176b;">${releasing.length} בשידור</span></div>` : '',
+    announced.length > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.18);border-radius:20px;"><div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#fbbf24;">${announced.length} הוכרזו</span></div>` : '',
+    avail.length > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.18);border-radius:20px;"><div style="width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#4ade80;">${avail.length} ממתין</span></div>` : '',
+  ].filter(Boolean).join('')
 
-  const announcedSection = announced.length > 0 ? `
-    <div style="height:1px;background:rgba(255,255,255,0.05);margin:6px 10px 2px;"></div>
-    <div class="section-hdr" style="display:flex;align-items:center;gap:8px;padding:22px 16px 10px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 7px rgba(251,191,36,0.67);flex-shrink:0;"></div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:0.13em;text-transform:uppercase;color:#d1ddf9;">הוכרזה עונה</div>
-      <div class="section-hdr-count" style="font-family:'Courier New',monospace;font-size:11px;color:#888;margin-left:auto;">${announced.length} סדרות</div>
-    </div>
-    ${announcedCards}` : ''
+  function sectionHdr(color: string, label: string): string {
+    return `<div class="section-hdr" style="padding:20px 20px 12px;display:flex;align-items:center;gap:10px;"><div style="flex:1;height:1px;background:linear-gradient(to left,${color}55,transparent);"></div><span style="font-size:9px;font-weight:700;color:${color};letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;padding:0 4px;">${label}</span><div style="flex:1;height:1px;background:linear-gradient(to right,${color}55,transparent);"></div></div>`
+  }
 
-  const availableSection = avail.length > 0 ? `
-    <div style="height:1px;background:rgba(255,255,255,0.05);margin:6px 10px 2px;"></div>
-    <div class="section-hdr" style="display:flex;align-items:center;gap:8px;padding:22px 16px 10px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 7px rgba(74,222,128,0.67);flex-shrink:0;"></div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:0.13em;text-transform:uppercase;color:#d1ddf9;">ממתין לצפייה</div>
-      <div class="section-hdr-count" style="font-family:'Courier New',monospace;font-size:11px;color:#888;margin-left:auto;">${avail.length} ${avail.length === 1 ? 'עונה זמינה' : 'עונות זמינות'}</div>
-    </div>
-    ${availableCards}` : ''
+  const releasingSection = releasing.length > 0 ? `${sectionHdr('#e0176b', 'בשידור כעת')}${releasingCards}` : ''
+  const announcedSection = announced.length > 0 ? `${sectionHdr('#fbbf24', 'הוכרזה עונה')}${announcedCards}` : ''
+  const availableSection = avail.length > 0 ? `${sectionHdr('#4ade80', 'ממתין לצפייה')}${availableCards}` : ''
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
@@ -215,50 +191,39 @@ export async function sendConsolidatedMonthlyEmail(params: {
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <style>
   @media (max-width: 480px) {
-    .rc-wrap { flex-direction: column !important; min-height: auto !important; }
-    .rc-cover-col { width: 100% !important; max-height: 200px !important; }
-    .rc-cover-col img, .rc-cover-col div { width: 100% !important; max-height: 200px !important; }
+    .rc-wrap { flex-direction: column !important; }
+    .rc-cover { width: 100% !important; height: 170px !important; min-height: unset !important; }
+    .rc-cover img, .rc-cover div { height: 170px !important; min-height: unset !important; }
     .rc-body { padding: 12px 12px 10px !important; }
-    .rc-title { font-size: 15px !important; }
-    .sdots-row { flex-wrap: wrap !important; gap: 4px !important; }
-    .av-wrap { flex-wrap: wrap !important; }
-    .av-btn { width: 100% !important; text-align: center !important; box-sizing: border-box !important; margin-right: 0 !important; }
-    .av-icon { display: none !important; }
-    .ac-stat-num { font-size: 16px !important; }
-    .ac-divider { min-height: 36px !important; }
-    .section-hdr { padding: 16px 12px 8px !important; }
-    .email-heading { font-size: 20px !important; }
-  }
-  @media (max-width: 360px) {
-    .card-margin { margin-left: 4px !important; margin-right: 4px !important; }
+    .rc-title { font-size: 14px !important; }
+    .card { margin-left: 8px !important; margin-right: 8px !important; }
+    .section-hdr { padding: 16px 12px 10px !important; }
   }
 </style>
 </head>
 <body style="margin:0;padding:0;background:#070710;font-family:'Heebo',Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%;">
-<div style="max-width:480px;margin:0 auto;background:#070710;padding-bottom:24px;">
+<div style="max-width:480px;margin:0 auto;padding-bottom:32px;">
 
-  <div style="padding:28px 16px 14px;border-bottom:1px solid rgba(224,23,107,0.18);display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-family:'Space Mono','Courier New',monospace;font-size:10px;color:#888;letter-spacing:0.14em;text-transform:uppercase;">anime tracker</div>
-    <div style="font-size:12px;color:#888;font-weight:300;">${new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</div>
+  <div style="padding:28px 20px 0;">
+    <div style="font-size:10px;color:#e0176b;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px;font-family:'Courier New',monospace;">ANIME TRACKER</div>
+    <div style="font-size:30px;font-weight:900;color:#f1f5f9;line-height:1.1;">עדכון <span style="color:#e0176b;">חודשי</span></div>
+    <div style="font-size:13px;color:#64748b;margin-top:8px;font-weight:300;">${new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</div>
   </div>
 
-  <div style="padding:20px 16px 10px;">
-    <div class="email-heading" style="font-size:26px;font-weight:900;color:#d1ddf9;line-height:1.15;">עדכון <span style="background:linear-gradient(90deg,#e0176b,#8a0d42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">חודשי</span></div>
-    <div style="font-size:13px;color:#888;margin-top:5px;font-weight:300;">${subtitleParts.join(' · ')}</div>
-  </div>
+  <div style="padding:16px 20px 4px;display:flex;gap:8px;flex-wrap:wrap;">${pillsHtml}</div>
 
   ${releasingSection}
   ${announcedSection}
   ${availableSection}
 
-  <div style="padding:22px 16px 8px;border-top:1px solid rgba(224,23,107,0.1);margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:11px;color:#555;">עודכן ע"י AniList API</div>
-    <div style="font-family:'Space Mono','Courier New',monospace;font-size:10px;color:#555;letter-spacing:0.12em;">ANIME TRACKER</div>
+  <div style="margin:20px 12px 0;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-size:11px;color:#374151;">AniList API</span>
+    <span style="font-size:10px;color:#374151;letter-spacing:0.15em;font-family:'Courier New',monospace;">ANIME TRACKER</span>
   </div>
 
 </div>
