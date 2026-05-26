@@ -280,15 +280,13 @@ export default function Home() {
   }
 
   async function handleRefreshCategory(categoryIds: number[]): Promise<Record<number, AnimeSeasonInfo>> {
-    // Fetch ALL tracked IDs so the re-sort covers every series,
-    // but only clear the cache for the clicked category's series.
-    const allIds = tracked.map((t) => t.anilistId).join(',')
-    const clearCache = categoryIds.join(',')
+    const ids = categoryIds.join(',')
+    const allTrackedIds = tracked.map((t) => t.anilistId).join(',')
     try {
-      const r = await fetch(`/api/next-seasons?ids=${allIds}&clearCache=${clearCache}`)
+      const r = await fetch(`/api/next-seasons?ids=${ids}&allTrackedIds=${allTrackedIds}&clearCache=${ids}`)
       if (!r.ok) return {}
       const d: Record<number, AnimeSeasonInfo> = await r.json()
-      setSeasonInfo(d)
+      setSeasonInfo((prev) => ({ ...(prev ?? {}), ...d }))
       return d
     } catch {
       return {}

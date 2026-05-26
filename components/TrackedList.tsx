@@ -336,14 +336,12 @@ export default function TrackedList({
     if (catIds.length === 0) return
     setRefreshing((prev) => new Set(prev).add(cat))
     try {
-      // Clear cache for this category's IDs, fetch fresh data for ALL series,
-      // then re-sort every item — mirrors the weekly automatic refresh.
       const newInfo = await onRefreshCategory(catIds)
       setStableCategories((prev) => {
         const next = { ...prev }
-        for (const item of items) {
-          if (item.anilistId in newInfo) {
-            next[item.anilistId] = categorize(newInfo[item.anilistId])
+        for (const id of catIds) {
+          if (id in newInfo) {
+            next[id] = categorize(newInfo[id])
           }
         }
         return next
