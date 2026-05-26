@@ -374,6 +374,10 @@ export default function TrackedList({
               startDateToSortKey(seasonInfo?.[a.anilistId]?.next?.startDate) -
               startDateToSortKey(seasonInfo?.[b.anilistId]?.next?.startDate)
             )
+          : cat === 'completed'
+          ? [...catItems].sort((a, b) =>
+              new Date(b.trackedAt).getTime() - new Date(a.trackedAt).getTime()
+            )
           : catItems
 
         return (
