@@ -51,6 +51,11 @@ function formatStartDate(d: RelationNode['startDate']): string {
   return String(d.year)
 }
 
+function startDateToSortKey(d: RelationNode['startDate'] | undefined): number {
+  if (!d?.year) return Number.MAX_SAFE_INTEGER
+  return d.year * 10000 + (d.month ?? 12) * 100 + (d.day ?? 31)
+}
+
 function isCurrentMonth(startDate?: RelationNode['startDate']): boolean {
   if (!startDate?.year || !startDate?.month) return false
   const now = new Date()
@@ -364,6 +369,13 @@ export default function TrackedList({
         const isCollapsed = collapsed.has(cat)
         const isRefreshing = refreshing.has(cat)
 
+        const sortedCatItems = cat === 'upcoming'
+          ? [...catItems].sort((a, b) =>
+              startDateToSortKey(seasonInfo?.[a.anilistId]?.next?.startDate) -
+              startDateToSortKey(seasonInfo?.[b.anilistId]?.next?.startDate)
+            )
+          : catItems
+
         return (
           <section key={cat}>
             <div className="relative flex items-center justify-center mb-4">
@@ -389,7 +401,7 @@ export default function TrackedList({
             </div>
             {!isCollapsed && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {catItems.map((item) => (
+                {sortedCatItems.map((item) => (
                   <AnimeCard
                     key={item.id}
                     item={item}
