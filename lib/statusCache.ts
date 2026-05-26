@@ -46,6 +46,11 @@ export async function setStatusCacheBatch(entries: Array<[number, StatusData]>):
   )
 }
 
+export async function deleteStatusCacheBatch(anilistIds: number[]): Promise<void> {
+  if (anilistIds.length === 0) return
+  await prisma.statusCache.deleteMany({ where: { anilistId: { in: anilistIds } } })
+}
+
 export async function clearStatusCache(): Promise<void> {
   await prisma.statusCache.deleteMany()
 }

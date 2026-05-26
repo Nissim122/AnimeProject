@@ -69,6 +69,11 @@ export async function refreshCacheForIds(anilistIds: number[]): Promise<{ refres
   return { refreshed, errors, skipped }
 }
 
+export async function deleteSeasonCacheBatch(anilistIds: number[]): Promise<void> {
+  if (anilistIds.length === 0) return
+  await prisma.seasonCache.deleteMany({ where: { anilistId: { in: anilistIds } } })
+}
+
 export async function clearSeasonCache(): Promise<void> {
   await prisma.seasonCache.deleteMany()
 }

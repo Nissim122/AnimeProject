@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { batchGetAnimeStatus, getAnimeSequels, withRateLimit } from '@/lib/anilist'
-import { getCachedAllSeasons } from '@/lib/seasonCache'
-import { getStatusCacheBatch, setStatusCacheBatch } from '@/lib/statusCache'
+import { getCachedAllSeasons, deleteSeasonCacheBatch } from '@/lib/seasonCache'
+import { getStatusCacheBatch, setStatusCacheBatch, deleteStatusCacheBatch } from '@/lib/statusCache'
 import type { RelationNode } from '@/lib/anilist'
 
 export async function GET(req: NextRequest) {
@@ -16,6 +16,14 @@ async function handler(req: NextRequest) {
     .split(',')
     .map(Number)
     .filter((n) => !isNaN(n) && n > 0)
+
+  // If clearCache IDs are provided, wipe their StatusCache + SeasonCache entries
+  // so the subsequent fetch goes to AniList fresh (mirrors the weekly refresh logic).
+  const clearCacheParam = req.nextUrl.searchParams.get('clearCache')
+  if (clearCacheParam) {
+    const clearIds = clearCacheParam.split(',').map(Number).filter((n) => !isNaN(n) && n > 0)
+    await Promise.all([deleteStatusCacheBatch(clearIds), deleteSeasonCacheBatch(clearIds)])
+  }
 
   const allTrackedIdsParam = req.nextUrl.searchParams.get('allTrackedIds')
   const allTrackedIdList = allTrackedIdsParam

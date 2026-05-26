@@ -279,14 +279,16 @@ export default function Home() {
     setModalAnime(fakeAnime)
   }
 
-  async function handleRefreshCategory(anilistIds: number[]): Promise<Record<number, AnimeSeasonInfo>> {
-    const ids = anilistIds.join(',')
-    const allTrackedIds = tracked.map((t) => t.anilistId).join(',')
+  async function handleRefreshCategory(categoryIds: number[]): Promise<Record<number, AnimeSeasonInfo>> {
+    // Fetch ALL tracked IDs so the re-sort covers every series,
+    // but only clear the cache for the clicked category's series.
+    const allIds = tracked.map((t) => t.anilistId).join(',')
+    const clearCache = categoryIds.join(',')
     try {
-      const r = await fetch(`/api/next-seasons?ids=${ids}&allTrackedIds=${allTrackedIds}`)
+      const r = await fetch(`/api/next-seasons?ids=${allIds}&clearCache=${clearCache}`)
       if (!r.ok) return {}
       const d: Record<number, AnimeSeasonInfo> = await r.json()
-      setSeasonInfo((prev) => prev ? { ...prev, ...d } : d)
+      setSeasonInfo(d)
       return d
     } catch {
       return {}

@@ -241,7 +241,6 @@ export default function TrackedList({
 }: Props) {
   const [collapsed, setCollapsed] = useState<Set<Category>>(new Set())
   const [refreshing, setRefreshing] = useState<Set<Category>>(new Set())
-  const [refreshingId, setRefreshingId] = useState<number | null>(null)
   const [stableCategories, setStableCategories] = useState<Record<number, Category>>({})
   const initialized = useRef(false)
 
@@ -333,20 +332,23 @@ export default function TrackedList({
 
   async function handleRefresh(cat: Category) {
     if (!onRefreshCategory) return
-    const ids = (grouped[cat] ?? []).map((i) => i.anilistId)
-    if (ids.length === 0) return
+    const catIds = (grouped[cat] ?? []).map((i) => i.anilistId)
+    if (catIds.length === 0) return
     setRefreshing((prev) => new Set(prev).add(cat))
     try {
-      for (const id of ids) {
-        setRefreshingId(id)
-        const newInfo = await onRefreshCategory([id])
-        setStableCategories((prev) => ({
-          ...prev,
-          [id]: categorize(newInfo[id]),
-        }))
-      }
+      // Clear cache for this category's IDs, fetch fresh data for ALL series,
+      // then re-sort every item — mirrors the weekly automatic refresh.
+      const newInfo = await onRefreshCategory(catIds)
+      setStableCategories((prev) => {
+        const next = { ...prev }
+        for (const item of items) {
+          if (item.anilistId in newInfo) {
+            next[item.anilistId] = categorize(newInfo[item.anilistId])
+          }
+        }
+        return next
+      })
     } finally {
-      setRefreshingId(null)
       setRefreshing((prev) => {
         const next = new Set(prev)
         next.delete(cat)
@@ -395,7 +397,7 @@ export default function TrackedList({
                     item={item}
                     info={seasonInfo?.[item.anilistId]}
                     category={cat}
-                    isRefreshing={refreshingId === item.anilistId}
+                    isRefreshing={isRefreshing}
                     onRemove={onRemove}
                     onCardClick={onCardClick}
                     onNoteUpdate={onNoteUpdate}
