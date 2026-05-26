@@ -28,6 +28,11 @@ function formatDate(d: RelationNode['startDate']): string {
   return String(d.year)
 }
 
+function startDateToSortKey(d: RelationNode['startDate'] | undefined): number {
+  if (!d?.year) return Number.MAX_SAFE_INTEGER
+  return d.year * 10000 + (d.month ?? 12) * 100 + (d.day ?? 31)
+}
+
 function isCurrentMonth(d?: RelationNode['startDate']): boolean {
   if (!d?.year || !d?.month) return false
   const now = new Date()
@@ -80,6 +85,8 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
         upcoming.push({ parentTitle: title, coverImage: cover, startDate: info.next.startDate })
       }
     }
+
+    upcoming.sort((a, b) => startDateToSortKey(a.startDate) - startDateToSortKey(b.startDate))
 
     if (watching.length === 0 && releasing.length === 0 && upcoming.length === 0) {
       setEmailState('nothing')
@@ -139,8 +146,14 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
             <p className="text-gray-400 text-sm text-center py-6">לא נמצאו עדכונים</p>
           ) : (
             GROUP_ORDER.map((g) => {
-              const items = grouped[g]
-              if (!items || items.length === 0) return null
+              const rawItems = grouped[g]
+              if (!rawItems || rawItems.length === 0) return null
+              const items = g === 'upcoming'
+                ? [...rawItems].sort((a, b) =>
+                    startDateToSortKey(seasonInfo?.[a.anilistId]?.next?.startDate) -
+                    startDateToSortKey(seasonInfo?.[b.anilistId]?.next?.startDate)
+                  )
+                : rawItems
               const { label, icon, color } = GROUP_META[g]
               return (
                 <section key={g}>

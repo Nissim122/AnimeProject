@@ -49,7 +49,13 @@ export async function sendConsolidatedMonthlyEmail(params: {
 
   const { items, available } = params
   const releasing = items.filter(i => i.status === 'RELEASING')
-  const announced = items.filter(i => i.status === 'NOT_YET_RELEASED')
+  const announced = items
+    .filter(i => i.status === 'NOT_YET_RELEASED')
+    .sort((a, b) => {
+      const key = (d: typeof a.startDate) =>
+        !d.year ? Number.MAX_SAFE_INTEGER : d.year * 10000 + (d.month ?? 12) * 100 + (d.day ?? 31)
+      return key(a.startDate) - key(b.startDate)
+    })
   const avail = available ?? []
   const total = releasing.length + announced.length + avail.length
 
