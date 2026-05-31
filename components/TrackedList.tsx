@@ -251,7 +251,7 @@ function AnimeCard({
                 disabled={busy}
                 className="flex-1 text-xs text-yellow-500 hover:text-yellow-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1.5 flex items-center justify-center gap-1 bg-gray-700/50 hover:bg-gray-700 rounded-lg px-2 border border-gray-600/40 hover:border-gray-500"
               >
-                ⏸
+                השהה
               </button>
             )}
           </div>
