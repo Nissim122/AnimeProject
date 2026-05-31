@@ -94,6 +94,7 @@ function AnimeCard({
   onCardClick,
   onNoteUpdate,
   onMoveToOnHold,
+  onRefreshSingle,
 }: {
   item: TrackedItem
   info: AnimeSeasonInfo | undefined
@@ -103,6 +104,7 @@ function AnimeCard({
   onCardClick?: (item: TrackedItem) => void
   onNoteUpdate?: (anilistId: number, note: string) => Promise<void>
   onMoveToOnHold?: (item: TrackedItem) => void
+  onRefreshSingle?: () => Promise<void>
 }) {
   const availableSequel = info?.available ?? null
   const nextSequel = info?.next ?? null
@@ -110,7 +112,15 @@ function AnimeCard({
   const [noteOpen, setNoteOpen] = useState(false)
   const [noteText, setNoteText] = useState(item.note ?? '')
   const [noteSaving, setNoteSaving] = useState(false)
+  const [singleRefreshing, setSingleRefreshing] = useState(false)
+  const busy = isRefreshing || singleRefreshing
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleSingleRefresh = useCallback(async () => {
+    if (!onRefreshSingle) return
+    setSingleRefreshing(true)
+    try { await onRefreshSingle() } finally { setSingleRefreshing(false) }
+  }, [onRefreshSingle])
 
   useEffect(() => {
     setNoteText(item.note ?? '')
@@ -129,11 +139,11 @@ function AnimeCard({
   }, [onNoteUpdate, item.anilistId, noteText])
 
   return (
-    <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${borderColor} ${isRefreshing ? 'opacity-60' : ''}`}>
+    <div className={`bg-gray-800 rounded-xl overflow-hidden border flex flex-col ${borderColor} ${busy ? 'opacity-60' : ''}`}>
       <div
         className="relative cursor-pointer group"
         style={{ aspectRatio: '3/4' }}
-        onClick={() => !isRefreshing && onCardClick?.(item)}
+        onClick={() => !busy && onCardClick?.(item)}
         title="לחץ לשינוי עונה"
       >
         {item.coverImage ? (
@@ -148,22 +158,22 @@ function AnimeCard({
             🎌
           </div>
         )}
-        {category === 'releasing' && !isRefreshing && (
+        {category === 'releasing' && !busy && (
           <span className="absolute top-2 right-2 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold z-10">
             בשידור
           </span>
         )}
-        {category === 'error' && !isRefreshing && (
+        {category === 'error' && !busy && (
           <span className="absolute top-2 right-2 bg-red-700 text-white text-xs px-1.5 py-0.5 rounded-full font-bold z-10">
             שגיאה
           </span>
         )}
-        {isRefreshing && (
+        {busy && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
             <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        {!isRefreshing && onCardClick && (
+        {!busy && onCardClick && (
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
             <span className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-[#e0176b] px-2 py-1 rounded-lg">
               שנה עונה
@@ -223,18 +233,31 @@ function AnimeCard({
             </button>
           )}
 
-          {onMoveToOnHold && (
-            <button
-              onClick={() => onMoveToOnHold(item)}
-              disabled={isRefreshing}
-              className="text-xs text-yellow-500 hover:text-yellow-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1 flex items-center justify-center gap-1"
-            >
-              ⏸ השהה
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {onRefreshSingle && (
+              <button
+                onClick={handleSingleRefresh}
+                disabled={busy}
+                className="flex-1 flex items-center justify-center gap-1 text-xs text-gray-500 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gray-700/50 hover:bg-gray-700 rounded-lg px-2 py-1.5 transition-colors border border-gray-600/40 hover:border-gray-500"
+                title="רענן סדרה"
+              >
+                <span className={singleRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
+                <span>רענן</span>
+              </button>
+            )}
+            {onMoveToOnHold && (
+              <button
+                onClick={() => onMoveToOnHold(item)}
+                disabled={busy}
+                className="flex-1 text-xs text-yellow-500 hover:text-yellow-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1.5 flex items-center justify-center gap-1 bg-gray-700/50 hover:bg-gray-700 rounded-lg px-2 border border-gray-600/40 hover:border-gray-500"
+              >
+                ⏸
+              </button>
+            )}
+          </div>
           <button
             onClick={() => onRemove(item.anilistId)}
-            disabled={isRefreshing}
+            disabled={busy}
             className="text-xs text-red-400 hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1"
           >
             הסר מהרשימה
@@ -419,19 +442,30 @@ export default function TrackedList({
             </div>
             {!isCollapsed && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {sortedCatItems.map((item) => (
-                  <AnimeCard
-                    key={item.id}
-                    item={item}
-                    info={seasonInfo?.[item.anilistId]}
-                    category={cat}
-                    isRefreshing={isRefreshing}
-                    onRemove={onRemove}
-                    onCardClick={onCardClick}
-                    onNoteUpdate={onNoteUpdate}
-                    onMoveToOnHold={onMoveToOnHold}
-                  />
-                ))}
+                {sortedCatItems.map((item) => {
+                  const singleRefreshCallback = onRefreshCategory ? async () => {
+                    const newInfo = await onRefreshCategory([item.anilistId])
+                    setStableCategories((prev) => {
+                      const next = { ...prev }
+                      if (item.anilistId in newInfo) next[item.anilistId] = categorize(newInfo[item.anilistId])
+                      return next
+                    })
+                  } : undefined
+                  return (
+                    <AnimeCard
+                      key={item.id}
+                      item={item}
+                      info={seasonInfo?.[item.anilistId]}
+                      category={cat}
+                      isRefreshing={isRefreshing}
+                      onRemove={onRemove}
+                      onCardClick={onCardClick}
+                      onNoteUpdate={onNoteUpdate}
+                      onMoveToOnHold={onMoveToOnHold}
+                      onRefreshSingle={singleRefreshCallback}
+                    />
+                  )
+                })}
               </div>
             )}
           </section>
