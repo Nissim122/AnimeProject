@@ -41,6 +41,24 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { anilistId, note } = await req.json() as { anilistId: number; note: string }
+    if (!anilistId) return NextResponse.json({ error: 'חסר anilistId' }, { status: 400 })
+    const item = await prisma.onHoldItem.update({
+      where: { userId_anilistId: { userId, anilistId } },
+      data: { note: note?.trim() || null },
+    })
+    return NextResponse.json({ item })
+  } catch (err) {
+    console.error('[onhold PATCH]', err)
+    return NextResponse.json({ error: 'Failed to update note' }, { status: 500 })
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

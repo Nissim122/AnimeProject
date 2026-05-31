@@ -400,6 +400,19 @@ export default function Home() {
     }
   }
 
+  async function handleOnHoldNoteUpdate(anilistId: number, note: string) {
+    const res = await fetch('/api/onhold', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId, note }),
+    })
+    if (res.ok) {
+      setOnHold((prev) =>
+        prev.map((o) => (o.anilistId === anilistId ? { ...o, note: note.trim() || null } : o))
+      )
+    }
+  }
+
   function handleCheckUpdates() {
     setShowCheckModal(true)
   }
@@ -530,7 +543,7 @@ export default function Home() {
           <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} onMoveToTracked={handleMoveToTracked} />
         )}
         {activeView === 'onhold' && (
-          <OnHoldView items={onHold} onRemove={handleRemoveFromOnHold} onMoveToTracked={handleRestoreFromOnHold} />
+          <OnHoldView items={onHold} onRemove={handleRemoveFromOnHold} onMoveToTracked={handleRestoreFromOnHold} onNoteUpdate={handleOnHoldNoteUpdate} />
         )}
       </section>
 
