@@ -1,6 +1,8 @@
 import { prisma } from './prisma'
 import type { RelationNode } from './anilist'
 
+const STATUS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+
 type StatusData = {
   status: string
   startDate: { year: number | null; month: number | null; day: number | null }
@@ -12,15 +14,18 @@ export async function getStatusCacheBatch(anilistIds: number[]): Promise<Map<num
   const rows = await prisma.statusCache.findMany({
     where: { anilistId: { in: anilistIds } },
   })
+  const now = Date.now()
   return new Map(
-    rows.map((r) => [
-      r.anilistId,
-      {
-        status: r.status,
-        startDate: JSON.parse(r.startDateJson) as StatusData['startDate'],
-        sequels: JSON.parse(r.sequelsJson) as RelationNode[],
-      },
-    ])
+    rows
+      .filter((r) => now - r.updatedAt.getTime() < STATUS_CACHE_TTL_MS)
+      .map((r) => [
+        r.anilistId,
+        {
+          status: r.status,
+          startDate: JSON.parse(r.startDateJson) as StatusData['startDate'],
+          sequels: JSON.parse(r.sequelsJson) as RelationNode[],
+        },
+      ])
   )
 }
 

@@ -5,10 +5,12 @@ import { useUser, UserButton, SignInButton } from '@clerk/nextjs'
 import SearchBar from '@/components/SearchBar'
 import TrackedList from '@/components/TrackedList'
 import WatchListView from '@/components/WatchListView'
+import OnHoldView from '@/components/OnHoldView'
 import AnimeDetailModal from '@/components/AnimeDetailModal'
 import CheckUpdatesModal from '@/components/CheckUpdatesModal'
 import type { AnimeResult, RelationNode } from '@/lib/anilist'
 import type { WatchListItem } from '@/components/WatchListView'
+import type { OnHoldItem } from '@/components/OnHoldView'
 
 interface TrackedItem {
   id: number
@@ -38,12 +40,13 @@ export interface AnimeSeasonInfo {
 
 let toastId = 0
 
-type ActiveView = 'tracked' | 'watchlist'
+type ActiveView = 'tracked' | 'watchlist' | 'onhold'
 
 export default function Home() {
   const { user, isLoaded } = useUser()
   const [tracked, setTracked] = useState<TrackedItem[]>([])
   const [watchlist, setWatchlist] = useState<WatchListItem[]>([])
+  const [onHold, setOnHold] = useState<OnHoldItem[]>([])
   const [activeView, setActiveView] = useState<ActiveView>('tracked')
   const [seasonInfo, setSeasonInfo] = useState<Record<number, AnimeSeasonInfo> | undefined>({})
   const [modalAnime, setModalAnime] = useState<AnimeResult | null>(null)
@@ -52,6 +55,7 @@ export default function Home() {
   const [seasonInfoLoading, setSeasonInfoLoading] = useState(true)
   const [showCheckModal, setShowCheckModal] = useState(false)
   const [watchlistModalItem, setWatchlistModalItem] = useState<WatchListItem | null>(null)
+  const [onHoldModalItem, setOnHoldModalItem] = useState<OnHoldItem | null>(null)
 
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = ++toastId
@@ -96,15 +100,28 @@ export default function Home() {
     }
   }, [])
 
+  const loadOnHold = useCallback(async () => {
+    try {
+      const res = await fetch('/api/onhold')
+      if (!res.ok) throw new Error(`status ${res.status}`)
+      const data = await res.json()
+      setOnHold(data.items ?? [])
+    } catch (err) {
+      console.error('[loadOnHold]', err)
+    }
+  }, [])
+
   useEffect(() => {
     if (user) {
       loadTracked()
       loadWatchlist()
+      loadOnHold()
     }
-  }, [user, loadTracked, loadWatchlist])
+  }, [user, loadTracked, loadWatchlist, loadOnHold])
 
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
   const watchlistIds = new Set(watchlist.map((w) => w.anilistId))
+  const onHoldIds = new Set(onHold.map((o) => o.anilistId))
 
   async function handleTrack(anime: AnimeResult, seriesIds?: number[]): Promise<boolean> {
     const toRemove = seriesIds
@@ -201,6 +218,18 @@ export default function Home() {
     }
   }
 
+  async function handleTrackFromOnHold(anime: AnimeResult, seriesIds?: number[]) {
+    const success = await handleTrack(anime, seriesIds)
+    if (success && onHoldModalItem) {
+      const anilistId = onHoldModalItem.anilistId
+      const res = await fetch(`/api/onhold?anilistId=${anilistId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setOnHold((prev) => prev.filter((o) => o.anilistId !== anilistId))
+      }
+      setActiveView('tracked')
+    }
+  }
+
   async function handleAddToWatchlist(anime: AnimeResult) {
     const res = await fetch('/api/watchlist', {
       method: 'POST',
@@ -244,6 +273,57 @@ export default function Home() {
         delete next[anilistId]
         return next
       })
+    } else {
+      addToast('שגיאה בהסרה', 'error')
+    }
+  }
+
+  async function handleMoveToOnHold(item: TrackedItem) {
+    const res = await fetch('/api/onhold', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId: item.anilistId, title: item.title, coverImage: item.coverImage }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      await fetch(`/api/track?anilistId=${item.anilistId}`, { method: 'DELETE' })
+      setTracked((prev) => prev.filter((t) => t.anilistId !== item.anilistId))
+      setSeasonInfo((prev) => {
+        if (!prev) return prev
+        const next = { ...prev }
+        delete next[item.anilistId]
+        return next
+      })
+      setOnHold((prev) => [data.item, ...prev.filter((o) => o.anilistId !== item.anilistId)])
+      addToast(`⏸ ${item.title} הועברה להשהייה`, 'info')
+      setActiveView('onhold')
+    } else {
+      addToast('שגיאה בהעברה להשהייה', 'error')
+    }
+  }
+
+  async function handleRestoreFromOnHold(item: OnHoldItem) {
+    const fakeAnime: AnimeResult = {
+      id: item.anilistId,
+      title: { romaji: item.title, english: null },
+      coverImage: { large: item.coverImage ?? '' },
+      status: 'FINISHED',
+      seasonYear: null,
+      season: null,
+      format: null,
+      popularity: null,
+      episodes: null,
+    }
+    setOnHoldModalItem(item)
+    setModalAnime(fakeAnime)
+  }
+
+  async function handleRemoveFromOnHold(anilistId: number) {
+    const item = onHold.find((o) => o.anilistId === anilistId)
+    const res = await fetch(`/api/onhold?anilistId=${anilistId}`, { method: 'DELETE' })
+    if (res.ok) {
+      addToast(`הוסר מהשהייה: ${item?.title ?? ''}`, 'info')
+      setOnHold((prev) => prev.filter((o) => o.anilistId !== anilistId))
     } else {
       addToast('שגיאה בהסרה', 'error')
     }
@@ -400,6 +480,16 @@ export default function Home() {
             >
               👁 לצפייה ({watchlist.length})
             </button>
+            <button
+              onClick={() => setActiveView('onhold')}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
+                activeView === 'onhold'
+                  ? 'bg-yellow-500 text-[#0f0f1a] shadow-[0_2px_14px_rgba(234,179,8,0.3)]'
+                  : 'bg-[#1a1a2e] text-[#d1ddf9]/50 border border-[#d1ddf9]/10 hover:text-[#d1ddf9]/80 hover:border-[#d1ddf9]/20'
+              }`}
+            >
+              ⏸ השהייה ({onHold.length})
+            </button>
           </div>
         </div>
 
@@ -414,6 +504,7 @@ export default function Home() {
               items={tracked}
               onRemove={handleRemove}
               onNoteUpdate={handleNoteUpdate}
+              onMoveToOnHold={handleMoveToOnHold}
               seasonInfo={seasonInfo}
               seasonInfoLoading={seasonInfoLoading}
               onOpenSequel={handleOpenSequel}
@@ -424,6 +515,9 @@ export default function Home() {
         )}
         {activeView === 'watchlist' && (
           <WatchListView items={watchlist} onRemove={handleRemoveFromWatchlist} onMoveToTracked={handleMoveToTracked} />
+        )}
+        {activeView === 'onhold' && (
+          <OnHoldView items={onHold} onRemove={handleRemoveFromOnHold} onMoveToTracked={handleRestoreFromOnHold} />
         )}
       </section>
 
@@ -442,9 +536,9 @@ export default function Home() {
           anime={modalAnime}
           trackedIds={trackedIds}
           watchlistIds={watchlistIds}
-          onTrack={watchlistModalItem ? handleTrackFromWatchlist : handleTrack}
-          onAddToWatchlist={watchlistModalItem ? undefined : handleAddToWatchlist}
-          onClose={() => { setModalAnime(null); setWatchlistModalItem(null) }}
+          onTrack={watchlistModalItem ? handleTrackFromWatchlist : onHoldModalItem ? handleTrackFromOnHold : handleTrack}
+          onAddToWatchlist={(watchlistModalItem || onHoldModalItem) ? undefined : handleAddToWatchlist}
+          onClose={() => { setModalAnime(null); setWatchlistModalItem(null); setOnHoldModalItem(null) }}
         />
       )}
 

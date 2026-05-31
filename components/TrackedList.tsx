@@ -30,6 +30,7 @@ interface Props {
   items: TrackedItem[]
   onRemove: (anilistId: number) => void
   onNoteUpdate?: (anilistId: number, note: string) => Promise<void>
+  onMoveToOnHold?: (item: TrackedItem) => void
   seasonInfo?: Record<number, AnimeSeasonInfo>
   seasonInfoLoading?: boolean
   onOpenSequel?: (sequel: RelationNode) => void
@@ -92,6 +93,7 @@ function AnimeCard({
   onRemove,
   onCardClick,
   onNoteUpdate,
+  onMoveToOnHold,
 }: {
   item: TrackedItem
   info: AnimeSeasonInfo | undefined
@@ -100,6 +102,7 @@ function AnimeCard({
   onRemove: (id: number) => void
   onCardClick?: (item: TrackedItem) => void
   onNoteUpdate?: (anilistId: number, note: string) => Promise<void>
+  onMoveToOnHold?: (item: TrackedItem) => void
 }) {
   const availableSequel = info?.available ?? null
   const nextSequel = info?.next ?? null
@@ -220,6 +223,15 @@ function AnimeCard({
             </button>
           )}
 
+          {onMoveToOnHold && (
+            <button
+              onClick={() => onMoveToOnHold(item)}
+              disabled={isRefreshing}
+              className="text-xs text-yellow-500 hover:text-yellow-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors py-1 flex items-center justify-center gap-1"
+            >
+              ⏸ השהה
+            </button>
+          )}
           <button
             onClick={() => onRemove(item.anilistId)}
             disabled={isRefreshing}
@@ -237,6 +249,7 @@ export default function TrackedList({
   items,
   onRemove,
   onNoteUpdate,
+  onMoveToOnHold,
   seasonInfo,
   seasonInfoLoading,
   onCardClick,
@@ -301,6 +314,7 @@ export default function TrackedList({
               isRefreshing={true}
               onRemove={onRemove}
               onNoteUpdate={onNoteUpdate}
+              onMoveToOnHold={onMoveToOnHold}
             />
           ))}
         </div>
@@ -415,6 +429,7 @@ export default function TrackedList({
                     onRemove={onRemove}
                     onCardClick={onCardClick}
                     onNoteUpdate={onNoteUpdate}
+                    onMoveToOnHold={onMoveToOnHold}
                   />
                 ))}
               </div>

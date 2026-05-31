@@ -53,6 +53,17 @@ model WatchListItem {
   @@unique([userId, anilistId])
 }
 
+model OnHoldItem {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  anilistId  Int
+  title      String
+  coverImage String?
+  addedAt    DateTime @default(now())
+
+  @@unique([userId, anilistId])
+}
+
 model SeasonCache {
   anilistId   Int      @id
   seasonsJson String
