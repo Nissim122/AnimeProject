@@ -242,7 +242,7 @@ function AnimeCard({
                 title="רענן סדרה"
               >
                 <span className={singleRefreshing ? 'animate-spin inline-block' : ''}>↻</span>
-                <span>רענן</span>
+                <span style={{ color: '#d1ddf9' }}>רענן</span>
               </button>
             )}
             {onMoveToOnHold && (
@@ -427,7 +427,7 @@ export default function TrackedList({
                 title="רענן קטגוריה"
               >
                 <span className={isRefreshing ? 'animate-spin inline-block text-sm' : 'text-sm'}>↻</span>
-                <span className="hidden sm:inline">רענן</span>
+                <span className="hidden sm:inline" style={{ color: '#d1ddf9' }}>רענן</span>
               </button>
               <button
                 onClick={() => toggleCollapse(cat)}
