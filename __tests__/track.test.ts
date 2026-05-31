@@ -9,6 +9,7 @@ const {
   mockUpdate,
   mockDelete,
   mockGetAnimeSequels,
+  mockWatchlistDeleteMany,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockFindUnique: vi.fn(),
@@ -17,6 +18,7 @@ const {
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
   mockGetAnimeSequels: vi.fn(),
+  mockWatchlistDeleteMany: vi.fn(),
 }))
 
 vi.mock('next/server', () => ({
@@ -41,6 +43,7 @@ vi.mock('@/lib/prisma', () => ({
       delete: mockDelete,
     },
     knownSequel: { createMany: mockCreateMany },
+    watchListItem: { deleteMany: mockWatchlistDeleteMany },
   },
 }))
 
@@ -70,6 +73,7 @@ describe('POST /api/track', () => {
     mockAuth.mockResolvedValue({ userId: 'user-1' })
     mockGetAnimeSequels.mockResolvedValue([])
     mockCreateMany.mockResolvedValue({ count: 0 })
+    mockWatchlistDeleteMany.mockResolvedValue({ count: 0 })
   })
 
   it('returns 401 when not authenticated', async () => {
