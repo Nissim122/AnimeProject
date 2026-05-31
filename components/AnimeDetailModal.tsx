@@ -212,10 +212,10 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
             {onAddToWatchlist && (
               <button
                 onClick={handleAddToWatchlist}
-                disabled={loading || fetchError || !selectedAnime || alreadyInWatchlist}
+                disabled={loading || fetchError || !selectedAnime || alreadyInWatchlist || alreadyTracked}
                 className="px-3 py-2 bg-[#d1ddf9] hover:bg-[#bccef5] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-[#0f0f1a] rounded-lg font-semibold text-xs sm:text-sm transition-colors"
               >
-                {alreadyInWatchlist ? '✓ ברשימת צפיה' : '+ לצפייה'}
+                {alreadyTracked ? '✓ כבר במעקב' : alreadyInWatchlist ? '✓ ברשימת צפיה' : '+ לצפייה'}
               </button>
             )}
             <button
