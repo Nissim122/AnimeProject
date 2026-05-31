@@ -488,7 +488,7 @@ export default function Home() {
                   : 'bg-[#1a1a2e] text-[#d1ddf9]/50 border border-[#d1ddf9]/10 hover:text-[#d1ddf9]/80 hover:border-[#d1ddf9]/20'
               }`}
             >
-              ⏸ השהייה ({onHold.length})
+              השהייה ({onHold.length})
             </button>
           </div>
         </div>
