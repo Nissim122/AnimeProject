@@ -5,6 +5,7 @@ export interface OnHoldItem {
   anilistId: number
   title: string
   coverImage: string | null
+  note: string | null
   addedAt: string
 }
 
@@ -56,6 +57,11 @@ export default function OnHoldView({ items, onRemove, onMoveToTracked }: Props) 
               {cleanSeriesTitle(item.title)}
             </p>
             <p className="text-yellow-500/70 text-xs text-right">⏸ הושהתה</p>
+            {item.note && (
+              <p className="text-gray-300 text-xs text-right bg-gray-700/60 rounded px-1 py-0.5 line-clamp-2" title={item.note}>
+                {item.note}
+              </p>
+            )}
             <p className="text-gray-500 text-xs text-right">
               {new Date(item.addedAt).toLocaleDateString('he-IL', {
                 day: 'numeric',

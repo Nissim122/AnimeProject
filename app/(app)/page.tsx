@@ -221,10 +221,24 @@ export default function Home() {
   async function handleTrackFromOnHold(anime: AnimeResult, seriesIds?: number[]) {
     const success = await handleTrack(anime, seriesIds)
     if (success && onHoldModalItem) {
-      const anilistId = onHoldModalItem.anilistId
-      const res = await fetch(`/api/onhold?anilistId=${anilistId}`, { method: 'DELETE' })
-      if (res.ok) {
+      const { anilistId, note } = onHoldModalItem
+      const [deleteRes] = await Promise.all([
+        fetch(`/api/onhold?anilistId=${anilistId}`, { method: 'DELETE' }),
+      ])
+      if (deleteRes.ok) {
         setOnHold((prev) => prev.filter((o) => o.anilistId !== anilistId))
+      }
+      if (note?.trim()) {
+        const patchRes = await fetch('/api/track', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anilistId: anime.id, note }),
+        })
+        if (patchRes.ok) {
+          setTracked((prev) =>
+            prev.map((t) => (t.anilistId === anime.id ? { ...t, note } : t))
+          )
+        }
       }
       setActiveView('tracked')
     }
@@ -282,7 +296,7 @@ export default function Home() {
     const res = await fetch('/api/onhold', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ anilistId: item.anilistId, title: item.title, coverImage: item.coverImage }),
+      body: JSON.stringify({ anilistId: item.anilistId, title: item.title, coverImage: item.coverImage, note: item.note }),
     })
     const data = await res.json()
     if (res.ok) {

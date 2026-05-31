@@ -59,6 +59,7 @@ model OnHoldItem {
   anilistId  Int
   title      String
   coverImage String?
+  note       String?
   addedAt    DateTime @default(now())
 
   @@unique([userId, anilistId])

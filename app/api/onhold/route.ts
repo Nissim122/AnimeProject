@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { anilistId, title, coverImage } = await req.json()
+    const { anilistId, title, coverImage, note } = await req.json()
     if (!anilistId || !title) {
       return NextResponse.json({ error: 'חסרים שדות' }, { status: 400 })
     }
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     })
     if (existing) return NextResponse.json({ item: existing, existing: true })
     const item = await prisma.onHoldItem.create({
-      data: { userId, anilistId, title, coverImage: coverImage ?? null },
+      data: { userId, anilistId, title, coverImage: coverImage ?? null, note: note?.trim() || null },
     })
     return NextResponse.json({ item })
   } catch (err) {

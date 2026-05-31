@@ -12,6 +12,9 @@ const exo2 = Exo_2({
 export const metadata: Metadata = {
   title: 'Anime Tracker',
   description: 'עקוב אחרי האנימות שלך וקבל התראה כשיוצאת עונה חדשה',
+  icons: {
+    icon: '/icon.svg',
+  },
 }
 
 export const viewport: Viewport = {
