@@ -451,44 +451,105 @@ export default function Home() {
       {/* Lists section */}
       <section className="mb-8">
         {/* Tab nav */}
-        <div className="flex items-center justify-between mb-4 gap-2">
-          <button
-            onClick={handleCheckUpdates}
-            disabled={tracked.length === 0 || activeView !== 'tracked'}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg text-xs sm:text-sm font-medium shadow-[0_2px_12px_rgba(224,23,107,0.35)] disabled:shadow-none transition-[transform,box-shadow,background-color] active:scale-95 whitespace-nowrap"
+        <div className="mb-6">
+          {/* Tab bar */}
+          <div
+            className="relative flex items-center gap-1 p-1 rounded-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(26,26,46,0.95) 0%, rgba(15,15,26,0.98) 100%)',
+              border: '1px solid rgba(209,221,249,0.08)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.4)',
+            }}
           >
-            🔄 <span className="hidden xs:inline">בדוק </span>עדכונים
-          </button>
-          <div className="flex gap-2">
+            {/* Subtle glow stripe at top */}
+            <div
+              className="absolute top-0 left-6 right-6 h-px rounded-full pointer-events-none"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(224,23,107,0.25), rgba(209,221,249,0.18), transparent)' }}
+            />
+
             <button
               onClick={() => setActiveView('tracked')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
+              className={`relative flex items-center gap-1.5 px-3 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 active:scale-95 flex-1 justify-center ${
                 activeView === 'tracked'
-                  ? 'bg-[#e0176b] text-white shadow-[0_2px_14px_rgba(224,23,107,0.4)]'
-                  : 'bg-[#1a1a2e] text-[#d1ddf9]/50 border border-[#d1ddf9]/10 hover:text-[#d1ddf9]/80 hover:border-[#d1ddf9]/20'
+                  ? 'text-white'
+                  : 'text-[#d1ddf9]/45 hover:text-[#d1ddf9]/70'
               }`}
+              style={activeView === 'tracked' ? {
+                background: 'linear-gradient(135deg, #e0176b 0%, #b8105a 100%)',
+                boxShadow: '0 2px 16px rgba(224,23,107,0.45), inset 0 1px 0 rgba(255,255,255,0.12)',
+              } : {}}
             >
-              📋 במעקב ({tracked.length})
+              <span>📋</span>
+              <span>במעקב</span>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                  activeView === 'tracked' ? 'bg-white/20 text-white' : 'bg-[#d1ddf9]/10 text-[#d1ddf9]/40'
+                }`}
+              >
+                {tracked.length}
+              </span>
             </button>
+
             <button
               onClick={() => setActiveView('watchlist')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
+              className={`relative flex items-center gap-1.5 px-3 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 active:scale-95 flex-1 justify-center ${
                 activeView === 'watchlist'
-                  ? 'bg-[#d1ddf9] text-[#0f0f1a] shadow-[0_2px_14px_rgba(209,221,249,0.3)]'
-                  : 'bg-[#1a1a2e] text-[#d1ddf9]/50 border border-[#d1ddf9]/10 hover:text-[#d1ddf9]/80 hover:border-[#d1ddf9]/20'
+                  ? 'text-[#0f0f1a]'
+                  : 'text-[#d1ddf9]/45 hover:text-[#d1ddf9]/70'
               }`}
+              style={activeView === 'watchlist' ? {
+                background: 'linear-gradient(135deg, #d1ddf9 0%, #a8baf0 100%)',
+                boxShadow: '0 2px 16px rgba(209,221,249,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
+              } : {}}
             >
-              👁 לצפייה ({watchlist.length})
+              <span>👁</span>
+              <span>לצפייה</span>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                  activeView === 'watchlist' ? 'bg-[#0f0f1a]/15 text-[#0f0f1a]/70' : 'bg-[#d1ddf9]/10 text-[#d1ddf9]/40'
+                }`}
+              >
+                {watchlist.length}
+              </span>
             </button>
+
             <button
               onClick={() => setActiveView('onhold')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-[transform,box-shadow,background] active:scale-95 ${
+              className={`relative flex items-center gap-1.5 px-3 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 active:scale-95 flex-1 justify-center ${
                 activeView === 'onhold'
-                  ? 'bg-yellow-500 text-[#0f0f1a] shadow-[0_2px_14px_rgba(234,179,8,0.3)]'
-                  : 'bg-[#1a1a2e] text-[#d1ddf9]/50 border border-[#d1ddf9]/10 hover:text-[#d1ddf9]/80 hover:border-[#d1ddf9]/20'
+                  ? 'text-[#0f0f1a]'
+                  : 'text-[#d1ddf9]/45 hover:text-[#d1ddf9]/70'
               }`}
+              style={activeView === 'onhold' ? {
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                boxShadow: '0 2px 16px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+              } : {}}
             >
-              ⏸ השהייה ({onHold.length})
+              <span>⏸</span>
+              <span>השהייה</span>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                  activeView === 'onhold' ? 'bg-[#0f0f1a]/15 text-[#0f0f1a]/70' : 'bg-[#d1ddf9]/10 text-[#d1ddf9]/40'
+                }`}
+              >
+                {onHold.length}
+              </span>
+            </button>
+
+            {/* Check updates — compact icon button on the left end */}
+            <div className="w-px self-stretch bg-[#d1ddf9]/08 mx-0.5" />
+            <button
+              onClick={handleCheckUpdates}
+              disabled={tracked.length === 0 || activeView !== 'tracked'}
+              title="בדוק עדכונים"
+              className="flex items-center gap-1 px-2.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
+              style={tracked.length > 0 && activeView === 'tracked' ? {
+                background: 'linear-gradient(135deg, rgba(224,23,107,0.18) 0%, rgba(224,23,107,0.08) 100%)',
+                border: '1px solid rgba(224,23,107,0.25)',
+                color: '#e0176b',
+              } : { color: 'rgba(209,221,249,0.3)' }}
+            >
+              🔄 <span className="hidden sm:inline">עדכונים</span>
             </button>
           </div>
         </div>
