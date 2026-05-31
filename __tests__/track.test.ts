@@ -133,6 +133,68 @@ describe('POST /api/track', () => {
     expect(res.body).toEqual({ anime: created })
     expect(mockCreateMany).not.toHaveBeenCalled()
   })
+
+  // ─── הסרה מ-watchlist בעת הוספה למעקב ──────────
+  it('removes the anime from watchlist when tracked for the first time', async () => {
+    const created = { id: 4, anilistId: 400, title: 'World Trigger', userId: 'user-1' }
+    mockFindUnique.mockResolvedValue(null)
+    mockCreate.mockResolvedValue(created)
+
+    await POST(makeReq({ body: { anilistId: 400, title: 'World Trigger' } }))
+
+    expect(mockWatchlistDeleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', anilistId: 400 },
+    })
+  })
+
+  it('does NOT remove from watchlist when the anime is already tracked', async () => {
+    const existing = { id: 4, anilistId: 400, title: 'World Trigger', userId: 'user-1' }
+    mockFindUnique.mockResolvedValue(existing)
+
+    await POST(makeReq({ body: { anilistId: 400, title: 'World Trigger' } }))
+
+    expect(mockWatchlistDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it('still removes from watchlist even when sequel fetch fails', async () => {
+    const created = { id: 5, anilistId: 500, title: 'World Trigger S2', userId: 'user-1' }
+    mockFindUnique.mockResolvedValue(null)
+    mockCreate.mockResolvedValue(created)
+    mockGetAnimeSequels.mockRejectedValue(new Error('AniList timeout'))
+
+    const res = (await POST(makeReq({ body: { anilistId: 500, title: 'World Trigger S2' } }))) as {
+      body: { anime: unknown }
+      status: number
+    }
+
+    expect(mockWatchlistDeleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', anilistId: 500 },
+    })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ anime: created })
+  })
+
+  it('scopes watchlist deletion to the authenticated user only', async () => {
+    mockAuth.mockResolvedValue({ userId: 'user-2' })
+    const created = { id: 6, anilistId: 600, title: 'HxH', userId: 'user-2' }
+    mockFindUnique.mockResolvedValue(null)
+    mockCreate.mockResolvedValue(created)
+
+    await POST(makeReq({ body: { anilistId: 600, title: 'HxH' } }))
+
+    expect(mockWatchlistDeleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-2', anilistId: 600 },
+    })
+  })
+
+  it('returns 500 on DB create failure', async () => {
+    mockFindUnique.mockResolvedValue(null)
+    mockCreate.mockRejectedValue(new Error('DB error'))
+    const res = (await POST(makeReq({ body: { anilistId: 100, title: 'Test' } }))) as {
+      status: number
+    }
+    expect(res.status).toBe(500)
+  })
 })
 
 // ─── DELETE tests ──────────────────────────────
