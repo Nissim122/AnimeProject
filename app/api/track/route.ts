@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
       data: { userId, anilistId, title, coverImage },
     })
 
+    await prisma.watchListItem.deleteMany({ where: { userId, anilistId } })
+
     try {
       const sequels = await getAnimeSequels(anilistId)
       if (sequels.length > 0) {

@@ -67,6 +67,7 @@ describe('GET /api/search', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsHebrew.mockReturnValue(false)
+    mockHebrewToKeywords.mockResolvedValue([])
   })
 
   it('returns empty results for a missing query', async () => {

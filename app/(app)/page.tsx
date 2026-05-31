@@ -183,6 +183,7 @@ export default function Home() {
 
       setSeasonInfo((prev) => ({ ...(prev ?? {}), ...newSeasonInfo }))
       setTracked((prev) => [newItem, ...prev])
+      setWatchlist((prev) => prev.filter((w) => w.anilistId !== anime.id))
       return true
     } else {
       addToast(data.error ?? 'שגיאה בהוספה', 'error')
