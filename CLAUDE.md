@@ -172,6 +172,14 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
   - `allWatched` — כל העונות נצפו
 - מחזיר object ממפה anilistId → AnimeSeasonInfo.
 
+### `GET /api/check-episode-releases`
+- רץ כל 25 שעות (בדיקת פרקים שיצאו בעבר).
+- שולף את כל הפרקים שיצאו ב-25 השעות האחרונות מ-AniList `getAiringScheduleInRange`.
+- לכל משתמש עם אנימות במעקב: מסנן פרקים רלוונטיים (שייכים לאנימות במעקב או sequels שלהן).
+- בדיקת כפילויות עם `SentNotification` (type: `EPISODE_<מספר>`).
+- שולח מייל עם `sendNewEpisodeEmail` ושומר רשומת כפילות.
+- מחזיר `{ checked, notified, errors }`.
+
 ### `POST /api/check-updates`
 **שלב 1 — איסוף נתונים:**
 - לכל אנימה במעקב: מביא סטטוס + סיקוולים ישירים מ-AniList.
@@ -281,13 +289,14 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 
 ---
 
-## מיילים — 3 סוגים (lib/mailer.ts)
+## מיילים — 4 סוגים (lib/mailer.ts)
 
 | פונקציה | מתי נשלחת | תוכן |
 |---|---|---|
 | `sendMonthStartEmail` | RELEASING או בחודש הנוכחי | מייל מפורט: טבלת כל העונות, עונה חדשה מסומנת באדום, סקשן אופציונלי של סיקוולים שיצאו |
 | `sendDayBeforeEmail` | מחר בדיוק | מייל קצר עם תאריך וכותרת |
 | `sendAvailableSeasonsEmail` | לא נשלחו מיילים אחרים אבל יש סיקוולים שיצאו | רשימת כל הסיקוולים הזמינים |
+| `sendNewEpisodeEmail` | כשפרקים חדשים יוצאים לאנימות במעקב | מייל עם רשימת הפרקים שיצאו וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `animeAI - פרקים חדשים` |
 
 כל המיילים בסגנון dark theme עם CSS inline.
 
