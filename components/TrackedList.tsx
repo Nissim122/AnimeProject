@@ -300,16 +300,27 @@ export default function TrackedList({
       return
     }
 
-    // After initialization: only categorize newly added items.
-    // Existing items keep their stable category until explicitly refreshed.
+    // After initialization: categorize new items, and recategorize existing items
+    // whose category depends solely on watchStatus (no available sequel, no next season).
     setStableCategories((prev) => {
-      const newItems = items.filter((item) => !(item.anilistId in prev))
-      if (newItems.length === 0) return prev
       const next = { ...prev }
-      for (const item of newItems) {
-        next[item.anilistId] = categorize(seasonInfo[item.anilistId], item.watchStatus)
+      let dirty = false
+      for (const item of items) {
+        if (!(item.anilistId in prev)) {
+          next[item.anilistId] = categorize(seasonInfo[item.anilistId], item.watchStatus)
+          dirty = true
+        } else {
+          const info = seasonInfo[item.anilistId]
+          if (info && !info.error && info.available === null && info.next === null) {
+            const expected: Category = item.watchStatus === 'watching' ? 'watching' : 'completed'
+            if (prev[item.anilistId] !== expected) {
+              next[item.anilistId] = expected
+              dirty = true
+            }
+          }
+        }
       }
-      return next
+      return dirty ? next : prev
     })
   }, [seasonInfoLoading, seasonInfo, items])
 

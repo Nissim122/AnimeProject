@@ -182,20 +182,25 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 
 ### `POST /api/check-updates`
 **שלב 1 — איסוף נתונים:**
+- `fetchSentNotificationKeys` — query בודד לכל user מ-`SentNotification`, מחזיר `Set<string>` (סוג: `${sequelId}_${type}`)
 - לכל אנימה במעקב: מביא סטטוס + סיקוולים ישירים מ-AniList.
 - אם RELEASING — מוסיף לתור התראות.
 - עובר על KnownSequel לזיהוי שרשראות רב-דוריות (S1→S2 ידוע, S3 חדש).
 - delay 700ms בין כל קריאה (rate limit AniList).
+- בדיקת כפילויות בזמן O(1) מול ה-Set (במקום query בדוק לכל סיקוול).
 
 **שלב 2 — שליחת מיילים:**
 - `MONTH_START`: סיקוול RELEASING או בחודש הנוכחי → מייל מפורט עם כל העונות.
 - `DAY_BEFORE`: סיקוול מחר → מייל קצר.
 - כל סוג נשלח רק פעם אחת (unique על sequelAnilistId + type).
+- `createMany` — batch insert בסוף אם יש התראות, בודד insert במקום insert פר-רשומה.
 
 **שלב 3 — reminder:**
 - אם לא נשלחו מיילים אבל יש סיקוולים שיצאו ולא נצפו → מייל תזכורת כללי.
 
 מחזיר `{ checked, notified, errors, notifications }`.
+
+**אופטימיזציה:** עם 20 אנימות ו-3 סיקוולים כל אחד: **60 queries בדיקת כפילויות → 1 query + 1 batch insert**.
 
 ### `GET /api/watchlist`
 - מחזיר כל WatchListItem ממוין `addedAt DESC`.
