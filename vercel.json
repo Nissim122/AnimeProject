@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/refresh-season-cache",
-      "schedule": "0 3 * * 0"
+      "schedule": "0 3 * * 3"
     }
   ]
 }
