@@ -478,6 +478,106 @@ export async function sendUserApprovedEmail(params: {
   return true
 }
 
+export async function sendNewEpisodeEmail(params: {
+  newEpisodes: Array<{
+    mediaId: number
+    title: string
+    coverImage: string | null
+    episode: number
+    airingAt: number
+    upcoming: Array<{ episode: number; airingAt: number }>
+  }>
+  toEmail: string
+}): Promise<boolean> {
+  const transport = createTransport()
+  const { newEpisodes, toEmail } = params
+  if (!transport || !toEmail || newEpisodes.length === 0) {
+    console.warn('[mailer] sendNewEpisodeEmail: missing config or empty list')
+    return false
+  }
+
+  function formatAiringFull(ts: number): string {
+    const d = new Date(ts * 1000)
+    const now = new Date()
+    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
+    if (d.toDateString() === now.toDateString()) return 'היום!'
+    if (d.toDateString() === tomorrow.toDateString()) return 'מחר'
+    return d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Jerusalem' })
+  }
+
+  function upcomingColor(ts: number): string {
+    const d = new Date(ts * 1000)
+    const now = new Date()
+    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
+    if (d.toDateString() === now.toDateString()) return '#f472b6'
+    if (d.toDateString() === tomorrow.toDateString()) return '#fbbf24'
+    return '#60a5fa'
+  }
+
+  const cards = newEpisodes.map(ep => {
+    const cover = ep.coverImage
+      ? `<img src="${ep.coverImage}" alt="" style="width:54px;height:76px;object-fit:cover;border-radius:8px;flex-shrink:0;" />`
+      : `<div style="width:54px;height:76px;background:#1f2937;border-radius:8px;flex-shrink:0;"></div>`
+
+    const upcomingRows = ep.upcoming.slice(0, 3).map(u => {
+      const color = upcomingColor(u.airingAt)
+      const label = formatAiringFull(u.airingAt)
+      return `<div style="font-size:11px;color:${color};margin-top:3px;">פרק ${u.episode} — ${label}</div>`
+    }).join('')
+
+    return `
+    <div style="display:flex;align-items:flex-start;gap:14px;background:#111827;border:1px solid rgba(74,222,128,0.18);border-radius:14px;padding:14px;margin-bottom:12px;">
+      ${cover}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ep.title}</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:8px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div>
+          <span style="font-size:13px;color:#4ade80;font-weight:700;">פרק ${ep.episode} יצא — ${formatAiringFull(ep.airingAt)}</span>
+        </div>
+        ${ep.upcoming.length > 0 ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.05);">${upcomingRows}</div>` : ''}
+      </div>
+    </div>`
+  }).join('')
+
+  const subject = newEpisodes.length === 1
+    ? `🎌 פרק חדש — ${newEpisodes[0].title}`
+    : `🎌 ${newEpisodes.length} פרקים חדשים יצאו`
+
+  await transport.sendMail({
+    from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject,
+    html: `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#070710;font-family:'Heebo',Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%;">
+<div style="max-width:480px;margin:0 auto;padding-bottom:32px;">
+
+  <div style="padding:28px 20px 16px;">
+    <div style="font-size:10px;color:#e0176b;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px;font-family:'Courier New',monospace;">ANIME TRACKER</div>
+    <div style="font-size:28px;font-weight:900;color:#f1f5f9;line-height:1.1;">פרקים <span style="color:#4ade80;">חדשים</span></div>
+    <div style="font-size:13px;color:#64748b;margin-top:6px;font-weight:300;">${newEpisodes.length} ${newEpisodes.length === 1 ? 'סדרה' : 'סדרות'} עם פרק חדש</div>
+  </div>
+
+  <div style="padding:0 12px 8px;">${cards}</div>
+
+  <div style="margin:20px 12px 0;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.05);text-align:center;">
+    <span style="font-size:10px;color:#374151;letter-spacing:0.15em;font-family:'Courier New',monospace;">ANIME TRACKER</span>
+  </div>
+
+</div>
+</body>
+</html>`,
+  })
+
+  console.log(`[mailer] New episode email sent — ${newEpisodes.length} series`)
+  return true
+}
+
 export function isEmailConfigured(): boolean {
   return !!(process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.NOTIFY_EMAIL)
 }

@@ -7,6 +7,10 @@
     {
       "path": "/api/refresh-season-cache",
       "schedule": "0 3 * * 3"
+    },
+    {
+      "path": "/api/check-episode-releases",
+      "schedule": "0 7 * * *"
     }
   ]
 }
