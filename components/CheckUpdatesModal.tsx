@@ -114,7 +114,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
     setEmailState('sending')
 
     const watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }> = []
-    const releasing: Array<{ parentTitle: string; coverImage?: string }> = []
+    const releasing: Array<{ parentTitle: string; coverImage?: string; upcomingEpisodes?: AiringEp[] }> = []
     const upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null } }> = []
 
     for (const item of tracked) {
