@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { getAnimeSequels, getAnimeStatusWithSequels, getAllSeasons, delay, withRateLimit, RelationNode } from '@/lib/anilist'
+import { getAnimeSequels, getAnimeStatusWithSequels, batchGetAnimeStatus, getAllSeasons, delay, withRateLimit, RelationNode } from '@/lib/anilist'
 import { sendConsolidatedMonthlyEmail } from '@/lib/mailer'
 import { translateToHebrew } from '@/lib/translate'
 
@@ -53,6 +53,19 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
   ])
   const trackedIdsSet = new Set(tracked.map((a) => a.anilistId))
 
+  // Pre-fetch all anime statuses in one batch (AniList Page allows up to 50 per request)
+  type StatusEntry = { status: string; startDate: { year: number | null; month: number | null; day: number | null }; sequels: RelationNode[] }
+  const statusBatchMap = new Map<number, StatusEntry>()
+  const allTrackedIds = tracked.map((a) => a.anilistId)
+  for (let i = 0; i < allTrackedIds.length; i += 50) {
+    try {
+      const chunk = await batchGetAnimeStatus(allTrackedIds.slice(i, i + 50))
+      for (const [id, data] of chunk) statusBatchMap.set(id, data)
+    } catch {
+      // Partial batch failure — missing IDs will fall back to individual calls in the loop
+    }
+  }
+
   let checked = 0
   let errors = 0
   const releasingAnimes: CheckOnlyResult['releasingAnimes'] = []
@@ -72,9 +85,12 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
         const allSequels: RelationNode[] = []
         const seenSequelIds = new Set<number>()
 
-        await delay(700)
-        const { status: selfStatus, startDate: selfStartDate, sequels: directSequels } =
-          await getAnimeStatusWithSequels(anime.anilistId)
+        let statusResult = statusBatchMap.get(anime.anilistId)
+        if (!statusResult) {
+          await delay(700)
+          statusResult = await getAnimeStatusWithSequels(anime.anilistId)
+        }
+        const { status: selfStatus, startDate: selfStartDate, sequels: directSequels } = statusResult
         seenSequelIds.add(anime.anilistId)
 
         if (selfStatus === 'RELEASING') {
