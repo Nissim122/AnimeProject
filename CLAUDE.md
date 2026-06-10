@@ -61,6 +61,7 @@ app/
     next-seasons/route.ts    # GET ?ids= — מצב עונות עבור אנימות במעקב
     check-updates/route.ts   # POST — בדיקת עדכונים + שליחת מייל
     watchlist/route.ts       # GET / POST / DELETE — ניהול watchlist
+    airing-schedule/route.ts # GET ?id= — לוח שידורים לסדרה (פרקים עתידיים)
 
 components/
   SearchBar.tsx              # שורת חיפוש + רשת תוצאות + פתיחת modal
@@ -194,6 +195,13 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 ### `DELETE /api/watchlist?anilistId=`
 - מוחק מה-watchlist.
 
+### `GET /api/airing-schedule?id=`
+- מקבל AniList ID של עונה ספציפית.
+- קורא ישירות ל-AniList (לא דרך `gqlFetch` עם rate limit — קריאה בודדת triggered by user).
+- מחזיר `{ status, nextAiringEpisode: { episode, airingAt } | null, upcoming: [{ episode, airingAt }] }`.
+- `upcoming` = כל הפרקים שטרם שודרו (`notYetAired: true`), ממוינים לפי מספר פרק.
+- משמש רק ל-RELEASING seasons — ה-modal לא קורא לזה אחרת.
+
 ---
 
 ## לוגיקת UI — כללים חשובים
@@ -220,6 +228,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - מחשב ממוספור אפיזודות רציף (מדלג על סרטים)
 - **3 אפשרויות לסדרה שעוד לא במעקב:** `📺 צופה כרגע` (watchStatus=watching) | `סמן שראיתי עד עונה זו` (watchStatus=completed) | `+ לצפייה` (watchlist)
 - **סדרה עם watchStatus=watching:** מציג כפתור `✓ סיימתי לצפות` במקום — משנה watchStatus ל-completed
+- **לוח שידורים:** כשנבחרת עונה עם `status === 'RELEASING'` — נטען אוטומטית `/api/airing-schedule?id=` ומוצג סקשן "📅 לוח שידורים" מתחת לרשימת העונות. מציג: הפרק האחרון שיצא (✓ ירוק) + 3 פרקים הבאים עם תאריך מעוצב (היום = ורוד, מחר = צהוב, עתיד = כחול). State: `airingData`, `airingLoading`. נטען עם AbortController לביטול בשינוי עונה.
 - **חוק עונות:** כשמסמנים עונה — כל עונה אחרת מאותה הסדרה שכבר במעקב **מוסרת אוטומטית**.
 - אם עונה אחרת כבר במעקב — אזהרה כתומה `⚠️ עונה אחרת מהסדרה כבר במעקב — תוחלף בבחירה החדשה`
 - כפתור disabled אם העונה הנבחרת כבר במעקב
