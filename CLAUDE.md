@@ -40,9 +40,12 @@ DATABASE_URL=file:C:/Users/nisim/.anime-tracker/anime.db
 EMAIL_USER=...@gmail.com       # חשבון שולח
 EMAIL_PASS=...                 # App Password של Gmail (לא סיסמה רגילה)
 NOTIFY_EMAIL=...@gmail.com     # לאן שולחים את ההתראות
+ADMIN_SECRET=...               # סוד ל-HMAC של קישורי אישור/דחייה (חובה)
+ADMIN_EMAIL=...@gmail.com      # כתובת הנהלים שמקבלת בקשות אישור (ברירת מחדל: nisimelec77@gmail.com)
 ```
 
-אם `EMAIL_USER` / `EMAIL_PASS` / `NOTIFY_EMAIL` חסרים — המייל נדלג בשקט (warning בלבד), האפליקציה ממשיכה לעבוד.
+- אם `EMAIL_USER` / `EMAIL_PASS` / `NOTIFY_EMAIL` חסרים — המייל נדלג בשקט (warning בלבד), האפליקציה ממשיכה לעבוד.
+- **`ADMIN_SECRET` חובה.** אם חסר — קישורי האישור/דחייה בעמוד pending לא יעבדו, וקריאה ל-`generateApprovalToken` תיזרוק שגיאה (עוטופה ב-try/catch בדף). אם לא מוגדר — ה-user לא יקבל מייל אישור לעולם.
 
 ---
 
@@ -201,6 +204,18 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - מחזיר `{ status, nextAiringEpisode: { episode, airingAt } | null, upcoming: [{ episode, airingAt }] }`.
 - `upcoming` = כל הפרקים שטרם שודרו (`notYetAired: true`), ממוינים לפי מספר פרק.
 - משמש רק ל-RELEASING seasons — ה-modal לא קורא לזה אחרת.
+
+### `GET /api/admin/approve?userId=&token=`
+- Endpoint להאשרת משתמש חדש דרך קישור במייל.
+- **אימות:** HMAC-SHA256 מחושב מ-`userId` עם `process.env.ADMIN_SECRET`. אם env חסר → `verifyToken` מחזיר `false` ו-logs שגיאה.
+- מחזיר HTML page: אם אימות נכשל → "אימות נכשל", אם בדיקה הצליחה → מעדכן status ל-`APPROVED` בדטה-בייס ושולח מייל אישור.
+
+### `GET /api/admin/deny?userId=&token=`
+- Endpoint לדחיית משתמש דרך קישור במייל.
+- **אימות:** זהה ל-approve.
+- מעדכן status ל-`DENIED` אם אימות הצליח.
+
+**הערה אבטחה:** `generateApprovalToken` ב-`app/pending/page.tsx` זורק שגיאה (לא silent) אם `ADMIN_SECRET` חסר. הקריאה שלה עוטפת ב-`try/catch` כדי למנוע crash של ה-page. אם env לא מוגדר — קישורים בעמוד pending לא יעבדו וה-users לא יקבלו מיילי אישור.
 
 ---
 
