@@ -9,15 +9,18 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { anilistId, title, coverImage } = body as {
+    const { anilistId, title, coverImage, watchStatus } = body as {
       anilistId: number
       title: string
       coverImage?: string
+      watchStatus?: string
     }
 
     if (!anilistId || !title) {
       return NextResponse.json({ error: 'Missing anilistId or title' }, { status: 400 })
     }
+
+    const safeWatchStatus = watchStatus === 'watching' ? 'watching' : 'completed'
 
     const existing = await prisma.trackedAnime.findUnique({
       where: { userId_anilistId: { userId, anilistId } },
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     const anime = await prisma.trackedAnime.create({
-      data: { userId, anilistId, title, coverImage },
+      data: { userId, anilistId, title, coverImage, watchStatus: safeWatchStatus },
     })
 
     await prisma.watchListItem.deleteMany({ where: { userId, anilistId } })
@@ -58,12 +61,16 @@ export async function PATCH(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { anilistId, note } = await req.json() as { anilistId: number; note: string }
+    const { anilistId, note, watchStatus } = await req.json() as { anilistId: number; note?: string; watchStatus?: string }
     if (!anilistId) return NextResponse.json({ error: 'Missing anilistId' }, { status: 400 })
+
+    const updateData: Record<string, unknown> = {}
+    if (note !== undefined) updateData.note = note?.trim() || null
+    if (watchStatus === 'watching' || watchStatus === 'completed') updateData.watchStatus = watchStatus
 
     const anime = await prisma.trackedAnime.update({
       where: { userId_anilistId: { userId, anilistId } },
-      data: { note: note?.trim() || null },
+      data: updateData,
     })
     return NextResponse.json({ anime })
   } catch (err) {

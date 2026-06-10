@@ -15,6 +15,7 @@ model TrackedAnime {
   title        String
   coverImage   String?
   note         String?
+  watchStatus  String        @default("completed")
   trackedAt    DateTime      @default(now())
   knownSequels KnownSequel[]
 

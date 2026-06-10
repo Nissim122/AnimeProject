@@ -11,6 +11,7 @@ interface TrackedItem {
   title: string
   coverImage: string | null
   note: string | null
+  watchStatus: string
   trackedAt: string
 }
 
@@ -63,13 +64,14 @@ function isCurrentMonth(startDate?: RelationNode['startDate']): boolean {
   return startDate.year === now.getFullYear() && startDate.month === (now.getMonth() + 1)
 }
 
-function categorize(info: AnimeSeasonInfo | undefined): Category {
+function categorize(info: AnimeSeasonInfo | undefined, watchStatus?: string): Category {
   if (!info || info.error) return 'error'
   if (info.available !== null) return 'watching'
   if (info.next !== null) {
     if (info.next.status === 'RELEASING' || isCurrentMonth(info.next.startDate)) return 'releasing'
     return 'upcoming'
   }
+  if (watchStatus === 'watching') return 'watching'
   return 'completed'
 }
 
@@ -292,7 +294,7 @@ export default function TrackedList({
       initialized.current = true
       const cats: Record<number, Category> = {}
       for (const item of items) {
-        cats[item.anilistId] = categorize(seasonInfo[item.anilistId])
+        cats[item.anilistId] = categorize(seasonInfo[item.anilistId], item.watchStatus)
       }
       setStableCategories(cats)
       return
@@ -305,7 +307,7 @@ export default function TrackedList({
       if (newItems.length === 0) return prev
       const next = { ...prev }
       for (const item of newItems) {
-        next[item.anilistId] = categorize(seasonInfo[item.anilistId])
+        next[item.anilistId] = categorize(seasonInfo[item.anilistId], item.watchStatus)
       }
       return next
     })
@@ -350,7 +352,7 @@ export default function TrackedList({
   for (const item of items) {
     const cat = initialized.current
       ? (stableCategories[item.anilistId] ?? 'error')
-      : categorize(seasonInfo?.[item.anilistId])
+      : categorize(seasonInfo?.[item.anilistId], item.watchStatus)
     if (!grouped[cat]) grouped[cat] = []
     grouped[cat]!.push(item)
   }
@@ -383,7 +385,8 @@ export default function TrackedList({
         const next = { ...prev }
         for (const id of catIds) {
           if (id in newInfo) {
-            next[id] = categorize(newInfo[id])
+            const item = items.find((i) => i.anilistId === id)
+            next[id] = categorize(newInfo[id], item?.watchStatus)
           }
         }
         return next
@@ -447,7 +450,7 @@ export default function TrackedList({
                     const newInfo = await onRefreshCategory([item.anilistId])
                     setStableCategories((prev) => {
                       const next = { ...prev }
-                      if (item.anilistId in newInfo) next[item.anilistId] = categorize(newInfo[item.anilistId])
+                      if (item.anilistId in newInfo) next[item.anilistId] = categorize(newInfo[item.anilistId], item.watchStatus)
                       return next
                     })
                   } : undefined

@@ -18,6 +18,7 @@ interface TrackedItem {
   title: string
   coverImage: string | null
   note: string | null
+  watchStatus: string
   trackedAt: string
 }
 
@@ -122,6 +123,7 @@ export default function Home() {
   const trackedIds = new Set(tracked.map((t) => t.anilistId))
   const watchlistIds = new Set(watchlist.map((w) => w.anilistId))
   const onHoldIds = new Set(onHold.map((o) => o.anilistId))
+  const watchingIds = new Set(tracked.filter((t) => t.watchStatus === 'watching').map((t) => t.anilistId))
 
   async function handleTrack(anime: AnimeResult, seriesIds?: number[]): Promise<boolean> {
     const toRemove = seriesIds
@@ -163,6 +165,7 @@ export default function Home() {
         title: data.anime.title,
         coverImage: data.anime.coverImage ?? null,
         note: data.anime.note ?? null,
+        watchStatus: data.anime.watchStatus ?? 'completed',
         trackedAt: data.anime.trackedAt,
       }
 
@@ -188,6 +191,88 @@ export default function Home() {
     } else {
       addToast(data.error ?? 'שגיאה בהוספה', 'error')
       return false
+    }
+  }
+
+  async function handleTrackWatching(anime: AnimeResult, seriesIds?: number[]) {
+    const toRemove = seriesIds
+      ? seriesIds.filter((id) => id !== anime.id && trackedIds.has(id))
+      : []
+    if (toRemove.length > 0) {
+      await Promise.all(
+        toRemove.map((id) => fetch(`/api/track?anilistId=${id}`, { method: 'DELETE' }))
+      )
+      setTracked((prev) => prev.filter((t) => !toRemove.includes(t.anilistId)))
+      setSeasonInfo((prev) => {
+        if (!prev) return prev
+        const next = { ...prev }
+        toRemove.forEach((id) => delete next[id])
+        return next
+      })
+    }
+
+    const res = await fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        anilistId: anime.id,
+        title: anime.title.english ?? anime.title.romaji,
+        coverImage: anime.coverImage?.large,
+        watchStatus: 'watching',
+      }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      if (data.message === 'Already tracked') {
+        addToast(`${anime.title.english ?? anime.title.romaji} כבר במעקב`, 'info')
+        return
+      }
+      addToast(`📺 ${anime.title.english ?? anime.title.romaji} — צופה כרגע`, 'success')
+
+      const newItem: TrackedItem = {
+        id: data.anime.id,
+        anilistId: data.anime.anilistId,
+        title: data.anime.title,
+        coverImage: data.anime.coverImage ?? null,
+        note: data.anime.note ?? null,
+        watchStatus: 'watching',
+        trackedAt: data.anime.trackedAt,
+      }
+
+      const allTrackedAfterChange = tracked
+        .filter((t) => !toRemove.includes(t.anilistId))
+        .map((t) => t.anilistId)
+      const allTrackedIds = [...allTrackedAfterChange, anime.id]
+      let newSeasonInfo: Record<number, AnimeSeasonInfo> = {}
+      try {
+        const r = await fetch(`/api/next-seasons?ids=${anime.id}&allTrackedIds=${allTrackedIds.join(',')}`)
+        if (r.ok) newSeasonInfo = await r.json()
+        else newSeasonInfo = { [anime.id]: { next: null, available: null, error: true } }
+      } catch {
+        newSeasonInfo = { [anime.id]: { next: null, available: null, error: true } }
+      }
+
+      setSeasonInfo((prev) => ({ ...(prev ?? {}), ...newSeasonInfo }))
+      setTracked((prev) => [newItem, ...prev])
+      setWatchlist((prev) => prev.filter((w) => w.anilistId !== anime.id))
+    } else {
+      addToast(data.error ?? 'שגיאה בהוספה', 'error')
+    }
+  }
+
+  async function handleMarkCompleted(anilistId: number) {
+    const res = await fetch('/api/track', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId, watchStatus: 'completed' }),
+    })
+    if (res.ok) {
+      setTracked((prev) =>
+        prev.map((t) => (t.anilistId === anilistId ? { ...t, watchStatus: 'completed' } : t))
+      )
+      addToast('✅ הסדרה סומנה כהושלמה', 'success')
+    } else {
+      addToast('שגיאה בעדכון סטטוס', 'error')
     }
   }
 
@@ -470,9 +555,11 @@ export default function Home() {
       <section className="mb-6 sm:mb-10">
         <SearchBar
           onTrack={handleTrack}
+          onTrackWatching={handleTrackWatching}
           onAddToWatchlist={handleAddToWatchlist}
           trackedIds={trackedIds}
           watchlistIds={watchlistIds}
+          watchingIds={watchingIds}
         />
       </section>
 
@@ -563,7 +650,10 @@ export default function Home() {
           anime={modalAnime}
           trackedIds={trackedIds}
           watchlistIds={watchlistIds}
+          watchingIds={watchingIds}
           onTrack={watchlistModalItem ? handleTrackFromWatchlist : onHoldModalItem ? handleTrackFromOnHold : handleTrack}
+          onTrackWatching={(watchlistModalItem || onHoldModalItem) ? undefined : handleTrackWatching}
+          onMarkCompleted={(watchlistModalItem || onHoldModalItem) ? undefined : handleMarkCompleted}
           onAddToWatchlist={(watchlistModalItem || onHoldModalItem) ? undefined : handleAddToWatchlist}
           onClose={() => { setModalAnime(null); setWatchlistModalItem(null); setOnHoldModalItem(null) }}
         />

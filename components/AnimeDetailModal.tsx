@@ -3,21 +3,47 @@
 import { useState, useEffect } from 'react'
 import type { AnimeResult } from '@/lib/anilist'
 
+interface AiringEp {
+  episode: number
+  airingAt: number
+}
+
+interface AiringScheduleData {
+  nextAiringEpisode: AiringEp | null
+  upcoming: AiringEp[]
+}
+
+function formatAiringDate(airingAt: number): { label: string; color: string } {
+  const date = new Date(airingAt * 1000)
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (date.toDateString() === now.toDateString()) return { label: 'היום!', color: 'text-pink-400' }
+  if (date.toDateString() === tomorrow.toDateString()) return { label: 'מחר', color: 'text-yellow-400' }
+  const label = date.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long' })
+  return { label, color: 'text-blue-400' }
+}
+
 interface Props {
   anime: AnimeResult
   trackedIds: Set<number>
   watchlistIds?: Set<number>
+  watchingIds?: Set<number>
   onTrack: (anime: AnimeResult, seriesIds?: number[]) => void
+  onTrackWatching?: (anime: AnimeResult, seriesIds?: number[]) => void
+  onMarkCompleted?: (anilistId: number) => void
   onAddToWatchlist?: (anime: AnimeResult) => void
   onClose: () => void
 }
 
-export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new Set(), onTrack, onAddToWatchlist, onClose }: Props) {
+export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new Set(), watchingIds = new Set(), onTrack, onTrackWatching, onMarkCompleted, onAddToWatchlist, onClose }: Props) {
   const [seasons, setSeasons] = useState<AnimeResult[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [selectedId, setSelectedId] = useState<number>(anime.id)
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set())
+  const [airingData, setAiringData] = useState<AiringScheduleData | null>(null)
+  const [airingLoading, setAiringLoading] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -41,7 +67,26 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
   }, [anime.id])
 
   const selectedAnime = seasons.find((s) => s.id === selectedId)
+
+  // Fetch airing schedule when a RELEASING season is selected
+  useEffect(() => {
+    if (!selectedAnime || selectedAnime.status !== 'RELEASING') {
+      setAiringData(null)
+      return
+    }
+    const controller = new AbortController()
+    setAiringLoading(true)
+    setAiringData(null)
+    fetch(`/api/airing-schedule?id=${selectedAnime.id}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => setAiringData(data))
+      .catch((err) => { if ((err as Error).name !== 'AbortError') setAiringData(null) })
+      .finally(() => { if (!controller.signal.aborted) setAiringLoading(false) })
+    return () => controller.abort()
+  }, [selectedAnime?.id, selectedAnime?.status])
+
   const alreadyTracked = selectedAnime ? trackedIds.has(selectedAnime.id) : false
+  const alreadyWatching = selectedAnime ? watchingIds.has(selectedAnime.id) : false
   const alreadyInWatchlist = selectedAnime ? watchlistIds.has(selectedAnime.id) : false
   // Any other season in this series that is already tracked (besides the selected one)
   const otherTrackedCount = seasons.filter((s) => s.id !== selectedId && trackedIds.has(s.id)).length
@@ -62,6 +107,20 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
   function handleTrack() {
     if (selectedAnime && !alreadyTracked && !isFutureRelease) {
       onTrack(selectedAnime, seasons.map((s) => s.id))
+      onClose()
+    }
+  }
+
+  function handleTrackWatching() {
+    if (selectedAnime && !alreadyTracked && !isFutureRelease && onTrackWatching) {
+      onTrackWatching(selectedAnime, seasons.map((s) => s.id))
+      onClose()
+    }
+  }
+
+  function handleMarkCompleted() {
+    if (selectedAnime && alreadyWatching && onMarkCompleted) {
+      onMarkCompleted(selectedAnime.id)
       onClose()
     }
   }
@@ -194,6 +253,51 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
                   )
                 })}
               </div>
+
+              {/* Airing schedule — only for RELEASING seasons */}
+              {selectedAnime?.status === 'RELEASING' && (
+                <div className="mt-5 border-t border-gray-700/60 pt-4">
+                  <h3 className="text-white text-sm font-semibold text-right mb-3">📅 לוח שידורים</h3>
+                  {airingLoading && (
+                    <p className="text-gray-500 text-xs text-center animate-pulse py-2">טוען...</p>
+                  )}
+                  {!airingLoading && airingData && (() => {
+                    const next3 = airingData.upcoming.slice(0, 3)
+                    const lastAiredEp = airingData.nextAiringEpisode
+                      ? airingData.nextAiringEpisode.episode - 1
+                      : null
+                    return (
+                      <div className="flex flex-col gap-2">
+                        {lastAiredEp != null && lastAiredEp > 0 && (
+                          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-800/30 border border-gray-700/40">
+                            <span className="text-green-400 text-xs font-medium">✓ יצא</span>
+                            <span className="text-gray-400 text-sm">פרק {lastAiredEp}</span>
+                          </div>
+                        )}
+                        {next3.length === 0 ? (
+                          <p className="text-gray-500 text-xs text-right py-1">לא נמצאו פרקים מתוכננים</p>
+                        ) : (
+                          next3.map((ep) => {
+                            const { label, color } = formatAiringDate(ep.airingAt)
+                            return (
+                              <div
+                                key={ep.episode}
+                                className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-800/50 border border-gray-700/60"
+                              >
+                                <span className={`text-xs font-medium ${color}`}>{label}</span>
+                                <span className="text-white text-sm">פרק {ep.episode}</span>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    )
+                  })()}
+                  {!airingLoading && !airingData && (
+                    <p className="text-gray-500 text-xs text-right py-1">לא נמצא מידע על שידורים</p>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -208,7 +312,7 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
             return `נבחרה: עונה ${tvNum}`
           })()}
           </p>
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end flex-wrap">
             {onAddToWatchlist && (
               <button
                 onClick={handleAddToWatchlist}
@@ -218,13 +322,33 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
                 {alreadyTracked ? '✓ כבר במעקב' : alreadyInWatchlist ? '✓ ברשימת צפיה' : '+ לצפייה'}
               </button>
             )}
-            <button
-              onClick={handleTrack}
-              disabled={loading || fetchError || !selectedAnime || alreadyTracked || isFutureRelease}
-              className="px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
-            >
-              {alreadyTracked ? '✓ כבר במעקב' : isFutureRelease ? 'טרם יצאה' : 'סמן שראיתי עד עונה זו'}
-            </button>
+            {/* "Currently watching" — shown only when not yet tracked and onTrackWatching is available */}
+            {onTrackWatching && !alreadyTracked && (
+              <button
+                onClick={handleTrackWatching}
+                disabled={loading || fetchError || !selectedAnime || isFutureRelease}
+                className="px-3 py-2 bg-[#2196b0] hover:bg-[#2db3cd] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
+              >
+                {isFutureRelease ? 'טרם יצאה' : '📺 צופה כרגע'}
+              </button>
+            )}
+            {/* "Mark completed" — shown when currently tracking as watching */}
+            {alreadyWatching && onMarkCompleted ? (
+              <button
+                onClick={handleMarkCompleted}
+                className="px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
+              >
+                ✓ סיימתי לצפות
+              </button>
+            ) : (
+              <button
+                onClick={handleTrack}
+                disabled={loading || fetchError || !selectedAnime || alreadyTracked || isFutureRelease}
+                className="px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
+              >
+                {alreadyTracked ? '✓ כבר במעקב' : isFutureRelease ? 'טרם יצאה' : 'סמן שראיתי עד עונה זו'}
+              </button>
+            )}
           </div>
         </div>
       </div>

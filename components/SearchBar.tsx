@@ -7,12 +7,14 @@ import AnimeDetailModal from './AnimeDetailModal'
 
 interface Props {
   onTrack: (anime: AnimeResult, seriesIds?: number[]) => void
+  onTrackWatching: (anime: AnimeResult, seriesIds?: number[]) => void
   onAddToWatchlist: (anime: AnimeResult) => void
   trackedIds: Set<number>
   watchlistIds: Set<number>
+  watchingIds: Set<number>
 }
 
-export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watchlistIds }: Props) {
+export default function SearchBar({ onTrack, onTrackWatching, onAddToWatchlist, trackedIds, watchlistIds, watchingIds }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<AnimeResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -114,7 +116,9 @@ export default function SearchBar({ onTrack, onAddToWatchlist, trackedIds, watch
           anime={modalAnime}
           trackedIds={trackedIds}
           watchlistIds={watchlistIds}
+          watchingIds={watchingIds}
           onTrack={onTrack}
+          onTrackWatching={onTrackWatching}
           onAddToWatchlist={onAddToWatchlist}
           onClose={() => setModalAnime(null)}
         />
