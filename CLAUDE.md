@@ -176,8 +176,12 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - רץ כל 25 שעות (בדיקת פרקים שיצאו בעבר).
 - שולף את כל הפרקים שיצאו ב-25 השעות האחרונות מ-AniList `getAiringScheduleInRange`.
 - לכל משתמש עם אנימות במעקב: מסנן פרקים רלוונטיים (שייכים לאנימות במעקב או sequels שלהן).
-- בדיקת כפילויות עם `SentNotification` (type: `EPISODE_<מספר>`).
-- שולח מייל עם `sendNewEpisodeEmail` ושומר רשומת כפילות.
+
+**אופטימיזציה:**
+1. **בדיקת כפילויות — batch dedup:** קריאה אחת `findMany` עם `OR` עבור כל הפרקים הרלוונטיים (במקום `findUnique` בלולאה)
+2. **rate limit משותף:** כל קריאות ה-`getAnimeAiringSchedule` בתוך context אחד של `withRateLimit` (700ms spacing עבור כל הקריאות, לא לכל אחת בנפרד)
+3. **batch insert:** `createMany` עם `skipDuplicates: true` עבור כל התראות (במקום insert בלולאה)
+
 - מחזיר `{ checked, notified, errors }`.
 
 ### `POST /api/check-updates`
