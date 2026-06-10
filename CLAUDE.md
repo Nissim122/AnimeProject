@@ -291,3 +291,4 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 5. **Rate limit** — `gqlFetch` ב-`lib/anilist.ts` מאכף 700ms; לא לקרוא ל-`getAllSeasons` בלולאה על הרבה אנימות.
 6. **Watchlist** — פיצ'ר נפרד לחלוטין מ-tracked: טבלה נפרדת, endpoints נפרדים, אין התראות מייל ל-watchlist.
 7. **next-seasons** — קריאה ב-batch בטעינת הדף; מחשב `seasonInfo` לכל אנימה במעקב (משמש להצגת בורדר + badge על הכרטיס).
+8. **watchStatus** — שדה ב-`TrackedAnime`: `'watching'` = צופה כרגע (מופיע ב-"📺 צופה" גם בלי סיקוול זמין), `'completed'` = ראיתי. `categorize()` ב-`TrackedList.tsx` בודק `watchStatus` לאחר בדיקת `available`/`next` — רק אם שניהם null ו-watchStatus=watching מחזיר `'watching'`.
