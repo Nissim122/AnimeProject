@@ -91,6 +91,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | anilistId | Int unique | מזהה AniList |
 | title | String | כותרת (english ?? romaji) |
 | coverImage | String? | URL תמונה |
+| watchStatus | String | `'watching'` (צופה כרגע) או `'completed'` (ראיתי). ברירת מחדל: `'completed'` |
 | trackedAt | DateTime | תאריך הוספה |
 | knownSequels | KnownSequel[] | רלייציה |
 
@@ -140,10 +141,14 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 
 ### `POST /api/track`
 ```json
-{ "anilistId": 123, "title": "...", "coverImage": "..." }
+{ "anilistId": 123, "title": "...", "coverImage": "...", "watchStatus": "watching" | "completed" }
 ```
+- `watchStatus` אופציונלי — ברירת מחדל `"completed"`.
 - בודק אם כבר קיים → מחזיר existing.
 - יוצר TrackedAnime ושומר סיקוולים ידועים כ-KnownSequel (כדי שלא יתריע עליהם בעתיד).
+
+### `PATCH /api/track`
+- מקבל `{ anilistId, note?, watchStatus? }` — מעדכן note ו/או watchStatus.
 
 ### `DELETE /api/track?anilistId=`
 - מוחק TrackedAnime (KnownSequel נמחק ב-cascade).
@@ -213,7 +218,8 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - טוען את כל עונות הסדרה דרך `/api/seasons?id=`
 - ברירת מחדל: העונה שנלחצה (לא בהכרח עונה 1)
 - מחשב ממוספור אפיזודות רציף (מדלג על סרטים)
-- כפתור **הוסף למעקב** + כפתור **הוסף ל-Watchlist**
+- **3 אפשרויות לסדרה שעוד לא במעקב:** `📺 צופה כרגע` (watchStatus=watching) | `סמן שראיתי עד עונה זו` (watchStatus=completed) | `+ לצפייה` (watchlist)
+- **סדרה עם watchStatus=watching:** מציג כפתור `✓ סיימתי לצפות` במקום — משנה watchStatus ל-completed
 - **חוק עונות:** כשמסמנים עונה — כל עונה אחרת מאותה הסדרה שכבר במעקב **מוסרת אוטומטית**.
 - אם עונה אחרת כבר במעקב — אזהרה כתומה `⚠️ עונה אחרת מהסדרה כבר במעקב — תוחלף בבחירה החדשה`
 - כפתור disabled אם העונה הנבחרת כבר במעקב
