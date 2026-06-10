@@ -4,7 +4,11 @@ import { sendUserApprovedEmail } from '@/lib/mailer'
 import crypto from 'crypto'
 
 function verifyToken(userId: string, token: string): boolean {
-  const secret = process.env.ADMIN_SECRET || 'change-this-secret'
+  const secret = process.env.ADMIN_SECRET
+  if (!secret) {
+    console.error('[admin/approve] ADMIN_SECRET is not set — refusing token verification')
+    return false
+  }
   const expected = crypto.createHmac('sha256', secret).update(userId).digest('hex')
   return token === expected
 }

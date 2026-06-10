@@ -16,7 +16,8 @@ function getBaseUrl(): string {
 }
 
 function generateApprovalToken(userId: string): string {
-  const secret = process.env.ADMIN_SECRET || 'change-this-secret'
+  const secret = process.env.ADMIN_SECRET
+  if (!secret) throw new Error('ADMIN_SECRET environment variable is not set')
   return crypto.createHmac('sha256', secret).update(userId).digest('hex')
 }
 
@@ -84,8 +85,8 @@ export default async function PendingPage() {
 
     if (shouldSendEmail) {
       const baseUrl = getBaseUrl()
-      const token = generateApprovalToken(userId)
       try {
+        const token = generateApprovalToken(userId)
         const sent = await sendApprovalRequestEmail({
           toAdmin: ADMIN_EMAIL,
           userEmail: primaryEmail,

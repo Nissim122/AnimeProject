@@ -61,7 +61,7 @@ async function runEpisodeCheck() {
       const mediaToParent = new Map<number, { title: string; coverImage: string | null }>()
       for (const t of tracked) {
         mediaToParent.set(t.anilistId, { title: t.title, coverImage: t.coverImage })
-        for (const s of t.knownSequels) {
+        for (const s of (t.knownSequels ?? [])) {
           mediaToParent.set(s.sequelAnilistId, { title: t.title, coverImage: t.coverImage })
         }
       }
