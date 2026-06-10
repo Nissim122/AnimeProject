@@ -1,9 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { AnimeSeasonInfo } from '@/app/(app)/page'
 import type { RelationNode } from '@/lib/anilist'
 import { cleanSeriesTitle } from '@/lib/titleUtils'
+
+interface AiringEp {
+  episode: number
+  airingAt: number
+}
+
+interface AiringScheduleData {
+  nextAiringEpisode: AiringEp | null
+  upcoming: AiringEp[]
+}
+
+function formatAiringDate(airingAt: number): { label: string; color: string } {
+  const date = new Date(airingAt * 1000)
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (date.toDateString() === now.toDateString()) return { label: 'היום!', color: 'text-pink-400' }
+  if (date.toDateString() === tomorrow.toDateString()) return { label: 'מחר', color: 'text-yellow-400' }
+  const label = date.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long' })
+  return { label, color: 'text-blue-400' }
+}
 
 interface TrackedItem {
   id: number
@@ -62,6 +83,31 @@ const GROUP_ORDER: Group[] = ['watching', 'releasing', 'upcoming']
 
 export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Props) {
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'nothing' | 'error'>('idle')
+  const [airingMap, setAiringMap] = useState<Record<number, AiringScheduleData | null>>({})
+
+  useEffect(() => {
+    const releasingItems = tracked.filter((item) => {
+      const info = seasonInfo?.[item.anilistId]
+      return classify(info) === 'releasing' && info?.next?.status === 'RELEASING'
+    })
+    if (releasingItems.length === 0) return
+
+    const controllers: AbortController[] = []
+    releasingItems.forEach((item) => {
+      const info = seasonInfo![item.anilistId]
+      const nextId = info.next!.id
+      const ctrl = new AbortController()
+      controllers.push(ctrl)
+      fetch(`/api/airing-schedule?id=${nextId}`, { signal: ctrl.signal })
+        .then((r) => r.json())
+        .then((data: AiringScheduleData) =>
+          setAiringMap((prev) => ({ ...prev, [item.anilistId]: data }))
+        )
+        .catch(() => {})
+    })
+    return () => controllers.forEach((c) => c.abort())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSendEmail() {
     if (emailState === 'sending') return
@@ -176,7 +222,17 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                               <span className="text-xs text-violet-400 truncate">📺 {info.available.title.romaji}</span>
                             )}
                             {g === 'releasing' && (
-                              <span className="text-xs text-green-400">🟢 משודר כעת</span>
+                              <>
+                                <span className="text-xs text-green-400">🟢 משודר כעת</span>
+                                {airingMap[item.anilistId]?.upcoming?.slice(0, 3).map((ep) => {
+                                  const { label, color } = formatAiringDate(ep.airingAt)
+                                  return (
+                                    <span key={ep.episode} className={`text-xs ${color}`}>
+                                      פרק {ep.episode} — {label}
+                                    </span>
+                                  )
+                                })}
+                              </>
                             )}
                             {g === 'upcoming' && info?.next && (
                               <span className="text-xs text-amber-400">📅 {formatDate(info.next.startDate)}</span>
