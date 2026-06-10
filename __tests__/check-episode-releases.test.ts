@@ -25,6 +25,7 @@ const {
   mockWithRateLimit,
   mockSendNewEpisodeEmail,
   mockGetUser,
+  mockClerkClient,
 } = vi.hoisted(() => ({
   mockFindMany:                   vi.fn(),
   mockFindUnique:                 vi.fn(),
@@ -34,6 +35,7 @@ const {
   mockWithRateLimit:              vi.fn(),
   mockSendNewEpisodeEmail:        vi.fn(),
   mockGetUser:                    vi.fn(),
+  mockClerkClient:                vi.fn(),
 }))
 
 // ─── Module mocks ────────────────────────────────
@@ -42,7 +44,7 @@ vi.mock('next/server', () => ({
 }))
 
 vi.mock('@clerk/nextjs/server', () => ({
-  clerkClient: vi.fn().mockResolvedValue({ users: { getUser: mockGetUser } }),
+  clerkClient: mockClerkClient,
 }))
 
 vi.mock('@/lib/prisma', () => ({
@@ -87,6 +89,7 @@ describe('GET /api/check-episode-releases', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     mockWithRateLimit.mockImplementation((fn: () => unknown) => fn())
+    mockClerkClient.mockResolvedValue({ users: { getUser: mockGetUser } })
     mockCreate.mockResolvedValue({})
     mockGetAnimeAiringSchedule.mockResolvedValue({ nextAiringEpisode: null, upcoming: [] })
     mockSendNewEpisodeEmail.mockResolvedValue(true)
