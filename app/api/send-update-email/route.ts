@@ -5,7 +5,7 @@ import { sendUpdatesEmail } from '@/lib/mailer'
 interface StartDate { year: number | null; month: number | null; day: number | null }
 
 interface WatchingInput  { parentTitle: string; coverImage?: string; sequelTitle: string }
-interface ReleasingInput { parentTitle: string; coverImage?: string }
+interface ReleasingInput { parentTitle: string; coverImage?: string; upcomingEpisodes?: { episode: number; airingAt: number }[] }
 interface UpcomingInput  { parentTitle: string; coverImage?: string; startDate: StartDate }
 
 export async function POST(req: Request) {

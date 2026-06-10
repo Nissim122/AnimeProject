@@ -254,7 +254,7 @@ function formatDateHe(d: { year: number | null; month: number | null; day: numbe
 
 export async function sendUpdatesEmail(params: {
   watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }>
-  releasing: Array<{ parentTitle: string; coverImage?: string }>
+  releasing: Array<{ parentTitle: string; coverImage?: string; upcomingEpisodes?: { episode: number; airingAt: number }[] }>
   upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null } }>
   toEmail: string
 }): Promise<boolean> {
@@ -301,9 +301,31 @@ export async function sendUpdatesEmail(params: {
     watching.map(i => item(i.coverImage, i.parentTitle, '#a78bfa', `📺 ${i.sequelTitle}`)).join('')
   ) : ''
 
+  function releasingItem(i: { parentTitle: string; coverImage?: string; upcomingEpisodes?: { episode: number; airingAt: number }[] }): string {
+    const episodeRows = (i.upcomingEpisodes ?? []).map(ep => {
+      const d = new Date(ep.airingAt * 1000)
+      const now = new Date()
+      const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
+      let label: string; let color: string
+      if (d.toDateString() === now.toDateString())      { label = 'היום!'; color = '#f472b6' }
+      else if (d.toDateString() === tomorrow.toDateString()) { label = 'מחר';  color = '#fbbf24' }
+      else { label = d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long', timeZone: 'Asia/Jerusalem' }); color = '#60a5fa' }
+      return `<div style="font-size:11px;color:${color};margin-top:3px;">פרק ${ep.episode} — ${label}</div>`
+    }).join('')
+    return `
+    <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(31,41,55,0.5);border-radius:10px;padding:8px 12px;margin-bottom:8px;">
+      ${i.coverImage ? `<img src="${i.coverImage}" alt="" style="width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0;" />` : `<div style="width:32px;height:44px;background:#1f2937;border-radius:4px;flex-shrink:0;"></div>`}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.parentTitle}</div>
+        <div style="font-size:12px;color:#4ade80;margin-top:2px;">🟢 משודר כעת</div>
+        ${episodeRows}
+      </div>
+    </div>`
+  }
+
   const releasingSection = releasing.length > 0 ? section(
     '🟢', 'יוצאים פרקים חדשים', '#4ade80', releasing.length,
-    releasing.map(i => item(i.coverImage, i.parentTitle, '#4ade80', '🟢 משודר כעת')).join('')
+    releasing.map(i => releasingItem(i)).join('')
   ) : ''
 
   const upcomingSection = upcoming.length > 0 ? section(

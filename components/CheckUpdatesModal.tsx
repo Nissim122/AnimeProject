@@ -126,7 +126,11 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
       if (g === 'watching' && info.available) {
         watching.push({ parentTitle: title, coverImage: cover, sequelTitle: info.available.title.romaji })
       } else if (g === 'releasing') {
-        releasing.push({ parentTitle: title, coverImage: cover })
+        releasing.push({
+          parentTitle: title,
+          coverImage: cover,
+          upcomingEpisodes: airingMap[item.anilistId]?.upcoming?.slice(0, 3),
+        })
       } else if (g === 'upcoming' && info.next) {
         upcoming.push({ parentTitle: title, coverImage: cover, startDate: info.next.startDate })
       }
