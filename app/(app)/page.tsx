@@ -286,6 +286,22 @@ export default function Home() {
     }
   }
 
+  async function handleMarkWatching(anilistId: number) {
+    const res = await fetch('/api/track', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId, watchStatus: 'watching' }),
+    })
+    if (res.ok) {
+      setTracked((prev) =>
+        prev.map((t) => (t.anilistId === anilistId ? { ...t, watchStatus: 'watching' } : t))
+      )
+      addToast('📺 הסדרה מסומנת כ"צופה כרגע"', 'success')
+    } else {
+      addToast('שגיאה בעדכון סטטוס', 'error')
+    }
+  }
+
   function handleMoveToTracked(item: WatchListItem) {
     const fakeAnime: AnimeResult = {
       id: item.anilistId,
@@ -664,6 +680,7 @@ export default function Home() {
           onTrack={watchlistModalItem ? handleTrackFromWatchlist : onHoldModalItem ? handleTrackFromOnHold : handleTrack}
           onTrackWatching={(watchlistModalItem || onHoldModalItem) ? undefined : handleTrackWatching}
           onMarkCompleted={(watchlistModalItem || onHoldModalItem) ? undefined : handleMarkCompleted}
+          onMarkWatching={(watchlistModalItem || onHoldModalItem) ? undefined : handleMarkWatching}
           onAddToWatchlist={(watchlistModalItem || onHoldModalItem) ? undefined : handleAddToWatchlist}
           onClose={() => { setModalAnime(null); setWatchlistModalItem(null); setOnHoldModalItem(null) }}
         />

@@ -32,11 +32,12 @@ interface Props {
   onTrack: (anime: AnimeResult, seriesIds?: number[]) => void
   onTrackWatching?: (anime: AnimeResult, seriesIds?: number[]) => void
   onMarkCompleted?: (anilistId: number) => void
+  onMarkWatching?: (anilistId: number) => void
   onAddToWatchlist?: (anime: AnimeResult) => void
   onClose: () => void
 }
 
-export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new Set(), watchingIds = new Set(), onTrack, onTrackWatching, onMarkCompleted, onAddToWatchlist, onClose }: Props) {
+export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new Set(), watchingIds = new Set(), onTrack, onTrackWatching, onMarkCompleted, onMarkWatching, onAddToWatchlist, onClose }: Props) {
   const [seasons, setSeasons] = useState<AnimeResult[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
@@ -332,13 +333,19 @@ export default function AnimeDetailModal({ anime, trackedIds, watchlistIds = new
                 {isFutureRelease ? 'טרם יצאה' : '📺 צופה כרגע'}
               </button>
             )}
-            {/* "Mark completed" — shown when currently tracking as watching */}
             {alreadyWatching && onMarkCompleted ? (
               <button
                 onClick={handleMarkCompleted}
                 className="px-3 py-2 bg-[#e0176b] hover:bg-[#f5257e] text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
               >
                 ✓ סיימתי לצפות
+              </button>
+            ) : alreadyTracked && !alreadyWatching && onMarkWatching && selectedAnime ? (
+              <button
+                onClick={() => { onMarkWatching(selectedAnime.id); onClose() }}
+                className="px-3 py-2 bg-[#2196b0] hover:bg-[#2db3cd] text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
+              >
+                📺 צופה כרגע
               </button>
             ) : (
               <button
