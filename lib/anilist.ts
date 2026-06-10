@@ -347,3 +347,79 @@ export async function batchGetAnimeStatus(
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+export interface AiringEntry {
+  episode: number
+  airingAt: number
+  mediaId: number
+  title: string
+  coverImage: string | null
+}
+
+export async function getAiringScheduleInRange(from: number, to: number): Promise<AiringEntry[]> {
+  const query = `
+    query AiringRange($from: Int, $to: Int, $page: Int) {
+      Page(page: $page, perPage: 50) {
+        pageInfo { hasNextPage }
+        airingSchedules(airingAt_greater: $from, airingAt_lesser: $to) {
+          episode
+          airingAt
+          media {
+            id
+            title { romaji english }
+            coverImage { large }
+          }
+        }
+      }
+    }
+  `
+  const results: AiringEntry[] = []
+  let page = 1
+  let hasNext = true
+
+  while (hasNext) {
+    if (page > 1) await delay(700)
+    const data = await gqlFetch(query, { from, to, page }) as any
+    const schedules = data?.data?.Page?.airingSchedules ?? []
+    const pageInfo = data?.data?.Page?.pageInfo
+
+    for (const s of schedules) {
+      results.push({
+        episode: s.episode,
+        airingAt: s.airingAt,
+        mediaId: s.media.id,
+        title: s.media.title.english ?? s.media.title.romaji,
+        coverImage: s.media.coverImage?.large ?? null,
+      })
+    }
+
+    hasNext = pageInfo?.hasNextPage ?? false
+    page++
+  }
+
+  return results
+}
+
+export async function getAnimeAiringSchedule(animeId: number): Promise<{
+  nextAiringEpisode: { episode: number; airingAt: number } | null
+  upcoming: Array<{ episode: number; airingAt: number }>
+}> {
+  const query = `
+    query AnimeAiring($id: Int) {
+      Media(id: $id, type: ANIME) {
+        nextAiringEpisode { episode airingAt }
+        airingSchedule(notYetAired: true) {
+          nodes { episode airingAt }
+        }
+      }
+    }
+  `
+  const data = await gqlFetch(query, { id: animeId }) as any
+  const media = data?.data?.Media
+  if (!media) return { nextAiringEpisode: null, upcoming: [] }
+  const upcoming: Array<{ episode: number; airingAt: number }> =
+    (media.airingSchedule?.nodes ?? []).sort(
+      (a: { episode: number }, b: { episode: number }) => a.episode - b.episode
+    )
+  return { nextAiringEpisode: media.nextAiringEpisode ?? null, upcoming }
+}
