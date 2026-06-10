@@ -204,9 +204,14 @@ export default function Home() {
       ? seriesIds.filter((id) => id !== anime.id && trackedIds.has(id))
       : []
     if (toRemove.length > 0) {
-      await Promise.all(
+      const deleteResults = await Promise.all(
         toRemove.map((id) => fetch(`/api/track?anilistId=${id}`, { method: 'DELETE' }))
       )
+      if (!deleteResults.every((r) => r.ok)) {
+        addToast('שגיאה בהסרת עונה קודמת — נסה שוב', 'error')
+        await loadTracked()
+        return
+      }
       setTracked((prev) => prev.filter((t) => !toRemove.includes(t.anilistId)))
       setSeasonInfo((prev) => {
         if (!prev) return prev
