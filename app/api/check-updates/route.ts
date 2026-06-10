@@ -34,23 +34,12 @@ export interface UpdateResult {
   notifications: Array<{ parent: string; sequel: string; type: string }>
 }
 
-async function hasSentNotification(userId: string, sequelId: number, type: string): Promise<boolean> {
-  const existing = await prisma.sentNotification.findUnique({
-    where: { userId_sequelAnilistId_type: { userId, sequelAnilistId: sequelId, type } },
+async function fetchSentNotificationKeys(userId: string): Promise<Set<string>> {
+  const rows = await prisma.sentNotification.findMany({
+    where: { userId },
+    select: { sequelAnilistId: true, type: true },
   })
-  return !!existing
-}
-
-async function recordNotification(
-  userId: string,
-  sequelId: number,
-  type: string,
-  sequelTitle: string,
-  parentTitle: string
-): Promise<void> {
-  await prisma.sentNotification.create({
-    data: { userId, sequelAnilistId: sequelId, type, sequelTitle, parentTitle },
-  })
+  return new Set(rows.map((r) => `${r.sequelAnilistId}_${r.type}`))
 }
 
 async function collectCheckDataForUser(userId: string): Promise<CheckOnlyResult & { _queue: PendingNotification[] }> {
@@ -58,10 +47,10 @@ async function collectCheckDataForUser(userId: string): Promise<CheckOnlyResult 
 }
 
 async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult & { _queue: PendingNotification[] }> {
-  const tracked = await prisma.trackedAnime.findMany({
-    where: { userId },
-    include: { knownSequels: true },
-  })
+  const [tracked, sentKeys] = await Promise.all([
+    prisma.trackedAnime.findMany({ where: { userId }, include: { knownSequels: true } }),
+    fetchSentNotificationKeys(userId),
+  ])
   const trackedIdsSet = new Set(tracked.map((a) => a.anilistId))
 
   let checked = 0
@@ -129,7 +118,7 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
 
         for (const sequel of allSequels) {
           if (sequel.status !== 'RELEASING' && sequel.status !== 'NOT_YET_RELEASED') continue
-          if (!(await hasSentNotification(userId, sequel.id, 'MONTH_START'))) {
+          if (!sentKeys.has(`${sequel.id}_MONTH_START`)) {
             pendingNotifications.push({
               animeId: anime.anilistId,
               animeTitle: anime.title,
@@ -243,9 +232,21 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
       toEmail,
     })
     if (sent) {
-      for (const rec of recordQueue) {
-        try { await recordNotification(userId, rec.sequelId, rec.type, rec.sequelTitle, rec.animeTitle) }
-        catch (e) { console.error(`[check-updates] CRITICAL: failed to record ${rec.type} for ${rec.sequelTitle}`, e) }
+      if (recordQueue.length > 0) {
+        try {
+          await prisma.sentNotification.createMany({
+            data: recordQueue.map((rec) => ({
+              userId,
+              sequelAnilistId: rec.sequelId,
+              type: rec.type,
+              sequelTitle: rec.sequelTitle,
+              parentTitle: rec.animeTitle,
+            })),
+            skipDuplicates: true,
+          })
+        } catch (e) {
+          console.error('[check-updates] CRITICAL: failed to record notifications batch', e)
+        }
       }
       result.notified = 1
       result.notifications = [

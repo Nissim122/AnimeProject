@@ -24,8 +24,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ─────────────────────────────────────────────
 const {
   mockFindMany,
-  mockFindUnique,
-  mockCreate,
+  mockSentNotificationFindMany,
+  mockCreateMany,
   mockGetAnimeSequels,
   mockGetAnimeStatusWithSequels,
   mockGetAllSeasons,
@@ -33,8 +33,8 @@ const {
   mockGetUser,
 } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
-  mockFindUnique: vi.fn(),
-  mockCreate: vi.fn(),
+  mockSentNotificationFindMany: vi.fn(),
+  mockCreateMany: vi.fn(),
   mockGetAnimeSequels: vi.fn(),
   mockGetAnimeStatusWithSequels: vi.fn(),
   mockGetAllSeasons: vi.fn(),
@@ -59,7 +59,7 @@ vi.mock('@clerk/nextjs/server', () => ({
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     trackedAnime: { findMany: mockFindMany },
-    sentNotification: { findUnique: mockFindUnique, create: mockCreate },
+    sentNotification: { findMany: mockSentNotificationFindMany, createMany: mockCreateMany },
   },
 }))
 
@@ -150,8 +150,8 @@ beforeEach(() => {
     emailAddresses: [{ id: 'em1', emailAddress: USER_EMAIL }],
     primaryEmailAddressId: 'em1',
   })
-  mockFindUnique.mockResolvedValue(null)
-  mockCreate.mockResolvedValue({})
+  mockSentNotificationFindMany.mockResolvedValue([])
+  mockCreateMany.mockResolvedValue({ count: 0 })
   mockGetAnimeSequels.mockResolvedValue([])
   mockGetAnimeStatusWithSequels.mockResolvedValue({
     status: 'FINISHED',
@@ -186,13 +186,16 @@ describe('Consolidated email — RELEASING sequel', () => {
         toEmail: USER_EMAIL,
       }),
     )
-    expect(mockCreate).toHaveBeenCalledWith(
+    expect(mockCreateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          sequelAnilistId: 200,
-          type: 'MONTH_START',
-          userId: USER_ID,
-        }),
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            sequelAnilistId: 200,
+            type: 'MONTH_START',
+            userId: USER_ID,
+          }),
+        ]),
+        skipDuplicates: true,
       }),
     )
     expect(result.notified).toBe(1)
@@ -206,7 +209,7 @@ describe('Consolidated email — RELEASING sequel', () => {
       startDate: { year: null, month: null, day: null },
       sequels: [s],
     })
-    mockFindUnique.mockResolvedValue({ id: 1 })
+    mockSentNotificationFindMany.mockResolvedValue([{ sequelAnilistId: 201, type: 'MONTH_START' }])
 
     const result = await runUpdateCheck()
 
@@ -231,7 +234,7 @@ describe('Consolidated email — RELEASING sequel', () => {
     await runUpdateCheck()
 
     expect(mockSendConsolidatedMonthlyEmail).not.toHaveBeenCalled()
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockCreateMany).not.toHaveBeenCalled()
   })
 
   it('does NOT include CANCELLED sequel as a notification item', async () => {
@@ -245,7 +248,7 @@ describe('Consolidated email — RELEASING sequel', () => {
     await runUpdateCheck()
 
     // No items, no notification records
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockCreateMany).not.toHaveBeenCalled()
     if (mockSendConsolidatedMonthlyEmail.mock.calls.length > 0) {
       const items = mockSendConsolidatedMonthlyEmail.mock.calls[0][0].items
       expect(items).toHaveLength(0)
@@ -277,7 +280,7 @@ describe('Consolidated email — RELEASING sequel', () => {
 
     const result = await runUpdateCheck()
 
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockCreateMany).not.toHaveBeenCalled()
     expect(result.notified).toBe(0)
   })
 
@@ -288,7 +291,7 @@ describe('Consolidated email — RELEASING sequel', () => {
       startDate: { year: null, month: null, day: null },
       sequels: [makeSequel(205, 'RELEASING')],
     })
-    mockCreate.mockRejectedValue(new Error('DB locked'))
+    mockCreateMany.mockRejectedValue(new Error('DB locked'))
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const result = await runUpdateCheck()
@@ -321,7 +324,7 @@ describe('Available seasons in consolidated email', () => {
         ]),
       }),
     )
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockCreateMany).not.toHaveBeenCalled()
   })
 })
 
@@ -425,7 +428,7 @@ describe('Error handling', () => {
     const result = await runUpdateCheck()
     consoleSpy.mockRestore()
 
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockCreateMany).not.toHaveBeenCalled()
     expect(result.errors).toBe(1)
     expect(result.notified).toBe(0)
   })
