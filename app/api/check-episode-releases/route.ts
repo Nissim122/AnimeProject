@@ -70,7 +70,25 @@ async function runEpisodeCheck() {
       const relevantEntries = [...airedByMediaId.values()].filter((e) => mediaToParent.has(e.mediaId))
       if (relevantEntries.length === 0) continue
 
-      // Check deduplication + fetch upcoming for new episodes
+      // Batch dedup: one query for all relevant entries instead of N findUnique calls
+      const existingSent = await prisma.sentNotification.findMany({
+        where: {
+          OR: relevantEntries.map((e) => ({
+            userId,
+            sequelAnilistId: e.mediaId,
+            type: `EPISODE_${e.episode}`,
+          })),
+        },
+        select: { sequelAnilistId: true, type: true },
+      })
+      const sentKeys = new Set(existingSent.map((n) => `${n.sequelAnilistId}_${n.type}`))
+
+      const newEntries = relevantEntries.filter(
+        (e) => !sentKeys.has(`${e.mediaId}_EPISODE_${e.episode}`)
+      )
+      if (newEntries.length === 0) continue
+
+      // Fetch upcoming schedules in a single rate-limit context so 700ms spacing is enforced
       const toSend: Array<{
         mediaId: number
         title: string
@@ -78,51 +96,42 @@ async function runEpisodeCheck() {
         episode: number
         airingAt: number
         upcoming: Array<{ episode: number; airingAt: number }>
-      }> = []
-
-      for (const entry of relevantEntries) {
-        const notifType = `EPISODE_${entry.episode}`
-        const already = await prisma.sentNotification.findUnique({
-          where: { userId_sequelAnilistId_type: { userId, sequelAnilistId: entry.mediaId, type: notifType } },
-        })
-        if (already) continue
-
-        // Fetch upcoming episodes for this series
-        let upcoming: Array<{ episode: number; airingAt: number }> = []
-        try {
-          const schedule = await withRateLimit(() => getAnimeAiringSchedule(entry.mediaId))
-          upcoming = schedule.upcoming.slice(0, 3)
-        } catch {
-          // Non-fatal — send without upcoming
+      }> = await withRateLimit(async () => {
+        const results = []
+        for (const entry of newEntries) {
+          let upcoming: Array<{ episode: number; airingAt: number }> = []
+          try {
+            const schedule = await getAnimeAiringSchedule(entry.mediaId)
+            upcoming = schedule.upcoming.slice(0, 3)
+          } catch {
+            // Non-fatal — send without upcoming
+          }
+          const parent = mediaToParent.get(entry.mediaId)!
+          results.push({
+            mediaId: entry.mediaId,
+            title: entry.title,
+            coverImage: parent.coverImage,
+            episode: entry.episode,
+            airingAt: entry.airingAt,
+            upcoming,
+          })
         }
-
-        const parent = mediaToParent.get(entry.mediaId)!
-        toSend.push({
-          mediaId: entry.mediaId,
-          title: entry.title,
-          coverImage: parent.coverImage,
-          episode: entry.episode,
-          airingAt: entry.airingAt,
-          upcoming,
-        })
-      }
-
-      if (toSend.length === 0) continue
+        return results
+      })
 
       try {
         const sent = await sendNewEpisodeEmail({ newEpisodes: toSend, toEmail: email })
         if (sent) {
-          for (const ep of toSend) {
-            await prisma.sentNotification.create({
-              data: {
-                userId,
-                sequelAnilistId: ep.mediaId,
-                type: `EPISODE_${ep.episode}`,
-                sequelTitle: ep.title,
-                parentTitle: ep.title,
-              },
-            })
-          }
+          await prisma.sentNotification.createMany({
+            data: toSend.map((ep) => ({
+              userId,
+              sequelAnilistId: ep.mediaId,
+              type: `EPISODE_${ep.episode}`,
+              sequelTitle: ep.title,
+              parentTitle: ep.title,
+            })),
+            skipDuplicates: true,
+          })
           totalNotified++
         }
       } catch (err) {
