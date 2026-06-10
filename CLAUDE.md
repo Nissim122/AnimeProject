@@ -45,7 +45,10 @@ ADMIN_EMAIL=...@gmail.com      # כתובת הנהלים שמקבלת בקשות
 ```
 
 - אם `EMAIL_USER` / `EMAIL_PASS` / `NOTIFY_EMAIL` חסרים — המייל נדלג בשקט (warning בלבד), האפליקציה ממשיכה לעבוד.
-- **`ADMIN_SECRET` חובה.** אם חסר — קישורי האישור/דחייה בעמוד pending לא יעבדו, וקריאה ל-`generateApprovalToken` תיזרוק שגיאה (עוטופה ב-try/catch בדף). אם לא מוגדר — ה-user לא יקבל מייל אישור לעולם.
+- **`ADMIN_SECRET` חובה.** אם חסר:
+  - `generateApprovalToken` ב-`pending/page.tsx` זורק שגיאה (עוטופה ב-`try/catch` בשורה 88 של הדף)
+  - `verifyToken` בשניהם `approve/route.ts` ו-`deny/route.ts` מחזיר `false` ו-logs שגיאה
+  - כתוצאה: קישורי האישור/דחייה בעמוד pending לא יעבדו, המשתמש לא יקבל מייל אישור, וקישורי אישור מ-מייל יחזירו "אימות נכשל"
 
 ---
 
@@ -207,15 +210,23 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 
 ### `GET /api/admin/approve?userId=&token=`
 - Endpoint להאשרת משתמש חדש דרך קישור במייל.
-- **אימות:** HMAC-SHA256 מחושב מ-`userId` עם `process.env.ADMIN_SECRET`. אם env חסר → `verifyToken` מחזיר `false` ו-logs שגיאה.
-- מחזיר HTML page: אם אימות נכשל → "אימות נכשל", אם בדיקה הצליחה → מעדכן status ל-`APPROVED` בדטה-בייס ושולח מייל אישור.
+- **אימות:** HMAC-SHA256 מחושב מ-`userId` עם `process.env.ADMIN_SECRET`.
+  - אם `ADMIN_SECRET` חסר → `verifyToken` מחזיר `false`, logs שגיאה, מחזיר HTML "אימות נכשל"
+  - אם token תקין → מעדכן status ל-`APPROVED` בדטה-בייס ושולח מייל אישור
+- מחזיר HTML page בעברית עם סטטוס הפעולה
 
 ### `GET /api/admin/deny?userId=&token=`
 - Endpoint לדחיית משתמש דרך קישור במייל.
-- **אימות:** זהה ל-approve.
-- מעדכן status ל-`DENIED` אם אימות הצליח.
+- **אימות:** זהה ל-approve — HMAC-SHA256, אם env חסר → "אימות נכשל"
+- אם token תקין → מעדכן status ל-`DENIED` בדטה-בייס
+- מחזיר HTML page בעברית עם סטטוס הפעולה
 
-**הערה אבטחה:** `generateApprovalToken` ב-`app/pending/page.tsx` זורק שגיאה (לא silent) אם `ADMIN_SECRET` חסר. הקריאה שלה עוטפת ב-`try/catch` כדי למנוע crash של ה-page. אם env לא מוגדר — קישורים בעמוד pending לא יעבדו וה-users לא יקבלו מיילי אישור.
+**הערה אבטחה:** 
+- `generateApprovalToken` ב-`pending/page.tsx` זורק שגיאה (explicit) אם `ADMIN_SECRET` חסר. הקריאה עוטפת ב-`try/catch` (שורה 88) כדי למנוע crash של הדף.
+- אם `ADMIN_SECRET` לא מוגדר בסביבה:
+  - עמוד pending לא יצליח לטעון קישורי אישור בדוא״ל
+  - `approve` ו-`deny` endpoints יזרקו שגיאה בלוג ויחזירו "אימות נכשל" ללא גישה
+  - users לא יקבלו מיילי אישור כלל
 
 ---
 
