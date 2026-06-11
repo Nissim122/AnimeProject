@@ -185,26 +185,45 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - מחזיר `{ checked, notified, errors }`.
 
 ### `POST /api/check-updates`
-**שלב 1 — איסוף נתונים:**
+**קבלת פרמטרים:**
+- `sendEmails` (default: `true`) — אם `false` → check-only mode בלא שליחת מיילים
+- `userOnly` (default: `false`) — אם `true` → רץ רק עבור המשתמש המחובר, דורש `sendEmails: true`
+- ללא `sendEmails` ו-user logged-in → check-only mode עבור משתמש יחיד
+
+**מצב 1 — Check Only (ללא מיילים):**
+- מחזיר `{ checked, errors, releasingAnimes, availableSequels, pendingNotifications, availableUnwatched }`
+- משמש לכפתור "בדוק עדכונים" בממשק לתצוגת מצב בלבד
+
+**מצב 2 — Update (עם מיילים) — עבור משתמש יחיד:**
+- קורא לפונקציה `runUpdateCheckForUser(userId, toEmail)` עם email מ-Clerk
+- מחזיר `{ checked, notified, errors, notifications }`
+
+**מצב 3 — Update (עם מיילים) — עבור כל המשתמשים (Cron):**
+- קורא לפונקציה `runUpdateCheck()`
+- איטרציה על כל users ב-`trackedAnime`, fetching email מ-Clerk
+
+**שלב 1 — איסוף נתונים (משותף לכל המצבים):**
 - `fetchSentNotificationKeys` — query בודד לכל user מ-`SentNotification`, מחזיר `Set<string>` (סוג: `${sequelId}_${type}`)
-- לכל אנימה במעקב: מביא סטטוס + סיקוולים ישירים מ-AniList.
-- אם RELEASING — מוסיף לתור התראות.
+- **batch pre-fetch סטטוסים:** לפני הלולאה, טוען את סטטוס כל האנימות בבאצ'ים של עד 50 לכל קריאה (מוגבל ל-1 batch = כ-700ms)
+- ב-loop: אם סטטוס נמצא בבאצ' → O(1) lookup מ-`statusBatchMap`; אם לא → fallback לקריאה בודדת עם 700ms delay
+- סיקוולים ישירים מ-AniList תמיד במקביל עם batch
 - עובר על KnownSequel לזיהוי שרשראות רב-דוריות (S1→S2 ידוע, S3 חדש).
-- delay 700ms בין כל קריאה (rate limit AniList).
+- delay 700ms בין כל קריאה בודדת (rate limit AniList) — **לא בבאצ'ים**
 - בדיקת כפילויות בזמן O(1) מול ה-Set (במקום query בדוק לכל סיקוול).
 
-**שלב 2 — שליחת מיילים:**
-- `MONTH_START`: סיקוול RELEASING או בחודש הנוכחי → מייל מפורט עם כל העונות.
-- `DAY_BEFORE`: סיקוול מחר → מייל קצר.
-- כל סוג נשלח רק פעם אחת (unique על sequelAnilistId + type).
-- `createMany` — batch insert בסוף אם יש התראות, בודד insert במקום insert פר-רשומה.
+**שלב 2 — שליחת מיילים (רק אם `sendEmails: true`):**
+- עשור `consolidatedItems` מהפנדינג נוטיפיקציות + enrichment עם עברית + עונות
+- מייל קונסוליד (מיי יחיד) עם כל הפנדינג + זמינים שלא נצפו
+- `createMany` עם `skipDuplicates: true` לשמירת רשומות נוטיפיקציה
+- מחזיר `{ checked, notified, errors, notifications }`
 
-**שלב 3 — reminder:**
-- אם לא נשלחו מיילים אבל יש סיקוולים שיצאו ולא נצפו → מייל תזכורת כללי.
+מחזיר (check-only): `{ checked, errors, releasingAnimes, availableSequels, pendingNotifications, availableUnwatched }`
+מחזיר (update): `{ checked, notified, errors, notifications }`
 
-מחזיר `{ checked, notified, errors, notifications }`.
-
-**אופטימיזציה:** עם 20 אנימות ו-3 סיקוולים כל אחד: **60 queries בדיקת כפילויות → 1 query + 1 batch insert**.
+**אופטימיזציה:** 
+- **קודם:** 20 אנימות × 1 קריאה סטטוס = 20 × 700ms = ~14s בשלב איסוף
+- **אחרי:** 1 batch query (50 ids) = 700ms + fallback אם נחוץ
+- כל סיקוול ידוע (KnownSequel) עדיין קריאה בודדת עם 700ms (אין batch מקביל קיים)
 
 ### `GET /api/watchlist`
 - מחזיר כל WatchListItem ממוין `addedAt DESC`.
@@ -295,6 +314,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - מושבת כשאין אנימות במעקב או כשבדיקה רצה
 - מציג ⟳ מסתובב בזמן בדיקה
 - לאחר בדיקה: toast עם מספר עדכונים שנמצאו
+- קורא ל-`POST /api/check-updates` בלא גוף (check-only mode) — מחזיר רשימת פנדינג בלא שליחת מיילים
 
 ---
 
