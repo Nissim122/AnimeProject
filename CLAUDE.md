@@ -225,6 +225,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 **מצב 1 — Check Only (ללא מיילים, דורש Clerk auth):**
 - `POST` ללא body או עם `sendEmails: false`
 - מחזיר `{ checked, errors, releasingAnimes, availableSequels, pendingNotifications, availableUnwatched }`
+  - `availableUnwatched` — כל אחד מוגדר עם `parentTitle`, `sequelTitle`, `sequelId`, ו-`coverImage` (אופציונלי)
 - משמש לכפתור "בדוק עדכונים" בממשק לתצוגת מצב בלבד
 
 **מצב 2 — Update (עם מיילים) — עבור משתמש יחיד (דורש Clerk auth):**
@@ -242,12 +243,14 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - **batch pre-fetch סטטוסים:** לפני הלולאה, טוען את סטטוס כל האנימות בבאצ'ים של עד 50 לכל קריאה (מוגבל ל-1 batch = כ-700ms)
 - ב-loop: אם סטטוס נמצא בבאצ' → O(1) lookup מ-`statusBatchMap`; אם לא → fallback לקריאה בודדת עם 700ms delay
 - סיקוולים ישירים מ-AniList תמיד במקביל עם batch
+- **collection cover images:** כל סיקוול זמין (unopened finished sequel) נאסף עם `coverImage` מהאנימה ממנה חזרה בDB (אם קיימת)
 - עובר על KnownSequel לזיהוי שרשראות רב-דוריות (S1→S2 ידוע, S3 חדש).
 - delay 700ms בין כל קריאה בודדת (rate limit AniList) — **לא בבאצ'ים**
 - בדיקת כפילויות בזמן O(1) מול ה-Set (במקום query בדוק לכל סיקוול).
 
 **שלב 2 — שליחת מיילים (רק אם `sendEmails: true`):**
 - עשור `consolidatedItems` מהפנדינג נוטיפיקציות + enrichment עם עברית + עונות
+- enrichment סיקוולים זמינים: נוסף `coverImage` מ-`availableUnwatched` לכל פריט (עדיפות: DB שלנו קודם, AniList כ-fallback)
 - מייל קונסוליד (מיי יחיד) עם כל הפנדינג + זמינים שלא נצפו
 - `createMany` עם `skipDuplicates: true` לשמירת רשומות נוטיפיקציה
 - מחזיר `{ checked, notified, errors, notifications }`
@@ -360,7 +363,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | `sendMonthStartEmail` | RELEASING או בחודש הנוכחי | מייל מפורט: טבלת כל העונות, עונה חדשה מסומנת באדום, סקשן אופציונלי של סיקוולים שיצאו |
 | `sendDayBeforeEmail` | מחר בדיוק | מייל קצר עם תאריך וכותרת |
 | `sendAvailableSeasonsEmail` | לא נשלחו מיילים אחרים אבל יש סיקוולים שיצאו | רשימת כל הסיקוולים הזמינים |
-| `sendConsolidatedMonthlyEmail` | עדכון חודשי משולב | מייל עם 3 סקשנים: "בשידור כעת" (עונות משודרות), "הוכרזה עונה" (עונות מוקדשות), "ממתין לצפייה" (סיקוולים). כרטיסיות בסקשן "ממתין לצפייה" מציגות כותרה וקטגוריית עונה בלבד (ללא כפתור לינק) |
+| `sendConsolidatedMonthlyEmail` | עדכון חודשי משולב | מייל עם 3 סקשנים: "בשידור כעת" (עונות משודרות), "הוכרזה עונה" (עונות מוקדשות), "ממתין לצפייה" (סיקוולים). כרטיסיות בסקשן "ממתין לצפייה" מציגות תמונת כיסוי (48×68px עם border-radius), כותרה וקטגוריית עונה, בסידור flex עם gap. תמונה מהDB שלנו מקדימה, AniList כfallback. אם אין תמונה — placeholder gray |
 | `sendNewEpisodeEmail` | כשיוצאים פרקים חדשים באותו יום לאנימות במעקב (דרך `/api/check-episode-releases`) | מייל עם רשימת הפרקים שיוצאים היום וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `פרקים חדשים להיום - animeAI` |
 
 כל המיילים בסגנון dark theme עם CSS inline.
