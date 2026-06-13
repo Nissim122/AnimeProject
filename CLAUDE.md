@@ -66,6 +66,7 @@ app/
     tracked/route.ts         # GET — רשימת מעוקבות
     next-seasons/route.ts    # GET ?ids= — מצב עונות עבור אנימות במעקב
     check-updates/route.ts   # POST — בדיקת עדכונים + שליחת מייל
+    check-episode-releases/route.ts # GET — בדיקת פרקים שיצאו אתמול + שליחת מייל לכל users (ציבורי)
     watchlist/route.ts       # GET / POST / DELETE — ניהול watchlist
     airing-schedule/route.ts # GET ?id= — לוח שידורים לסדרה (פרקים עתידיים)
 
@@ -173,19 +174,29 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - מחזיר object ממפה anilistId → AnimeSeasonInfo.
 
 ### `GET /api/check-episode-releases`
-- בדיקת פרקים שיצאו אתמול (לפי שעון ישראל).
-- בונה טווח זמן עבור יום "אתמול" לפי timezone `Asia/Jerusalem` (כולל DST אוטומטי):
-  - `from` = 00:00 אתמול שעון ישראל (as Unix timestamp)
-  - `to` = 00:00 היום שעון ישראל (= סוף אתמול)
-- שולף את כל הפרקים שיצאו ב-טווח זה מ-AniList `getAiringScheduleInRange`.
-- לכל משתמש עם אנימות במעקב: מסנן פרקים רלוונטיים (שייכים לאנימות במעקב או sequels שלהן).
+- **פונקציונליות:** בדיקת פרקים שיצאו אתמול (לפי שעון ישראל) לכל המשתמשים, ושליחת מיילי התראה לגביהם.
+- **ניתן גישה ציבורית** (ב-middleware) לשימוש בcron jobs או external triggers בלא הרשאות Clerk.
+- **תהליך:**
+  1. בונה טווח זמן עבור יום "אתמול" לפי timezone `Asia/Jerusalem` (כולל DST אוטומטי):
+     - `from` = 00:00 אתמול שעון ישראל (as Unix timestamp)
+     - `to` = 00:00 היום שעון ישראל (= סוף אתמול)
+  2. שולף את כל הפרקים שיצאו ב-טווח זה מ-AniList `getAiringScheduleInRange`
+  3. עובר על כל users שיש להם אנימות במעקב
+  4. לכל user: מסנן פרקים רלוונטיים (שייכים לאנימות במעקב או sequels שלהן)
+  5. בדיקת כפילויות: קריאה אחת `findMany` עם `OR` עבור כל הפרקים (מנע duplicates `EPISODE_${episode}`)
+  6. לכל פרק חדש: טוען upcoming עד 3 פרקים הבאים דרך `getAnimeAiringSchedule`
+  7. שולח מייל `sendNewEpisodeEmail` עם רשימת הפרקים
+  8. שומר רשומת `SentNotification` עם type `EPISODE_${episode}`
 
 **אופטימיזציה:**
-1. **בדיקת כפילויות — batch dedup:** קריאה אחת `findMany` עם `OR` עבור כל הפרקים הרלוונטיים (במקום `findUnique` בלולאה)
-2. **rate limit משותף:** כל קריאות ה-`getAnimeAiringSchedule` בתוך context אחד של `withRateLimit` (700ms spacing עבור כל הקריאות, לא לכל אחת בנפרד)
-3. **batch insert:** `createMany` עם `skipDuplicates: true` עבור כל התראות (במקום insert בלולאה)
+1. **batch dedup:** `findMany` עם `OR` עבור כל הפרקים הרלוונטיים (במקום `findUnique` בלולאה)
+2. **rate limit משותף:** כל קריאות ה-`getAnimeAiringSchedule` בתוך context אחד של `withRateLimit` (700ms spacing כללי)
+3. **batch insert:** `createMany` עם `skipDuplicates: true` עבור כל התראות (מנע כפל EPISODE_X)
 
-- מחזיר `{ checked, notified, errors }`.
+- מחזיר `{ checked, notified, errors }`:
+  - `checked` = מספר users שנבדקו
+  - `notified` = כמה users קיבלו מיילים בהצלחה
+  - `errors` = כמה עיבודים נכשלו
 
 ### `POST /api/check-updates`
 **קבלת פרמטרים:**
@@ -328,9 +339,11 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | `sendMonthStartEmail` | RELEASING או בחודש הנוכחי | מייל מפורט: טבלת כל העונות, עונה חדשה מסומנת באדום, סקשן אופציונלי של סיקוולים שיצאו |
 | `sendDayBeforeEmail` | מחר בדיוק | מייל קצר עם תאריך וכותרת |
 | `sendAvailableSeasonsEmail` | לא נשלחו מיילים אחרים אבל יש סיקוולים שיצאו | רשימת כל הסיקוולים הזמינים |
-| `sendNewEpisodeEmail` | כשפרקים חדשים יוצאים לאנימות במעקב | מייל עם רשימת הפרקים שיצאו וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `animeAI - פרקים חדשים` |
+| `sendNewEpisodeEmail` | כשפרקים חדשים יוצאים לאנימות במעקב (דרך `/api/check-episode-releases`) | מייל עם רשימת הפרקים שיצאו וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `animeAI - פרקים חדשים` |
 
 כל המיילים בסגנון dark theme עם CSS inline.
+
+**הערה:** `sendNewEpisodeEmail` נשלח מ-`check-episode-releases` כ-part מepisode detection אוטומטי (דרך cron או external trigger).
 
 ---
 
