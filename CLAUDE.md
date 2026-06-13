@@ -71,6 +71,7 @@ app/
     next-seasons/route.ts    # GET ?ids= — מצב עונות עבור אנימות במעקב
     check-updates/route.ts   # POST — בדיקת עדכונים + שליחת מייל
     check-episode-releases/route.ts # GET — בדיקת פרקים שיצאו אתמול + שליחת מייל לכל users (ציבורי)
+    test-episode-email/route.ts # GET — בדיקת שליחת מייל פרקים (test/debug endpoint)
     watchlist/route.ts       # GET / POST / DELETE — ניהול watchlist
     airing-schedule/route.ts # GET ?id= — לוח שידורים לסדרה (פרקים עתידיים)
 
@@ -201,6 +202,14 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
   - `checked` = מספר users שנבדקו
   - `notified` = כמה users קיבלו מיילים בהצלחה
   - `errors` = כמה עיבודים נכשלו
+
+### `GET /api/test-episode-email`
+- **פונקציונליות:** endpoint debug לבדיקת פונקציית שליחת מיילי פרקים.
+- **ניתן גישה ציבורית** (ב-middleware) — משמש בעיקר לטיפול ודבגים של תוכנה.
+- שולח מייל test עם 3 אנימות לדוגמה (Demon Slayer, Jujutsu Kaisen, Solo Leveling) לכתובת המוגדרת ב-`NOTIFY_EMAIL` (ברירת מחדל: `nisimelec77@gmail.com`).
+- מחזיר:
+  - `{ sent: true, to: EMAIL, episodes: 3 }` אם המייל נשלח בהצלחה
+  - `{ sent: false, reason: 'email config missing or send failed' }` (status 500) אם השליחה נכשלה
 
 ### `POST /api/check-updates` + `GET /api/check-updates`
 **הגנת Cron:**
