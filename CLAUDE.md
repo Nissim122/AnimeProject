@@ -225,7 +225,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 **מצב 1 — Check Only (ללא מיילים, דורש Clerk auth):**
 - `POST` ללא body או עם `sendEmails: false`
 - מחזיר `{ checked, errors, releasingAnimes, availableSequels, pendingNotifications, availableUnwatched }`
-  - `availableUnwatched` — כל אחד מוגדר עם `parentTitle`, `sequelTitle`, `sequelId`, ו-`coverImage` (אופציונלי)
+  - `availableUnwatched` — כל אחד מוגדר עם `parentTitle`, `sequelTitle`, `sequelId`, `coverImage` (אופציונלי), ו-`parentAnilistId` (אופציונלי)
 - משמש לכפתור "בדוק עדכונים" בממשק לתצוגת מצב בלבד
 
 **מצב 2 — Update (עם מיילים) — עבור משתמש יחיד (דורש Clerk auth):**
@@ -247,9 +247,13 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - עובר על KnownSequel לזיהוי שרשראות רב-דוריות (S1→S2 ידוע, S3 חדש).
 - delay 700ms בין כל קריאה בודדת (rate limit AniList) — **לא בבאצ'ים**
 - בדיקת כפילויות בזמן O(1) מול ה-Set (במקום query בדוק לכל סיקוול).
+- **לאנימות RELEASING:** קריאה ל-`getAnimeAiringSchedule` להשגת עד 3 פרקים קרובים (או הפרק הבא אם אין יותר).
 
 **שלב 2 — שליחת מיילים (רק אם `sendEmails: true`):**
 - עשור `consolidatedItems` מהפנדינג נוטיפיקציות + enrichment עם עברית + עונות
+- **עבור כל item במעקב:** חישוב `existingSeasonCount` — כמה עונות של הסדרה קיימות לפני העונה הנוכחית
+- **עבור כל item RELEASING:** קריאה ל-`getAnimeAiringSchedule` להשגת רשימת עד 3 פרקים קרובים
+- **עבור סיקוולים זמינים:** אם יש `parentAnilistId` — חישוב `currentSeasonNumber` כמספר העונה של ה-parent בסדרה
 - enrichment סיקוולים זמינים: נוסף `coverImage` מ-`availableUnwatched` לכל פריט (עדיפות: DB שלנו קודם, AniList כ-fallback)
 - מייל קונסוליד (מיי יחיד) עם כל הפנדינג + זמינים שלא נצפו
 - `createMany` עם `skipDuplicates: true` לשמירת רשומות נוטיפיקציה
@@ -363,7 +367,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | `sendMonthStartEmail` | RELEASING או בחודש הנוכחי | מייל מפורט: טבלת כל העונות, עונה חדשה מסומנת באדום, סקשן אופציונלי של סיקוולים שיצאו |
 | `sendDayBeforeEmail` | מחר בדיוק | מייל קצר עם תאריך וכותרת |
 | `sendAvailableSeasonsEmail` | לא נשלחו מיילים אחרים אבל יש סיקוולים שיצאו | רשימת כל הסיקוולים הזמינים |
-| `sendConsolidatedMonthlyEmail` | עדכון חודשי משולב | מייל עם 3 סקשנים: "בשידור כעת", "הוכרזה עונה", "ממתין לצפייה". **כרטיסיות — עיצוב אחיד לכל 3 הסקשנים:** עמודת תמונה רחב `76px` בצד שמאל + תוכן בצד ימין (flex). תמונות: `width="76"` attribute + `style="width:76px;display:block;"` לתאימות קליינטי מייל (Gmail/Outlook). placeholder: `width:76px;min-height:107px`. בקשן "בשידור": תמונה + badge + כותרה + עונה בחלק עליון, תוכן אחר מתחתיו. בקשן "הוכרזה": תמונה + כותרה + עונה + תאריך (גודל גדול יותר) + expected episodes. בקשן "ממתין": תמונה + כותרה + סדרה ההורה + זמינות (✓ ירוק). גובה אחיד `min-height:107px` עם `box-sizing:border-box` על body. ב-mobile (≤480px): תמונה full-width, גובה 170px עם `object-fit:cover`. |
+| `sendConsolidatedMonthlyEmail` | עדכון חודשי משולב | מייל עם 3 סקשנים: "בשידור כעת", "הוכרזה עונה", "ממתין לצפייה". **כרטיסיות — עיצוב אחיד לכל 3 הסקשנים:** עמודת תמונה רחב `76px` בצד שמאל + תוכן בצד ימין (flex). תמונות: `width="76"` attribute + `style="width:76px;display:block;"` לתאימות קליינטי מייל (Gmail/Outlook). placeholder: `width:76px;min-height:107px`. **בקשן "בשידור":** תמונה + badge + כותרה + עונה בחלק עליון, תוכן אחר מתחתיו. כוללת עד 3 פרקים קרובים עם כותרת "פרקים קרובים" וכרטיסייה לכל פרק (מספר + תאריך). **בקשן "הוכרזה":** תמונה + כותרה + עונה + מספר עונות קיימות + תאריך הכרזה (full format: יום/חודש/שנה) ב-container צהוב + expected episodes. **בקשן "ממתין":** תמונה + כותרה + סדרה ההורה + זמינות (✓ ירוק). גובה אחיד `min-height:107px` עם `box-sizing:border-box` על body. ב-mobile (≤480px): תמונה full-width, גובה 170px עם `object-fit:cover`. |
 | `sendNewEpisodeEmail` | כשיוצאים פרקים חדשים באותו יום לאנימות במעקב (דרך `/api/check-episode-releases`) | מייל עם רשימת הפרקים שיוצאים היום וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `פרקים חדשים להיום - animeAI` |
 
 כל המיילים בסגנון dark theme עם CSS inline.
@@ -384,6 +388,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - HTTP 429 → retry עד 2 פעמים עם exponential backoff (3s, 6s)
 - GQL-level 429 (HTTP 200 + שגיאה בגוף) — מטופל גם כן
 - `getAllSeasons` — BFS על PREQUEL+SEQUEL, מוגבל ל-20 nodes
+- `getAnimeAiringSchedule` — שליפת לוח שידורים של אנימה (מחזיר הפרק הבא + כל הפרקים הקרובים עד 3), משמשת ב-`check-updates` להוספת פרקים קרובים לתצוגת מייל RELEASING
 
 ---
 
