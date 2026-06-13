@@ -339,7 +339,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | `sendMonthStartEmail` | RELEASING או בחודש הנוכחי | מייל מפורט: טבלת כל העונות, עונה חדשה מסומנת באדום, סקשן אופציונלי של סיקוולים שיצאו |
 | `sendDayBeforeEmail` | מחר בדיוק | מייל קצר עם תאריך וכותרת |
 | `sendAvailableSeasonsEmail` | לא נשלחו מיילים אחרים אבל יש סיקוולים שיצאו | רשימת כל הסיקוולים הזמינים |
-| `sendNewEpisodeEmail` | כשפרקים חדשים יוצאים לאנימות במעקב (דרך `/api/check-episode-releases`) | מייל עם רשימת הפרקים שיצאו וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `animeAI - פרקים חדשים` |
+| `sendNewEpisodeEmail` | כשפרקים חדשים יוצאים לאנימות במעקב (דרך `/api/check-episode-releases`) | מייל עם רשימת הפרקים שיצאו וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `פרקים חדשים להיום - animeAI` |
 
 כל המיילים בסגנון dark theme עם CSS inline.
 
