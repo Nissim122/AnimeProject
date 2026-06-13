@@ -540,8 +540,8 @@ export async function sendNewEpisodeEmail(params: {
   }).join('')
 
   const subject = newEpisodes.length === 1
-    ? `animeAI - פרקים חדשים`
-    : `animeAI - פרקים חדשים`
+    ? `פרקים חדשים להיום - animeAI`
+    : `פרקים חדשים להיום - animeAI`
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
