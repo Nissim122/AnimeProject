@@ -31,6 +31,7 @@ interface TrackedItem {
   anilistId: number
   title: string
   coverImage: string | null
+  watchStatus: string
   trackedAt: string
 }
 
@@ -60,25 +61,25 @@ function isCurrentMonth(d?: RelationNode['startDate']): boolean {
   return d.year === now.getFullYear() && d.month === now.getMonth() + 1
 }
 
-type Group = 'watching' | 'releasing' | 'upcoming'
+type Group = 'releasing' | 'upcoming' | 'watching'
 
-function classify(info: AnimeSeasonInfo | undefined): Group | null {
-  if (!info || info.error) return null
-  if (info.available !== null) return 'watching'
-  if (info.next !== null) {
-    if (info.next.status === 'RELEASING' || isCurrentMonth(info.next.startDate)) return 'releasing'
-    return 'upcoming'
-  }
-  return null
+function isReleasing(info: AnimeSeasonInfo | undefined): boolean {
+  if (!info || info.error) return false
+  return info.next !== null && (info.next.status === 'RELEASING' || isCurrentMonth(info.next.startDate))
+}
+
+function isUpcoming(info: AnimeSeasonInfo | undefined): boolean {
+  if (!info || info.error) return false
+  return info.next !== null && info.next.status !== 'RELEASING' && !isCurrentMonth(info.next.startDate)
 }
 
 const GROUP_META: Record<Group, { label: string; icon: string; color: string }> = {
-  watching:  { label: 'צופה',                icon: '📺', color: 'text-violet-400' },
-  releasing: { label: 'יוצאים פרקים חדשים', icon: '🟢', color: 'text-green-400'  },
-  upcoming:  { label: 'הוכרזה עונה',         icon: '📅', color: 'text-amber-400'  },
+  releasing: { label: 'בשידור כעת',  icon: '🟢', color: 'text-pink-400'  },
+  upcoming:  { label: 'הוכרזה עונה', icon: '📅', color: 'text-amber-400' },
+  watching:  { label: 'צופה',        icon: '📺', color: 'text-blue-400'  },
 }
 
-const GROUP_ORDER: Group[] = ['watching', 'releasing', 'upcoming']
+const GROUP_ORDER: Group[] = ['releasing', 'upcoming', 'watching']
 
 
 export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Props) {
@@ -119,20 +120,25 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
 
     for (const item of tracked) {
       const info = seasonInfo?.[item.anilistId]
-      if (!info || info.error) continue
-      const g = classify(info)
       const title = cleanSeriesTitle(item.title)
       const cover = item.coverImage ?? undefined
-      if (g === 'watching' && info.available) {
-        watching.push({ parentTitle: title, coverImage: cover, sequelTitle: info.available.title.romaji })
-      } else if (g === 'releasing') {
-        releasing.push({
+      if (info && !info.error) {
+        if (isReleasing(info)) {
+          releasing.push({
+            parentTitle: title,
+            coverImage: cover,
+            upcomingEpisodes: airingMap[item.anilistId]?.upcoming?.slice(0, 3),
+          })
+        } else if (isUpcoming(info) && info.next) {
+          upcoming.push({ parentTitle: title, coverImage: cover, startDate: info.next.startDate })
+        }
+      }
+      if (item.watchStatus === 'watching') {
+        watching.push({
           parentTitle: title,
           coverImage: cover,
-          upcomingEpisodes: airingMap[item.anilistId]?.upcoming?.slice(0, 3),
+          sequelTitle: info?.available?.title.romaji ?? '',
         })
-      } else if (g === 'upcoming' && info.next) {
-        upcoming.push({ parentTitle: title, coverImage: cover, startDate: info.next.startDate })
       }
     }
 
@@ -160,13 +166,25 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
   const grouped: Partial<Record<Group, TrackedItem[]>> = {}
 
   for (const item of tracked) {
-    const g = classify(seasonInfo?.[item.anilistId])
-    if (!g) continue
-    if (!grouped[g]) grouped[g] = []
-    grouped[g]!.push(item)
+    const info = seasonInfo?.[item.anilistId]
+    if (isReleasing(info)) {
+      if (!grouped.releasing) grouped.releasing = []
+      grouped.releasing.push(item)
+    } else if (isUpcoming(info)) {
+      if (!grouped.upcoming) grouped.upcoming = []
+      grouped.upcoming.push(item)
+    }
+    if (item.watchStatus === 'watching') {
+      if (!grouped.watching) grouped.watching = []
+      grouped.watching.push(item)
+    }
   }
 
-  const total = GROUP_ORDER.reduce((n, g) => n + (grouped[g]?.length ?? 0), 0)
+  const total = (new Set([
+    ...(grouped.releasing?.map(i => i.anilistId) ?? []),
+    ...(grouped.upcoming?.map(i => i.anilistId) ?? []),
+    ...(grouped.watching?.map(i => i.anilistId) ?? []),
+  ])).size
 
   return (
     <div
@@ -223,7 +241,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                           <div className="flex flex-col gap-0.5 min-w-0">
                             <span className="text-sm text-gray-100 truncate">{cleanSeriesTitle(item.title)}</span>
                             {g === 'watching' && info?.available && (
-                              <span className="text-xs text-violet-400 truncate">📺 {info.available.title.romaji}</span>
+                              <span className="text-xs text-blue-400 truncate">📺 {info.available.title.romaji}</span>
                             )}
                             {g === 'releasing' && (
                               <>
