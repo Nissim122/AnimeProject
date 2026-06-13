@@ -17,9 +17,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoist mock functions ───────────────────────
 const {
-  mockFindMany,
-  mockFindUnique,
-  mockCreate,
+  mockTrackedFindMany,
+  mockSentFindMany,
+  mockCreateMany,
   mockGetAiringScheduleInRange,
   mockGetAnimeAiringSchedule,
   mockWithRateLimit,
@@ -27,15 +27,15 @@ const {
   mockGetUser,
   mockClerkClient,
 } = vi.hoisted(() => ({
-  mockFindMany:                   vi.fn(),
-  mockFindUnique:                 vi.fn(),
-  mockCreate:                     vi.fn(),
-  mockGetAiringScheduleInRange:   vi.fn(),
-  mockGetAnimeAiringSchedule:     vi.fn(),
-  mockWithRateLimit:              vi.fn(),
-  mockSendNewEpisodeEmail:        vi.fn(),
-  mockGetUser:                    vi.fn(),
-  mockClerkClient:                vi.fn(),
+  mockTrackedFindMany:             vi.fn(),
+  mockSentFindMany:                vi.fn(),
+  mockCreateMany:                  vi.fn(),
+  mockGetAiringScheduleInRange:    vi.fn(),
+  mockGetAnimeAiringSchedule:      vi.fn(),
+  mockWithRateLimit:               vi.fn(),
+  mockSendNewEpisodeEmail:         vi.fn(),
+  mockGetUser:                     vi.fn(),
+  mockClerkClient:                 vi.fn(),
 }))
 
 // ─── Module mocks ────────────────────────────────
@@ -49,8 +49,8 @@ vi.mock('@clerk/nextjs/server', () => ({
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    trackedAnime:     { findMany: mockFindMany },
-    sentNotification: { findUnique: mockFindUnique, create: mockCreate },
+    trackedAnime:     { findMany: mockTrackedFindMany },
+    sentNotification: { findMany: mockSentFindMany, createMany: mockCreateMany },
   },
 }))
 
@@ -88,16 +88,19 @@ function makeUser(email = 'test@example.com') {
 describe('GET /api/check-episode-releases', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    // withRateLimit immediately invokes its callback
     mockWithRateLimit.mockImplementation((fn: () => unknown) => fn())
     mockClerkClient.mockResolvedValue({ users: { getUser: mockGetUser } })
-    mockCreate.mockResolvedValue({})
+    // Default: no existing notifications
+    mockSentFindMany.mockResolvedValue([])
+    mockCreateMany.mockResolvedValue({ count: 1 })
     mockGetAnimeAiringSchedule.mockResolvedValue({ nextAiringEpisode: null, upcoming: [] })
     mockSendNewEpisodeEmail.mockResolvedValue(true)
   })
 
   it('returns 0 notified when no episodes aired', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([])
-    mockFindMany.mockResolvedValue([])
+    mockTrackedFindMany.mockResolvedValue([])
 
     const res = await GET()
     const body = (res as any)._body
@@ -108,11 +111,10 @@ describe('GET /api/check-episode-releases', () => {
 
   it('sends email when tracked anime has new episode', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(101, 5)])
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])          // distinct users
       .mockResolvedValueOnce([makeTracked('u1', 101)])     // user's tracked list
     mockGetUser.mockResolvedValue(makeUser('user@test.com'))
-    mockFindUnique.mockResolvedValue(null) // not yet notified
 
     await GET()
 
@@ -127,11 +129,10 @@ describe('GET /api/check-episode-releases', () => {
   it('sends email when known sequel has new episode', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(202, 3)])
     const tracked = { ...makeTracked('u1', 101), knownSequels: [{ sequelAnilistId: 202 }] }
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])
       .mockResolvedValueOnce([tracked])
     mockGetUser.mockResolvedValue(makeUser())
-    mockFindUnique.mockResolvedValue(null)
 
     await GET()
 
@@ -143,38 +144,43 @@ describe('GET /api/check-episode-releases', () => {
 
   it('does not send email for already-notified episode', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(101, 5)])
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])
       .mockResolvedValueOnce([makeTracked('u1', 101)])
     mockGetUser.mockResolvedValue(makeUser())
-    mockFindUnique.mockResolvedValue({ id: 1 }) // already notified
+    // Simulate that this episode was already notified
+    mockSentFindMany.mockResolvedValue([{ sequelAnilistId: 101, type: 'EPISODE_5' }])
 
     await GET()
 
     expect(mockSendNewEpisodeEmail).not.toHaveBeenCalled()
   })
 
-  it('records notification after successful email', async () => {
+  it('records notifications via createMany after successful email', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(101, 7)])
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])
       .mockResolvedValueOnce([makeTracked('u1', 101)])
     mockGetUser.mockResolvedValue(makeUser())
-    mockFindUnique.mockResolvedValue(null)
 
     await GET()
 
-    expect(mockCreate).toHaveBeenCalledOnce()
-    expect(mockCreate.mock.calls[0][0].data).toMatchObject({
-      userId: 'u1',
-      sequelAnilistId: 101,
-      type: 'EPISODE_7',
+    expect(mockCreateMany).toHaveBeenCalledOnce()
+    expect(mockCreateMany.mock.calls[0][0]).toMatchObject({
+      data: expect.arrayContaining([
+        expect.objectContaining({
+          userId: 'u1',
+          sequelAnilistId: 101,
+          type: 'EPISODE_7',
+        }),
+      ]),
+      skipDuplicates: true,
     })
   })
 
   it('skips user with no email address', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(101, 1)])
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])
       .mockResolvedValueOnce([makeTracked('u1', 101)])
     mockGetUser.mockResolvedValue({ emailAddresses: [], primaryEmailAddressId: null })
@@ -186,7 +192,7 @@ describe('GET /api/check-episode-releases', () => {
 
   it('does not notify when aired episode has no matching user', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(999, 4)])
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])
       .mockResolvedValueOnce([makeTracked('u1', 101)]) // tracks 101, not 999
     mockGetUser.mockResolvedValue(makeUser())
@@ -198,18 +204,17 @@ describe('GET /api/check-episode-releases', () => {
 
   it('tracks errors when email send throws', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(101, 5)])
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])
       .mockResolvedValueOnce([makeTracked('u1', 101)])
     mockGetUser.mockResolvedValue(makeUser())
-    mockFindUnique.mockResolvedValue(null)
     mockSendNewEpisodeEmail.mockRejectedValue(new Error('SMTP failure'))
 
     const res = await GET()
     const body = (res as any)._body
     expect(body.errors).toBe(1)
     expect(body.notified).toBe(0)
-    expect(mockCreate).not.toHaveBeenCalled()
+    expect(mockCreateMany).not.toHaveBeenCalled()
   })
 
   it('includes upcoming episodes in the email payload', async () => {
@@ -218,11 +223,10 @@ describe('GET /api/check-episode-releases', () => {
       { episode: 7, airingAt: NOW + 14 * 86400 },
     ]
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(101, 5)])
-    mockFindMany
+    mockTrackedFindMany
       .mockResolvedValueOnce([{ userId: 'u1' }])
       .mockResolvedValueOnce([makeTracked('u1', 101)])
     mockGetUser.mockResolvedValue(makeUser())
-    mockFindUnique.mockResolvedValue(null)
     mockGetAnimeAiringSchedule.mockResolvedValue({ nextAiringEpisode: null, upcoming })
 
     await GET()
@@ -233,14 +237,13 @@ describe('GET /api/check-episode-releases', () => {
 
   it('handles multiple users independently', async () => {
     mockGetAiringScheduleInRange.mockResolvedValue([makeAiredEntry(101, 2)])
-    mockFindMany
-      .mockResolvedValueOnce([{ userId: 'u1' }, { userId: 'u2' }])
-      .mockResolvedValueOnce([makeTracked('u1', 101)])
-      .mockResolvedValueOnce([makeTracked('u2', 101)])
+    mockTrackedFindMany
+      .mockResolvedValueOnce([{ userId: 'u1' }, { userId: 'u2' }]) // distinct users
+      .mockResolvedValueOnce([makeTracked('u1', 101)])              // u1 tracked
+      .mockResolvedValueOnce([makeTracked('u2', 101)])              // u2 tracked
     mockGetUser
       .mockResolvedValueOnce(makeUser('a@example.com'))
       .mockResolvedValueOnce(makeUser('b@example.com'))
-    mockFindUnique.mockResolvedValue(null)
 
     await GET()
 

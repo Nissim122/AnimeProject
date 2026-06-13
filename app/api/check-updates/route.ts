@@ -311,6 +311,12 @@ export async function runUpdateCheck(): Promise<UpdateResult> {
   return totals
 }
 
+function verifyCronSecret(req: Request): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return true // allow in local dev when CRON_SECRET is not set
+  return req.headers.get('authorization') === `Bearer ${secret}`
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({})) as { sendEmails?: boolean; userOnly?: boolean }
@@ -329,6 +335,10 @@ export async function POST(req: Request) {
     }
 
     if (sendEmails) {
+      // Full multi-user email blast — cron only
+      if (!verifyCronSecret(req)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
       const result = await runUpdateCheck()
       return NextResponse.json(result)
     }
@@ -345,7 +355,10 @@ export async function POST(req: Request) {
 }
 
 // Cron GET
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyCronSecret(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const result = await runUpdateCheck()
     return NextResponse.json(result)
