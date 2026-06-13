@@ -58,7 +58,7 @@ function makeSequel(id: number, status: string, year: number | null = null) {
     format: 'TV' as const,
     title: { romaji: `Title ${id}` },
     status,
-    startDate: { year, month: null, day: null },
+    startDate: { year, month: null as number | null, day: null as number | null },
   }
 }
 
@@ -69,7 +69,7 @@ function statusEntry(
 ) {
   return {
     status,
-    startDate: { year, month: null, day: null },
+    startDate: { year, month: null as number | null, day: null as number | null },
     sequels,
   }
 }
@@ -86,12 +86,12 @@ describe('GET /api/next-seasons', () => {
   })
 
   it('returns empty object when ids param is missing', async () => {
-    const res = (await GET(makeReq())) as { body: unknown }
+    const res = (await GET(makeReq())) as unknown as { body: unknown }
     expect(res.body).toEqual({})
   })
 
   it('returns empty object when ids param is blank', async () => {
-    const res = (await GET(makeReq({ ids: '' }))) as { body: unknown }
+    const res = (await GET(makeReq({ ids: '' }))) as unknown as { body: unknown }
     expect(res.body).toEqual({})
   })
 
@@ -113,7 +113,7 @@ describe('GET /api/next-seasons', () => {
   it('merges cached and fresh data', async () => {
     mockGetStatusCacheBatch.mockResolvedValue(new Map([[1, statusEntry('FINISHED')]]))
     mockBatchGetAnimeStatus.mockResolvedValue(new Map([[2, statusEntry('RELEASING')]]))
-    const res = (await GET(makeReq({ ids: '1,2' }))) as { body: Record<string, unknown> }
+    const res = (await GET(makeReq({ ids: '1,2' }))) as unknown as { body: Record<string, unknown> }
     expect(Object.keys(res.body)).toContain('1')
     expect(Object.keys(res.body)).toContain('2')
   })
@@ -123,7 +123,7 @@ describe('GET /api/next-seasons', () => {
     mockGetStatusCacheBatch.mockResolvedValue(
       new Map([[1, statusEntry('FINISHED', [upcomingSequel])]])
     )
-    const res = (await GET(makeReq({ ids: '1' }))) as {
+    const res = (await GET(makeReq({ ids: '1' }))) as unknown as {
       body: Record<string, { next: unknown; available: unknown }>
     }
     expect(res.body['1'].next).toMatchObject({ id: 99, status: 'NOT_YET_RELEASED' })
@@ -135,7 +135,7 @@ describe('GET /api/next-seasons', () => {
     mockGetStatusCacheBatch.mockResolvedValue(
       new Map([[1, statusEntry('FINISHED', [finishedSequel])]])
     )
-    const res = (await GET(makeReq({ ids: '1' }))) as {
+    const res = (await GET(makeReq({ ids: '1' }))) as unknown as {
       body: Record<string, { available: { id: number } | null }>
     }
     expect(res.body['1'].available?.id).toBe(50)
@@ -147,7 +147,7 @@ describe('GET /api/next-seasons', () => {
       new Map([[1, statusEntry('FINISHED', [finishedSequel])]])
     )
     // ids=1,50 → both tracked → 50 is in trackedSet
-    const res = (await GET(makeReq({ ids: '1,50' }))) as {
+    const res = (await GET(makeReq({ ids: '1,50' }))) as unknown as {
       body: Record<string, { available: unknown }>
     }
     expect(res.body['1'].available).toBeNull()
@@ -160,7 +160,7 @@ describe('GET /api/next-seasons', () => {
     )
     // Level-2 sequel of id=50 is RELEASING
     mockGetAnimeSequels.mockResolvedValue([makeSequel(51, 'RELEASING')])
-    const res = (await GET(makeReq({ ids: '1' }))) as {
+    const res = (await GET(makeReq({ ids: '1' }))) as unknown as {
       body: Record<string, { hasReleasingAhead: boolean }>
     }
     expect(res.body['1'].hasReleasingAhead).toBe(true)
@@ -170,7 +170,7 @@ describe('GET /api/next-seasons', () => {
     mockGetStatusCacheBatch.mockResolvedValue(
       new Map([[1, statusEntry('RELEASING', [], 2024)]])
     )
-    const res = (await GET(makeReq({ ids: '1' }))) as {
+    const res = (await GET(makeReq({ ids: '1' }))) as unknown as {
       body: Record<string, { next: { id: number; status: string } | null }>
     }
     expect(res.body['1'].next?.id).toBe(1)
@@ -180,7 +180,7 @@ describe('GET /api/next-seasons', () => {
   it('returns error flag for an id not present in the status map', async () => {
     mockGetStatusCacheBatch.mockResolvedValue(new Map())
     mockBatchGetAnimeStatus.mockResolvedValue(new Map()) // id=99 missing from AniList too
-    const res = (await GET(makeReq({ ids: '99' }))) as {
+    const res = (await GET(makeReq({ ids: '99' }))) as unknown as {
       body: Record<string, { error?: boolean }>
     }
     expect(res.body['99'].error).toBe(true)
@@ -189,7 +189,7 @@ describe('GET /api/next-seasons', () => {
   it('returns error flags for all ids when status batch fetch throws', async () => {
     mockGetStatusCacheBatch.mockResolvedValue(new Map())
     mockBatchGetAnimeStatus.mockRejectedValue(new Error('AniList down'))
-    const res = (await GET(makeReq({ ids: '1,2' }))) as {
+    const res = (await GET(makeReq({ ids: '1,2' }))) as unknown as {
       body: Record<string, { error?: boolean }>
     }
     expect(res.body['1'].error).toBe(true)
@@ -211,7 +211,7 @@ describe('GET /api/next-seasons', () => {
     mockGetStatusCacheBatch.mockResolvedValue(
       new Map([[1, statusEntry('FINISHED', [s1, s2])]])
     )
-    const res = (await GET(makeReq({ ids: '1' }))) as {
+    const res = (await GET(makeReq({ ids: '1' }))) as unknown as {
       body: Record<string, { next: { id: number } | null }>
     }
     expect(res.body['1'].next?.id).toBe(11) // January comes before April
@@ -248,7 +248,7 @@ describe('GET /api/next-seasons', () => {
         startDate: null,
       },
     ])
-    const res = (await GET(makeReq({ ids: '1' }))) as {
+    const res = (await GET(makeReq({ ids: '1' }))) as unknown as {
       body: Record<string, { available: { id: number } | null }>
     }
     expect(res.body['1'].available?.id).toBe(2)

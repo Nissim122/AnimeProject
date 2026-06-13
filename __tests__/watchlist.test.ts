@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoist mocks ───────────────────────────────
 const { mockAuth, mockFindMany, mockFindUnique, mockCreate, mockDeleteMany } = vi.hoisted(
@@ -60,14 +60,14 @@ describe('GET /api/watchlist', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue({ userId: null })
-    const res = (await GET()) as { status: number }
+    const res = (await GET()) as unknown as { status: number }
     expect(res.status).toBe(401)
   })
 
   it('returns all watchlist items ordered by addedAt desc', async () => {
     const items = [{ id: 1, anilistId: 100, title: 'Naruto', addedAt: new Date() }]
     mockFindMany.mockResolvedValue(items)
-    const res = (await GET()) as { body: { items: unknown[] } }
+    const res = (await GET()) as unknown as { body: { items: unknown[] } }
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
       orderBy: { addedAt: 'desc' },
@@ -77,13 +77,13 @@ describe('GET /api/watchlist', () => {
 
   it('returns an empty array when the watchlist is empty', async () => {
     mockFindMany.mockResolvedValue([])
-    const res = (await GET()) as { body: { items: unknown[] } }
+    const res = (await GET()) as unknown as { body: { items: unknown[] } }
     expect(res.body).toEqual({ items: [] })
   })
 
   it('returns 500 on DB failure', async () => {
     mockFindMany.mockRejectedValue(new Error('DB error'))
-    const res = (await GET()) as { status: number }
+    const res = (await GET()) as unknown as { status: number }
     expect(res.status).toBe(500)
   })
 })
@@ -97,26 +97,26 @@ describe('POST /api/watchlist', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue({ userId: null })
-    const res = (await POST(makeReq({ body: { anilistId: 1, title: 'Test' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 1, title: 'Test' } }))) as unknown as {
       status: number
     }
     expect(res.status).toBe(401)
   })
 
   it('returns 400 when anilistId is missing', async () => {
-    const res = (await POST(makeReq({ body: { title: 'Test' } }))) as { status: number }
+    const res = (await POST(makeReq({ body: { title: 'Test' } }))) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('returns 400 when title is missing', async () => {
-    const res = (await POST(makeReq({ body: { anilistId: 1 } }))) as { status: number }
+    const res = (await POST(makeReq({ body: { anilistId: 1 } }))) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('returns existing item without creating a duplicate', async () => {
     const existing = { id: 1, anilistId: 100, title: 'Naruto' }
     mockFindUnique.mockResolvedValue(existing)
-    const res = (await POST(makeReq({ body: { anilistId: 100, title: 'Naruto' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 100, title: 'Naruto' } }))) as unknown as {
       body: { item: unknown; existing: boolean }
     }
     expect(mockCreate).not.toHaveBeenCalled()
@@ -127,7 +127,7 @@ describe('POST /api/watchlist', () => {
     const created = { id: 2, anilistId: 200, title: 'One Piece' }
     mockFindUnique.mockResolvedValue(null)
     mockCreate.mockResolvedValue(created)
-    const res = (await POST(makeReq({ body: { anilistId: 200, title: 'One Piece' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 200, title: 'One Piece' } }))) as unknown as {
       body: { item: unknown }
     }
     expect(mockCreate).toHaveBeenCalledWith(
@@ -158,25 +158,25 @@ describe('DELETE /api/watchlist', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue({ userId: null })
-    const res = (await DELETE(makeReq({ anilistId: 100 }))) as { status: number }
+    const res = (await DELETE(makeReq({ anilistId: 100 }))) as unknown as { status: number }
     expect(res.status).toBe(401)
   })
 
   it('returns 400 when anilistId is missing', async () => {
-    const res = (await DELETE(makeReq())) as { status: number }
+    const res = (await DELETE(makeReq())) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('deletes the item for the correct user and returns ok', async () => {
     mockDeleteMany.mockResolvedValue({ count: 1 })
-    const res = (await DELETE(makeReq({ anilistId: 100 }))) as { body: { ok: boolean } }
+    const res = (await DELETE(makeReq({ anilistId: 100 }))) as unknown as { body: { ok: boolean } }
     expect(mockDeleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1', anilistId: 100 } })
     expect(res.body).toEqual({ ok: true })
   })
 
   it('returns 500 on DB failure', async () => {
     mockDeleteMany.mockRejectedValue(new Error('DB error'))
-    const res = (await DELETE(makeReq({ anilistId: 100 }))) as { status: number }
+    const res = (await DELETE(makeReq({ anilistId: 100 }))) as unknown as { status: number }
     expect(res.status).toBe(500)
   })
 })

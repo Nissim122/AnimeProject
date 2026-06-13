@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // ─── Hoist mocks ────────────────────────────────
 const { mockNextResponseJson, mockNextResponseHtml } = vi.hoisted(() => ({
@@ -46,13 +46,13 @@ describe('GET /api/airing-schedule', () => {
   })
 
   it('returns 400 when id param is missing', async () => {
-    const res = (await GET(makeReq())) as { status: number }
+    const res = (await GET(makeReq())) as unknown as { status: number }
     expect(res.status).toBe(400)
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it('returns 400 when id is not a number', async () => {
-    const res = (await GET(makeReq({ id: 'abc' }))) as { status: number }
+    const res = (await GET(makeReq({ id: 'abc' }))) as unknown as { status: number }
     expect(res.status).toBe(400)
     expect(mockFetch).not.toHaveBeenCalled()
   })
@@ -75,7 +75,7 @@ describe('GET /api/airing-schedule', () => {
         },
       })
     )
-    const res = (await GET(makeReq({ id: '1' }))) as {
+    const res = (await GET(makeReq({ id: '1' }))) as unknown as {
       body: { status: string; nextAiringEpisode: unknown; upcoming: Array<{ episode: number }> }
     }
     expect(res.body.status).toBe('RELEASING')
@@ -92,7 +92,7 @@ describe('GET /api/airing-schedule', () => {
         },
       })
     )
-    const res = (await GET(makeReq({ id: '1' }))) as {
+    const res = (await GET(makeReq({ id: '1' }))) as unknown as {
       body: { upcoming: unknown[]; nextAiringEpisode: unknown }
     }
     expect(res.body.upcoming).toEqual([])
@@ -101,7 +101,7 @@ describe('GET /api/airing-schedule', () => {
 
   it('returns { upcoming: [], nextAiringEpisode: null } when Media is null', async () => {
     mockFetch.mockResolvedValue(anilistOk({ data: { Media: null } }))
-    const res = (await GET(makeReq({ id: '1' }))) as {
+    const res = (await GET(makeReq({ id: '1' }))) as unknown as {
       body: { upcoming: unknown[]; nextAiringEpisode: unknown }
     }
     expect(res.body.upcoming).toEqual([])
@@ -110,7 +110,7 @@ describe('GET /api/airing-schedule', () => {
 
   it('returns 500 and empty payload when AniList fetch throws', async () => {
     mockFetch.mockRejectedValue(new Error('Network error'))
-    const res = (await GET(makeReq({ id: '1' }))) as {
+    const res = (await GET(makeReq({ id: '1' }))) as unknown as {
       status: number
       body: { upcoming: unknown[]; nextAiringEpisode: unknown }
     }
@@ -121,7 +121,7 @@ describe('GET /api/airing-schedule', () => {
 
   it('returns 500 and empty payload when AniList responds with non-ok status', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 503 })
-    const res = (await GET(makeReq({ id: '1' }))) as { status: number }
+    const res = (await GET(makeReq({ id: '1' }))) as unknown as { status: number }
     expect(res.status).toBe(500)
   })
 

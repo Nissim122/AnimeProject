@@ -87,6 +87,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
     seasons: AnimeResult[]
   }>
   watching?: Array<{ hebrewTitle: string; englishTitle: string; coverImage?: string; currentSeasonNumber?: number; totalSeasons?: number }>
+  available?: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId: number; coverImage?: string }>
   toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()

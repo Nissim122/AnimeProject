@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for GET /POST /api/refresh-season-cache
  *
  * Scenarios:
@@ -98,19 +98,19 @@ describe('GET /api/refresh-season-cache', () => {
   })
 
   it('passes auth when CRON_SECRET is not set', async () => {
-    const res = (await GET(makeReq())) as { status: number }
+    const res = (await GET(makeReq())) as unknown as { status: number }
     expect(res.status).not.toBe(401)
   })
 
   it('returns 401 when CRON_SECRET is set and Authorization header is wrong', async () => {
     process.env.CRON_SECRET = 'my-secret'
-    const res = (await GET(makeReq({ authHeader: 'Bearer wrong' }))) as { status: number }
+    const res = (await GET(makeReq({ authHeader: 'Bearer wrong' }))) as unknown as { status: number }
     expect(res.status).toBe(401)
   })
 
   it('passes auth when CRON_SECRET matches Bearer token', async () => {
     process.env.CRON_SECRET = 'my-secret'
-    const res = (await GET(makeReq({ authHeader: 'Bearer my-secret' }))) as { status: number; body: unknown }
+    const res = (await GET(makeReq({ authHeader: 'Bearer my-secret' }))) as unknown as { status: number; body: unknown }
     expect(res.status).not.toBe(401)
   })
 
@@ -150,7 +150,7 @@ describe('GET /api/refresh-season-cache', () => {
   })
 
   it('returns { total, status, seasons } with correct counts', async () => {
-    const res = (await GET(makeReq())) as {
+    const res = (await GET(makeReq())) as unknown as {
       body: { total: number; status: { refreshed: number; errors: number }; seasons: unknown }
     }
     expect(res.body.total).toBe(2)
@@ -165,7 +165,7 @@ describe('GET /api/refresh-season-cache', () => {
     mockBatchGetAnimeStatus.mockRejectedValue(new Error('AniList down'))
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const res = (await GET(makeReq())) as {
+    const res = (await GET(makeReq())) as unknown as {
       body: { status: { refreshed: number; errors: number } }
     }
     consoleSpy.mockRestore()
@@ -179,7 +179,7 @@ describe('GET /api/refresh-season-cache', () => {
     mockFindMany.mockResolvedValue([])
     mockRefreshCacheForIds.mockResolvedValue({ refreshed: 0, errors: 0, skipped: 0 })
 
-    const res = (await GET(makeReq())) as { body: { total: number } }
+    const res = (await GET(makeReq())) as unknown as { body: { total: number } }
     expect(res.body.total).toBe(0)
     expect(mockBatchGetAnimeStatus).not.toHaveBeenCalled()
   })
@@ -204,7 +204,7 @@ describe('POST /api/refresh-season-cache', () => {
 
   it('returns 401 when CRON_SECRET is set and token is wrong', async () => {
     process.env.CRON_SECRET = 'secret'
-    const res = (await POST(makeReq({ authHeader: 'Bearer wrong' }))) as { status: number }
+    const res = (await POST(makeReq({ authHeader: 'Bearer wrong' }))) as unknown as { status: number }
     expect(res.status).toBe(401)
   })
 

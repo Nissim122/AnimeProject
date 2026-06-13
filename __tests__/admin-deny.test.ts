@@ -66,7 +66,7 @@ function makeReq(params: Record<string, string> = {}) {
 }
 
 function htmlContains(fragment: string) {
-  return mockNextResponseCtor.mock.calls.some(([html]: [string]) => html.includes(fragment))
+  return mockNextResponseCtor.mock.calls.some(([html]: any[]) => (html as string).includes(fragment))
 }
 
 // ─── Tests ──────────────────────────────────────

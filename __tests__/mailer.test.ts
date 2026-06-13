@@ -268,7 +268,7 @@ describe('sendUserApprovedEmail', () => {
   })
 
   it('falls back to localhost when no env URL is set', async () => {
-    delete process.env.NODE_ENV
+    ;(process.env as Record<string, string | undefined>).NODE_ENV = undefined
     await sendUserApprovedEmail({ userEmail: 'x@x.com', userName: 'X' })
     const html = mockSendMail.mock.calls[0][0].html as string
     // In test env NODE_ENV is 'test', not 'production', so falls through to localhost

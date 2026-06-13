@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoist mocks ───────────────────────────────
 const { mockAuth, mockFindMany } = vi.hoisted(() => ({
@@ -37,7 +37,7 @@ describe('GET /api/tracked', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue({ userId: null })
-    const res = (await GET()) as { status: number }
+    const res = (await GET()) as unknown as { status: number }
     expect(res.status).toBe(401)
   })
 
@@ -47,7 +47,7 @@ describe('GET /api/tracked', () => {
       { id: 1, anilistId: 100, title: 'Naruto', trackedAt: new Date('2024-01-01') },
     ]
     mockFindMany.mockResolvedValue(tracked)
-    const res = (await GET()) as { body: { tracked: unknown[] } }
+    const res = (await GET()) as unknown as { body: { tracked: unknown[] } }
     expect(mockFindMany).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
       orderBy: { trackedAt: 'desc' },
@@ -58,13 +58,13 @@ describe('GET /api/tracked', () => {
 
   it('returns an empty array when nothing is tracked', async () => {
     mockFindMany.mockResolvedValue([])
-    const res = (await GET()) as { body: { tracked: unknown[] } }
+    const res = (await GET()) as unknown as { body: { tracked: unknown[] } }
     expect(res.body).toEqual({ tracked: [] })
   })
 
   it('returns 500 on DB failure', async () => {
     mockFindMany.mockRejectedValue(new Error('DB error'))
-    const res = (await GET()) as { status: number }
+    const res = (await GET()) as unknown as { status: number }
     expect(res.status).toBe(500)
   })
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoist mocks ───────────────────────────────
 const { mockGetAllSeasons } = vi.hoisted(() => ({
@@ -63,18 +63,18 @@ describe('GET /api/seasons', () => {
   })
 
   it('returns 400 when id is missing', async () => {
-    const res = (await GET(makeReq())) as { status: number }
+    const res = (await GET(makeReq())) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('returns 400 for a non-numeric id', async () => {
-    const res = (await GET(makeReq('abc'))) as { status: number }
+    const res = (await GET(makeReq('abc'))) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('returns all seasons for a valid id', async () => {
     mockGetAllSeasons.mockResolvedValue(SEASONS)
-    const res = (await GET(makeReq('100'))) as { body: { seasons: unknown[] } }
+    const res = (await GET(makeReq('100'))) as unknown as { body: { seasons: unknown[] } }
     expect(mockGetAllSeasons).toHaveBeenCalledWith(100)
     expect(res.body.seasons).toHaveLength(2)
     expect(res.body.seasons).toBe(SEASONS)
@@ -82,13 +82,13 @@ describe('GET /api/seasons', () => {
 
   it('returns a single-season array when the anime has no sequels', async () => {
     mockGetAllSeasons.mockResolvedValue([SEASONS[0]])
-    const res = (await GET(makeReq('100'))) as { body: { seasons: unknown[] } }
+    const res = (await GET(makeReq('100'))) as unknown as { body: { seasons: unknown[] } }
     expect(res.body.seasons).toHaveLength(1)
   })
 
   it('returns 502 when AniList call fails', async () => {
     mockGetAllSeasons.mockRejectedValue(new Error('AniList timeout'))
-    const res = (await GET(makeReq('100'))) as { status: number }
+    const res = (await GET(makeReq('100'))) as unknown as { status: number }
     expect(res.status).toBe(502)
   })
 })

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoist mocks ───────────────────────────────
 const {
@@ -78,24 +78,24 @@ describe('POST /api/track', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue({ userId: null })
-    const res = (await POST(makeReq({ body: { anilistId: 1, title: 'Test' } }))) as { status: number }
+    const res = (await POST(makeReq({ body: { anilistId: 1, title: 'Test' } }))) as unknown as { status: number }
     expect(res.status).toBe(401)
   })
 
   it('returns 400 when anilistId is missing', async () => {
-    const res = (await POST(makeReq({ body: { title: 'Test' } }))) as { status: number }
+    const res = (await POST(makeReq({ body: { title: 'Test' } }))) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('returns 400 when title is missing', async () => {
-    const res = (await POST(makeReq({ body: { anilistId: 1 } }))) as { status: number }
+    const res = (await POST(makeReq({ body: { anilistId: 1 } }))) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('returns existing entry without creating a duplicate', async () => {
     const existing = { id: 1, anilistId: 100, title: 'Naruto', userId: 'user-1' }
     mockFindUnique.mockResolvedValue(existing)
-    const res = (await POST(makeReq({ body: { anilistId: 100, title: 'Naruto' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 100, title: 'Naruto' } }))) as unknown as {
       body: { message: string; anime: unknown }
     }
     expect(mockCreate).not.toHaveBeenCalled()
@@ -107,7 +107,7 @@ describe('POST /api/track', () => {
     mockFindUnique.mockResolvedValue(null)
     mockCreate.mockResolvedValue(created)
     mockGetAnimeSequels.mockResolvedValue([{ id: 201 }, { id: 202 }])
-    const res = (await POST(makeReq({ body: { anilistId: 200, title: 'One Piece' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 200, title: 'One Piece' } }))) as unknown as {
       body: { anime: unknown }
     }
     expect(mockCreate).toHaveBeenCalledWith(
@@ -127,7 +127,7 @@ describe('POST /api/track', () => {
     mockFindUnique.mockResolvedValue(null)
     mockCreate.mockResolvedValue(created)
     mockGetAnimeSequels.mockRejectedValue(new Error('AniList error'))
-    const res = (await POST(makeReq({ body: { anilistId: 300, title: 'Bleach' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 300, title: 'Bleach' } }))) as unknown as {
       body: { anime: unknown }
     }
     expect(res.body).toEqual({ anime: created })
@@ -162,7 +162,7 @@ describe('POST /api/track', () => {
     mockCreate.mockResolvedValue(created)
     mockGetAnimeSequels.mockRejectedValue(new Error('AniList timeout'))
 
-    const res = (await POST(makeReq({ body: { anilistId: 500, title: 'World Trigger S2' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 500, title: 'World Trigger S2' } }))) as unknown as {
       body: { anime: unknown }
       status: number
     }
@@ -190,7 +190,7 @@ describe('POST /api/track', () => {
   it('returns 500 on DB create failure', async () => {
     mockFindUnique.mockResolvedValue(null)
     mockCreate.mockRejectedValue(new Error('DB error'))
-    const res = (await POST(makeReq({ body: { anilistId: 100, title: 'Test' } }))) as {
+    const res = (await POST(makeReq({ body: { anilistId: 100, title: 'Test' } }))) as unknown as {
       status: number
     }
     expect(res.status).toBe(500)
@@ -206,18 +206,18 @@ describe('DELETE /api/track', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue({ userId: null })
-    const res = (await DELETE(makeReq({ anilistId: 100 }))) as { status: number }
+    const res = (await DELETE(makeReq({ anilistId: 100 }))) as unknown as { status: number }
     expect(res.status).toBe(401)
   })
 
   it('returns 400 when anilistId is missing', async () => {
-    const res = (await DELETE(makeReq())) as { status: number }
+    const res = (await DELETE(makeReq())) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('deletes the tracked anime and returns success', async () => {
     mockDelete.mockResolvedValue({})
-    const res = (await DELETE(makeReq({ anilistId: 100 }))) as { body: { success: boolean } }
+    const res = (await DELETE(makeReq({ anilistId: 100 }))) as unknown as { body: { success: boolean } }
     expect(mockDelete).toHaveBeenCalledWith({
       where: { userId_anilistId: { userId: 'user-1', anilistId: 100 } },
     })
@@ -226,7 +226,7 @@ describe('DELETE /api/track', () => {
 
   it('returns 500 when DB delete throws', async () => {
     mockDelete.mockRejectedValue(new Error('DB error'))
-    const res = (await DELETE(makeReq({ anilistId: 100 }))) as { status: number }
+    const res = (await DELETE(makeReq({ anilistId: 100 }))) as unknown as { status: number }
     expect(res.status).toBe(500)
   })
 })
@@ -240,21 +240,21 @@ describe('PATCH /api/track', () => {
 
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue({ userId: null })
-    const res = (await PATCH(makeReq({ body: { anilistId: 100, note: 'good' } }))) as {
+    const res = (await PATCH(makeReq({ body: { anilistId: 100, note: 'good' } }))) as unknown as {
       status: number
     }
     expect(res.status).toBe(401)
   })
 
   it('returns 400 when anilistId is missing', async () => {
-    const res = (await PATCH(makeReq({ body: { note: 'good' } }))) as { status: number }
+    const res = (await PATCH(makeReq({ body: { note: 'good' } }))) as unknown as { status: number }
     expect(res.status).toBe(400)
   })
 
   it('updates the note and returns the updated entry', async () => {
     const updated = { id: 1, anilistId: 100, note: 'great anime' }
     mockUpdate.mockResolvedValue(updated)
-    const res = (await PATCH(makeReq({ body: { anilistId: 100, note: 'great anime' } }))) as {
+    const res = (await PATCH(makeReq({ body: { anilistId: 100, note: 'great anime' } }))) as unknown as {
       body: { anime: unknown }
     }
     expect(mockUpdate).toHaveBeenCalledWith({

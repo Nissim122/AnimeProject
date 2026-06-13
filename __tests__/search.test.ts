@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Hoist mocks ───────────────────────────────
 const {
@@ -71,18 +71,18 @@ describe('GET /api/search', () => {
   })
 
   it('returns empty results for a missing query', async () => {
-    const res = (await GET(makeReq())) as { body: { results: unknown[] } }
+    const res = (await GET(makeReq())) as unknown as { body: { results: unknown[] } }
     expect(res.body).toEqual({ results: [] })
   })
 
   it('returns empty results for a single-character query', async () => {
-    const res = (await GET(makeReq('N'))) as { body: { results: unknown[] } }
+    const res = (await GET(makeReq('N'))) as unknown as { body: { results: unknown[] } }
     expect(res.body).toEqual({ results: [] })
   })
 
   it('calls AniList directly for an English query', async () => {
     mockSearchAnime.mockResolvedValue([ANIME_1, ANIME_2])
-    const res = (await GET(makeReq('Naruto'))) as { body: { results: unknown[] } }
+    const res = (await GET(makeReq('Naruto'))) as unknown as { body: { results: unknown[] } }
     expect(mockSearchAnime).toHaveBeenCalledWith('Naruto')
     expect(res.body.results).toHaveLength(2)
   })
@@ -91,7 +91,7 @@ describe('GET /api/search', () => {
     const s1 = { ...ANIME_1, relations: { edges: [{ relationType: 'SEQUEL', node: { id: 2 } }] } }
     const s2 = { ...ANIME_2, relations: { edges: [{ relationType: 'PREQUEL', node: { id: 1 } }] } }
     mockSearchAnime.mockResolvedValue([s1, s2])
-    const res = (await GET(makeReq('Naruto'))) as { body: { results: unknown[] } }
+    const res = (await GET(makeReq('Naruto'))) as unknown as { body: { results: unknown[] } }
     expect(res.body.results).toHaveLength(1)
   })
 
@@ -113,14 +113,14 @@ describe('GET /api/search', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([ANIME_2])
       .mockResolvedValue([])
-    const res = (await GET(makeReq('חרב אמנות'))) as { body: { results: unknown[] } }
+    const res = (await GET(makeReq('חרב אמנות'))) as unknown as { body: { results: unknown[] } }
     expect(mockHebrewToKeywords).toHaveBeenCalled()
     expect(res.body.results.length).toBeGreaterThanOrEqual(1)
   })
 
   it('returns empty results gracefully when AniList throws', async () => {
     mockSearchAnime.mockRejectedValue(new Error('AniList down'))
-    const res = (await GET(makeReq('Naruto'))) as { body: { results: unknown[] } }
+    const res = (await GET(makeReq('Naruto'))) as unknown as { body: { results: unknown[] } }
     expect(res.body.results).toEqual([])
   })
 
