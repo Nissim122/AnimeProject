@@ -363,7 +363,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | `sendMonthStartEmail` | RELEASING או בחודש הנוכחי | מייל מפורט: טבלת כל העונות, עונה חדשה מסומנת באדום, סקשן אופציונלי של סיקוולים שיצאו |
 | `sendDayBeforeEmail` | מחר בדיוק | מייל קצר עם תאריך וכותרת |
 | `sendAvailableSeasonsEmail` | לא נשלחו מיילים אחרים אבל יש סיקוולים שיצאו | רשימת כל הסיקוולים הזמינים |
-| `sendConsolidatedMonthlyEmail` | עדכון חודשי משולב | מייל עם 3 סקשנים: "בשידור כעת" (עונות משודרות), "הוכרזה עונה" (עונות מוקדשות), "ממתין לצפייה" (סיקוולים). כרטיסיות בסקשן "ממתין לצפייה" מציגות תמונת כיסוי (48×68px עם border-radius), כותרה וקטגוריית עונה, בסידור flex עם gap. תמונה מהDB שלנו מקדימה, AniList כfallback. אם אין תמונה — placeholder gray |
+| `sendConsolidatedMonthlyEmail` | עדכון חודשי משולב | מייל עם 3 סקשנים: "בשידור כעת", "הוכרזה עונה", "ממתין לצפייה". **כרטיסיות — עיצוב אחיד לכל 3 הסקשנים:** עמודת תמונה רחב `76px` בצד שמאל + תוכן בצד ימין (flex). תמונות: `width="76"` attribute + `style="width:76px;display:block;"` לתאימות קליינטי מייל (Gmail/Outlook). placeholder: `width:76px;min-height:107px`. בקשן "בשידור": תמונה + badge + כותרה + עונה בחלק עליון, תוכן אחר מתחתיו. בקשן "הוכרזה": תמונה + כותרה + עונה + תאריך (גודל גדול יותר) + expected episodes. בקשן "ממתין": תמונה + כותרה + סדרה ההורה + זמינות (✓ ירוק). גובה אחיד `min-height:107px` עם `box-sizing:border-box` על body. ב-mobile (≤480px): תמונה full-width, גובה 170px עם `object-fit:cover`. |
 | `sendNewEpisodeEmail` | כשיוצאים פרקים חדשים באותו יום לאנימות במעקב (דרך `/api/check-episode-releases`) | מייל עם רשימת הפרקים שיוצאים היום וטבלת הפרקים הקרובים הבאים. כותרת קבועה: `פרקים חדשים להיום - animeAI` |
 
 כל המיילים בסגנון dark theme עם CSS inline.
