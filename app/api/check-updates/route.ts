@@ -239,32 +239,32 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
     }
   }
 
-  const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number; coverImage?: string }> = []
-  for (const item of data.availableUnwatched) {
+  // Build watching section: TrackedAnime with watchStatus='watching'
+  const watchingTracked = await prisma.trackedAnime.findMany({ where: { userId, watchStatus: 'watching' } })
+  const watchingItems: Array<{ hebrewTitle: string; englishTitle: string; coverImage?: string; currentSeasonNumber?: number; totalSeasons?: number }> = []
+  for (const anime of watchingTracked) {
     try {
-      const seasons = await getSeasons(item.sequelId)
-      const parentIdx = item.parentAnilistId
-        ? seasons.findIndex((s) => s.id === item.parentAnilistId)
-        : -1
-      enrichedAvailable.push({
-        parentTitle: item.parentTitle,
-        sequelTitle: item.sequelTitle,
-        currentSeasonNumber: parentIdx >= 0 ? parentIdx + 1 : undefined,
+      const hebrewTitle = await translateToHebrew(anime.title).catch(() => anime.title)
+      const seasons = await getSeasons(anime.anilistId)
+      const currentIdx = seasons.findIndex((s) => s.id === anime.anilistId)
+      watchingItems.push({
+        hebrewTitle,
+        englishTitle: anime.title,
+        coverImage: anime.coverImage ?? undefined,
+        currentSeasonNumber: currentIdx >= 0 ? currentIdx + 1 : undefined,
         totalSeasons: seasons.length > 0 ? seasons.length : undefined,
-        anilistId: item.sequelId,
-        coverImage: item.coverImage,
       })
     } catch {
-      enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle, anilistId: item.sequelId, coverImage: item.coverImage })
+      watchingItems.push({ hebrewTitle: anime.title, englishTitle: anime.title, coverImage: anime.coverImage ?? undefined })
     }
   }
 
-  if (consolidatedItems.length === 0 && enrichedAvailable.length === 0) return result
+  if (consolidatedItems.length === 0 && watchingItems.length === 0) return result
 
   try {
     const sent = await sendConsolidatedMonthlyEmail({
       items: consolidatedItems,
-      available: enrichedAvailable.length > 0 ? enrichedAvailable : undefined,
+      watching: watchingItems.length > 0 ? watchingItems : undefined,
       toEmail,
     })
     if (sent) {
@@ -287,7 +287,7 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
       result.notified = 1
       result.notifications = [
         ...consolidatedItems.map((i) => ({ parent: i.hebrewTitle, sequel: i.sequelTitle, type: 'CONSOLIDATED' })),
-        ...(enrichedAvailable.length > 0 ? [{ parent: '—', sequel: `${enrichedAvailable.length} עונות זמינות`, type: 'AVAILABLE' }] : []),
+        ...(watchingItems.length > 0 ? [{ parent: '—', sequel: `${watchingItems.length} צופה`, type: 'WATCHING' }] : []),
       ]
     }
   } catch (err) {

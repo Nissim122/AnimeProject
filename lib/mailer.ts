@@ -223,7 +223,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
     to,
-    subject: `🎌 עדכון חודשי — ${subtitleParts.join(' · ')}`,
+    subject: `עדכון חודשי - ANIME TRACKER 🎌`,
     attachments: imgAttachments,
     html: `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -250,7 +250,6 @@ export async function sendConsolidatedMonthlyEmail(params: {
   <div style="padding:28px 20px 0;text-align:center;">
     <div style="font-size:10px;color:#e0176b;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px;font-family:'Courier New',monospace;">ANIME TRACKER</div>
     <div style="font-size:30px;font-weight:900;color:#f1f5f9;line-height:1.1;">עדכון <span style="color:#e0176b;">חודשי</span></div>
-    <div style="font-size:13px;color:#64748b;margin-top:8px;font-weight:300;">${new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</div>
   </div>
 
   <div style="padding:16px 20px 4px;display:flex;gap:8px;flex-wrap:wrap;">${pillsHtml}</div>

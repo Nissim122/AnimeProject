@@ -131,9 +131,13 @@ const FAKE_ALL_SEASONS = [
 // ─────────────────────────────────────────────
 function setupTracked(animes: object[]) {
   mockFindMany.mockImplementation(
-    async (args: { select?: { userId?: unknown }; where?: unknown }) => {
+    async (args: { select?: { userId?: unknown }; where?: { watchStatus?: string } }) => {
       if (args?.select?.userId !== undefined) {
         return animes.length > 0 ? [{ userId: USER_ID }] : []
+      }
+      const ws = args?.where?.watchStatus
+      if (ws !== undefined) {
+        return (animes as Array<{ watchStatus?: string }>).filter((a) => a.watchStatus === ws)
       }
       return animes
     },
@@ -303,10 +307,10 @@ describe('Consolidated email — RELEASING sequel', () => {
 })
 
 // ═════════════════════════════════════════════
-// Available (FINISHED, untracked) in consolidated email
+// Available (FINISHED, untracked) — removed section
 // ═════════════════════════════════════════════
 describe('Available seasons in consolidated email', () => {
-  it('includes FINISHED untracked sequels in the available section', async () => {
+  it('does NOT send email for FINISHED untracked sequels (available section removed)', async () => {
     setupTracked([{ ...BASE_ANIME }])
     mockGetAnimeStatusWithSequels.mockResolvedValue({
       status: 'FINISHED',
@@ -316,14 +320,7 @@ describe('Available seasons in consolidated email', () => {
 
     await runUpdateCheck()
 
-    expect(mockSendConsolidatedMonthlyEmail).toHaveBeenCalledOnce()
-    expect(mockSendConsolidatedMonthlyEmail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        available: expect.arrayContaining([
-          expect.objectContaining({ sequelTitle: 'Sequel 300' }),
-        ]),
-      }),
-    )
+    expect(mockSendConsolidatedMonthlyEmail).not.toHaveBeenCalled()
     expect(mockCreateMany).not.toHaveBeenCalled()
   })
 })
