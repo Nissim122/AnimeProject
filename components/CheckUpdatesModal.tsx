@@ -89,7 +89,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
   useEffect(() => {
     const releasingItems = tracked.filter((item) => {
       const info = seasonInfo?.[item.anilistId]
-      return classify(info) === 'releasing' && info?.next?.status === 'RELEASING'
+      return isReleasing(info) && info?.next?.status === 'RELEASING'
     })
     if (releasingItems.length === 0) return
 
