@@ -171,13 +171,8 @@ export async function sendConsolidatedMonthlyEmail(params: {
       : ''
     return `
     <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);padding:13px 14px;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:150px;">
-          <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
-          <div style="font-size:11px;color:#4b5563;margin-top:3px;">המשך של <span style="color:#64748b;">${a.parentTitle}</span>${seasonCtx} · כל הפרקים זמינים</div>
-        </div>
-        <a href="${a.anilistId ? `https://anilist.co/anime/${a.anilistId}` : '#'}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:8px;text-decoration:none;color:#4ade80;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;">צפה ↗</a>
-      </div>
+      <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
+      <div style="font-size:11px;color:#4b5563;margin-top:3px;">המשך של <span style="color:#64748b;">${a.parentTitle}</span>${seasonCtx} · כל הפרקים זמינים</div>
     </div>`
   }).join('')
 
@@ -226,7 +221,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
 <body style="margin:0;padding:0;background:#070710;font-family:'Heebo',Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%;">
 <div style="max-width:480px;margin:0 auto;padding-bottom:32px;">
 
-  <div style="padding:28px 20px 0;">
+  <div style="padding:28px 20px 0;text-align:center;">
     <div style="font-size:10px;color:#e0176b;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px;font-family:'Courier New',monospace;">ANIME TRACKER</div>
     <div style="font-size:30px;font-weight:900;color:#f1f5f9;line-height:1.1;">עדכון <span style="color:#e0176b;">חודשי</span></div>
     <div style="font-size:13px;color:#64748b;margin-top:8px;font-weight:300;">${new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</div>
