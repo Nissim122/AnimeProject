@@ -173,8 +173,11 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - מחזיר object ממפה anilistId → AnimeSeasonInfo.
 
 ### `GET /api/check-episode-releases`
-- רץ כל 25 שעות (בדיקת פרקים שיצאו בעבר).
-- שולף את כל הפרקים שיצאו ב-25 השעות האחרונות מ-AniList `getAiringScheduleInRange`.
+- בדיקת פרקים שיצאו אתמול (לפי שעון ישראל).
+- בונה טווח זמן עבור יום "אתמול" לפי timezone `Asia/Jerusalem` (כולל DST אוטומטי):
+  - `from` = 00:00 אתמול שעון ישראל (as Unix timestamp)
+  - `to` = 00:00 היום שעון ישראל (= סוף אתמול)
+- שולף את כל הפרקים שיצאו ב-טווח זה מ-AniList `getAiringScheduleInRange`.
 - לכל משתמש עם אנימות במעקב: מסנן פרקים רלוונטיים (שייכים לאנימות במעקב או sequels שלהן).
 
 **אופטימיזציה:**
