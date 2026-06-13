@@ -1,22 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git diff*)",
-      "Bash(git -C*)",
-      "Bash(git status*)",
-      "Bash(git log*)",
-      "Bash(git add*)",
-      "Bash(git commit*)",
-      "Bash(git push*)",
-      "PowerShell(git diff*)",
-      "PowerShell(git -C*)",
-      "PowerShell(git status*)",
-      "PowerShell(git log*)",
-      "PowerShell(git add*)",
-      "PowerShell(git commit*)",
-      "PowerShell(git push*)",
+      "Bash(git*)",
+      "PowerShell(git*)",
       "PowerShell(Set-Location*)",
       "Read(*)",
+      "Write(*)",
       "Edit(*)",
       "Glob(*)",
       "Grep(*)"
