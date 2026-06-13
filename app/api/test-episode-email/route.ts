@@ -11,7 +11,7 @@ const DUMMY_EPISODES = [
   {
     mediaId: 101922,
     title: 'Demon Slayer: Kimetsu no Yaiba',
-    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-PEn1CTc93blC.jpg',
+    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-WBsBl0ClmgYL.jpg',
     episode: 12,
     airingAt: now - hour * 2,
     upcoming: [
@@ -22,7 +22,7 @@ const DUMMY_EPISODES = [
   {
     mediaId: 154587,
     title: 'Jujutsu Kaisen Season 3',
-    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-AxpSiqFZsXKM.jpg',
+    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154587-qQTzQnEJJ3oB.jpg',
     episode: 8,
     airingAt: now - hour * 5,
     upcoming: [
@@ -34,7 +34,7 @@ const DUMMY_EPISODES = [
   {
     mediaId: 170942,
     title: 'Solo Leveling Season 2',
-    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx170942-ik2jXDSPL0KR.jpg',
+    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx170942-KKcLfQzV57nG.jpg',
     episode: 5,
     airingAt: now - hour * 1,
     upcoming: [
