@@ -142,7 +142,6 @@ export async function sendConsolidatedMonthlyEmail(params: {
       <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 12px;min-height:107px;box-sizing:border-box;">
         ${badge}
         <div class="rc-title" style="font-size:16px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
-        ${item.sequelTitle ? `<div style="font-size:10px;color:#374151;font-family:'Courier New',monospace;direction:ltr;text-align:right;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.sequelTitle}</div>` : ''}
         ${nextHtml}
         ${progressHtml}
         ${dotsHtml}
@@ -164,7 +163,6 @@ export async function sendConsolidatedMonthlyEmail(params: {
       <div style="flex:1;min-width:0;padding:14px 14px 12px;min-height:107px;box-sizing:border-box;">
         ${seasonNum ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:2px 7px;border-radius:4px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">עונה ${seasonNum}</span>` : ''}
         <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
-        ${item.englishTitle && item.englishTitle !== item.hebrewTitle ? `<div style="font-size:10px;color:#374151;font-family:'Courier New',monospace;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.englishTitle}</div>` : ''}
         ${(item.existingSeasonCount ?? 0) > 0 ? `<div style="font-size:11px;color:#4b5563;margin-top:8px;">${item.existingSeasonCount} עונות קיימות</div>` : ''}
         <div style="margin-top:8px;padding:6px 8px;background:rgba(251,191,36,0.06);border-radius:6px;border:1px solid rgba(251,191,36,0.12);">
           <div style="font-size:9px;color:#4b5563;margin-bottom:2px;letter-spacing:0.06em;">${hasTBA ? 'TBA' : 'תאריך פרסום'}</div>
@@ -187,7 +185,6 @@ export async function sendConsolidatedMonthlyEmail(params: {
       <div style="width:76px;flex-shrink:0;overflow:hidden;">${coverHtml}</div>
       <div style="flex:1;min-width:0;padding:14px;min-height:107px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;">
         <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:4px;">המשך של ${a.parentTitle}${seasonCtx}</div>
         <div style="font-size:11px;color:#4ade80;margin-top:4px;">כל הפרקים זמינים ✓</div>
       </div>
     </div>`
