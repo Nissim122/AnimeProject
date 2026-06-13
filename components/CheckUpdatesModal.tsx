@@ -199,7 +199,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700 shrink-0">
           <div>
             <h2 className="text-white font-bold text-lg">עדכונים</h2>
-            <p className="text-gray-400 text-xs mt-0.5">
+            <p className="text-gray-300 text-xs mt-0.5">
               {total > 0 ? `${total} סדרות עם עדכון` : 'אין עדכונים כרגע'}
             </p>
           </div>
@@ -228,14 +228,19 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
               const { label, hex, border, bg } = GROUP_META[g]
               return (
                 <section key={g}>
-                  {/* Section header — matches email sectionHdr */}
-                  <div className="flex items-center gap-3 py-3">
-                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, ${hex}44, transparent)` }} />
-                    <span className="text-[11px] font-extrabold tracking-widest whitespace-nowrap" style={{ color: hex }}>
-                      {label}
-                      <span className="ml-2 opacity-60">({items.length})</span>
-                    </span>
-                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${hex}44, transparent)` }} />
+                  {/* Section header */}
+                  <div className="flex items-center gap-3 pt-2 pb-3">
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, ${hex}88, transparent)` }} />
+                    <div className="flex items-center gap-2 px-1">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: hex, boxShadow: `0 0 6px ${hex}` }} />
+                      <span className="text-[13px] font-black tracking-wide whitespace-nowrap" style={{ color: hex }}>
+                        {label}
+                      </span>
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${hex}22`, color: hex }}>
+                        {items.length}
+                      </span>
+                    </div>
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${hex}88, transparent)` }} />
                   </div>
 
                   <ul className="flex flex-col gap-2">
@@ -254,28 +259,28 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                             )}
                           </div>
                           {/* Content */}
-                          <div className="flex-1 min-w-0 px-3 py-3 flex flex-col justify-center gap-1">
-                            <span className="text-[14px] font-bold text-[#f1f5f9] leading-snug">
+                          <div className="flex-1 min-w-0 px-3 py-3 flex flex-col justify-center gap-1.5">
+                            <span className="text-[14px] font-bold text-white leading-snug">
                               {cleanSeriesTitle(item.title)}
                             </span>
                             {g === 'releasing' && episodes.length > 0 && episodes.map((ep) => {
                               const { label: epLabel, color: epColor } = formatAiringDate(ep.airingAt)
                               return (
-                                <span key={ep.episode} className={`text-[11px] ${epColor}`}>
+                                <span key={ep.episode} className={`text-[12px] font-medium ${epColor}`}>
                                   פרק {ep.episode} — {epLabel}
                                 </span>
                               )
                             })}
                             {g === 'releasing' && episodes.length === 0 && airingMap[item.anilistId] === undefined && (
-                              <span className="text-[11px] text-gray-500">טוען לוח שידורים...</span>
+                              <span className="text-[12px] text-gray-400">טוען לוח שידורים...</span>
                             )}
                             {g === 'upcoming' && info?.next && (
-                              <span className="text-[11px] text-amber-400">
-                                {formatDate(info.next.startDate)}
+                              <span className="text-[12px] font-semibold text-amber-300">
+                                📅 {formatDate(info.next.startDate)}
                               </span>
                             )}
                             {g === 'watching' && info?.available && (
-                              <span className="text-[11px] text-[#2db3cd] truncate">
+                              <span className="text-[12px] font-medium text-[#2db3cd] truncate">
                                 📺 {info.available.title.romaji}
                               </span>
                             )}
