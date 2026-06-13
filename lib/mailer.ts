@@ -30,6 +30,41 @@ function getTo(): string | null {
   return process.env.NOTIFY_EMAIL ?? null
 }
 
+interface ImageAttachment {
+  cid: string
+  content: Buffer
+  contentType: string
+  contentDisposition: 'inline'
+}
+
+async function fetchImageAttachments(urls: (string | null | undefined)[]): Promise<{
+  urlToCid: Map<string, string>
+  attachments: ImageAttachment[]
+}> {
+  const unique = [...new Set(urls.filter((u): u is string => !!u))]
+  const urlToCid = new Map<string, string>()
+  const attachments: ImageAttachment[] = []
+
+  await Promise.all(unique.map(async (url, i) => {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+      if (!res.ok) return
+      const buffer = Buffer.from(await res.arrayBuffer())
+      const contentType = res.headers.get('content-type') || 'image/jpeg'
+      const cid = `cover${i}@anime`
+      urlToCid.set(url, cid)
+      attachments.push({ cid, content: buffer, contentType, contentDisposition: 'inline' })
+    } catch { /* skip failed images */ }
+  }))
+
+  return { urlToCid, attachments }
+}
+
+function cidOrUrl(url: string, urlToCid: Map<string, string>): string {
+  const cid = urlToCid.get(url)
+  return cid ? `cid:${cid}` : url
+}
+
 
 
 export async function sendConsolidatedMonthlyEmail(params: {
@@ -59,6 +94,13 @@ export async function sendConsolidatedMonthlyEmail(params: {
   }
 
   const { items, available } = params
+  const avail = available ?? []
+
+  const { urlToCid, attachments: imgAttachments } = await fetchImageAttachments([
+    ...items.map(i => i.coverImage),
+    ...avail.map(a => a.coverImage),
+  ])
+
   const releasing = items.filter(i => i.status === 'RELEASING')
   const announced = items
     .filter(i => i.status === 'NOT_YET_RELEASED')
@@ -67,7 +109,6 @@ export async function sendConsolidatedMonthlyEmail(params: {
         !d.year ? Number.MAX_SAFE_INTEGER : d.year * 10000 + (d.month ?? 12) * 100 + (d.day ?? 31)
       return key(a.startDate) - key(b.startDate)
     })
-  const avail = available ?? []
   const total = releasing.length + announced.length + avail.length
 
   function formatAiringDate(ts: number): string {
@@ -101,7 +142,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
       : `<span style="display:inline-block;background:rgba(224,23,107,0.1);border:1px solid rgba(224,23,107,0.28);color:#e0176b;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;">▶ בשידור</span>`
 
     const coverHtml = item.coverImage
-      ? `<img src="${item.coverImage}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
+      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
       : `<div style="width:76px;height:107px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
 
     const aired = item.nextAiringEpisode
@@ -155,7 +196,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const dateVal = formatDateHe(item.startDate)
     const hasTBA = dateVal === 'בקרוב'
     const coverHtml = item.coverImage
-      ? `<img src="${item.coverImage}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
+      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
       : `<div style="width:76px;height:107px;background:#1f2937;"></div>`
     return `
     <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(251,191,36,0.15);overflow:hidden;display:flex;">
@@ -178,7 +219,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
       ? ` · עונה ${a.currentSeasonNumber}/${a.totalSeasons}`
       : ''
     const coverHtml = a.coverImage
-      ? `<img src="${a.coverImage}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
+      ? `<img src="${cidOrUrl(a.coverImage, urlToCid)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
       : `<div style="width:76px;height:107px;background:#1f2937;"></div>`
     return `
     <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);overflow:hidden;display:flex;">
@@ -213,6 +254,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
     to,
     subject: `🎌 עדכון חודשי — ${subtitleParts.join(' · ')}`,
+    attachments: imgAttachments,
     html: `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -286,9 +328,15 @@ export async function sendUpdatesEmail(params: {
   const total = watching.length + releasing.length + upcoming.length
   if (total === 0) return false
 
+  const { urlToCid: updUrlToCid, attachments: updAttachments } = await fetchImageAttachments([
+    ...watching.map(i => i.coverImage),
+    ...releasing.map(i => i.coverImage),
+    ...upcoming.map(i => i.coverImage),
+  ])
+
   function coverImg(url?: string): string {
     return url
-      ? `<img src="${url}" alt="" style="width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0;" />`
+      ? `<img src="${cidOrUrl(url, updUrlToCid)}" alt="" style="width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0;" />`
       : `<div style="width:32px;height:44px;background:#1f2937;border-radius:4px;flex-shrink:0;"></div>`
   }
 
@@ -332,7 +380,7 @@ export async function sendUpdatesEmail(params: {
     }).join('')
     return `
     <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(31,41,55,0.5);border-radius:10px;padding:8px 12px;margin-bottom:8px;">
-      ${i.coverImage ? `<img src="${i.coverImage}" alt="" style="width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0;" />` : `<div style="width:32px;height:44px;background:#1f2937;border-radius:4px;flex-shrink:0;"></div>`}
+      ${i.coverImage ? `<img src="${cidOrUrl(i.coverImage, updUrlToCid)}" alt="" style="width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0;" />` : `<div style="width:32px;height:44px;background:#1f2937;border-radius:4px;flex-shrink:0;"></div>`}
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.parentTitle}</div>
         <div style="font-size:12px;color:#4ade80;margin-top:2px;">🟢 משודר כעת</div>
@@ -361,6 +409,7 @@ export async function sendUpdatesEmail(params: {
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
     to: toEmail,
     subject: `🎌 עדכונים — ${total} סדרות`,
+    attachments: updAttachments,
     html: `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -517,6 +566,10 @@ export async function sendNewEpisodeEmail(params: {
     return false
   }
 
+  const { urlToCid: epUrlToCid, attachments: epAttachments } = await fetchImageAttachments(
+    newEpisodes.map(e => e.coverImage)
+  )
+
   function formatAiringFull(ts: number): string {
     const d = new Date(ts * 1000)
     const now = new Date()
@@ -537,7 +590,7 @@ export async function sendNewEpisodeEmail(params: {
 
   const cards = newEpisodes.map(ep => {
     const cover = ep.coverImage
-      ? `<img src="${ep.coverImage}" alt="" style="width:54px;height:76px;object-fit:cover;border-radius:8px;flex-shrink:0;" />`
+      ? `<img src="${cidOrUrl(ep.coverImage, epUrlToCid)}" alt="" style="width:54px;height:76px;object-fit:cover;border-radius:8px;flex-shrink:0;" />`
       : `<div style="width:54px;height:76px;background:#1f2937;border-radius:8px;flex-shrink:0;"></div>`
 
     const upcomingRows = ep.upcoming.slice(0, 3).map(u => {
@@ -568,6 +621,7 @@ export async function sendNewEpisodeEmail(params: {
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
     to: toEmail,
     subject,
+    attachments: epAttachments,
     html: `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
