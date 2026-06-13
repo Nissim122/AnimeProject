@@ -165,23 +165,23 @@ export async function sendConsolidatedMonthlyEmail(params: {
   const announcedCards = announced.map(item => {
     const idx = item.seasons.findIndex(s => s.id === item.sequelId)
     const seasonNum = idx >= 0 ? idx + 1 : null
+    const titleLine = seasonNum ? `${item.hebrewTitle} - עונה ${seasonNum}` : item.hebrewTitle
     const dateVal = formatDateHe(item.startDate)
-    const hasTBA = dateVal === 'בקרוב'
+
     const coverHtml = item.coverImage
-      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
-      : `<div style="width:76px;height:107px;background:#1f2937;"></div>`
+      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:90px;background:#1f2937;"></div>`
+
     return `
-    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(251,191,36,0.15);overflow:hidden;display:flex;">
-      <div style="width:76px;height:107px;flex-shrink:0;overflow:hidden;align-self:flex-start;">${coverHtml}</div>
-      <div style="flex:1;min-width:0;padding:14px 14px 12px;min-height:107px;box-sizing:border-box;">
-        ${seasonNum ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:2px 7px;border-radius:4px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">עונה ${seasonNum}</span>` : ''}
-        <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
-        ${(item.existingSeasonCount ?? 0) > 0 ? `<div style="font-size:11px;color:#4b5563;margin-top:8px;">${item.existingSeasonCount} עונות קיימות</div>` : ''}
-        <div style="margin-top:8px;padding:6px 8px;background:rgba(251,191,36,0.06);border-radius:6px;border:1px solid rgba(251,191,36,0.12);">
-          <div style="font-size:9px;color:#4b5563;margin-bottom:2px;letter-spacing:0.06em;">${hasTBA ? 'TBA' : 'תאריך פרסום'}</div>
-          <div style="font-size:13px;font-weight:700;color:${hasTBA ? '#4b5563' : '#fbbf24'};">${dateVal}</div>
+    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:14px;border:1px solid rgba(251,191,36,0.15);overflow:hidden;display:flex;min-height:110px;">
+      <div style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
+      <div style="flex:1;min-width:0;padding:14px 14px 14px;">
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${titleLine}</div>
+        <div style="margin-top:8px;">
+          ${(item.existingSeasonCount ?? 0) > 0 ? `<div style="font-size:12px;color:#94a3b8;margin-top:5px;">${item.existingSeasonCount} עונות קיימות</div>` : ''}
+          ${item.sequelEpisodeCount ? `<div style="font-size:12px;color:#94a3b8;margin-top:5px;">${item.sequelEpisodeCount} פרקים קיימים</div>` : ''}
         </div>
-        ${item.sequelEpisodeCount ? `<div style="margin-top:5px;font-size:11px;color:#4b5563;">${item.sequelEpisodeCount} פרקים צפויים</div>` : ''}
+        <div style="font-size:12px;color:#fbbf24;margin-top:10px;">${dateVal}</div>
       </div>
     </div>`
   }).join('')
