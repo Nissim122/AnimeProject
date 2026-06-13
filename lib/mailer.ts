@@ -213,7 +213,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
   ].filter(Boolean).join('')
 
   function sectionHdr(color: string, label: string): string {
-    return `<div class="section-hdr" style="padding:20px 20px 12px;display:flex;align-items:center;gap:10px;"><div style="flex:1;height:1px;background:linear-gradient(to left,${color}55,transparent);"></div><span style="font-size:9px;font-weight:700;color:${color};letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;padding:0 4px;">${label}</span><div style="flex:1;height:1px;background:linear-gradient(to right,${color}55,transparent);"></div></div>`
+    return `<div class="section-hdr" style="padding:20px 20px 12px;display:flex;align-items:center;gap:10px;"><div style="flex:1;height:1px;background:linear-gradient(to left,${color}55,transparent);"></div><span style="font-size:14px;font-weight:800;color:${color};letter-spacing:0.1em;white-space:nowrap;padding:0 4px;">${label}</span><div style="flex:1;height:1px;background:linear-gradient(to right,${color}55,transparent);"></div></div>`
   }
 
   const releasingSection = releasing.length > 0 ? `${sectionHdr('#e0176b', 'בשידור כעת')}${releasingCards}` : ''
