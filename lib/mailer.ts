@@ -116,9 +116,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
 
   function formatAiringDate(ts: number): string {
     const d = new Date(ts * 1000)
-    const date = d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', timeZone: 'Asia/Jerusalem' })
-    const time = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' })
-    return `${date}, ${time}`
+    return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', timeZone: 'Asia/Jerusalem' })
   }
 
   function formatMonthYear(year: number | null, month: number | null): string {
