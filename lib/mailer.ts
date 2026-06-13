@@ -557,8 +557,7 @@ export async function sendNewEpisodeEmail(params: {
 <body style="margin:0;padding:0;background:#070710;font-family:'Heebo',Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%;">
 <div style="max-width:480px;margin:0 auto;padding-bottom:32px;">
 
-  <div style="padding:28px 20px 16px;">
-    <div style="font-size:10px;color:#e0176b;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px;font-family:'Courier New',monospace;">ANIME TRACKER</div>
+  <div style="padding:28px 20px 16px;text-align:center;">
     <div style="font-size:28px;font-weight:900;color:#f1f5f9;line-height:1.1;">פרקים <span style="color:#4ade80;">חדשים</span></div>
     <div style="font-size:13px;color:#64748b;margin-top:6px;font-weight:300;">${newEpisodes.length} ${newEpisodes.length === 1 ? 'סדרה' : 'סדרות'} עם פרק חדש</div>
   </div>
@@ -566,7 +565,7 @@ export async function sendNewEpisodeEmail(params: {
   <div style="padding:0 12px 8px;">${cards}</div>
 
   <div style="margin:20px 12px 0;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.05);text-align:center;">
-    <span style="font-size:10px;color:#374151;letter-spacing:0.15em;font-family:'Courier New',monospace;">ANIME TRACKER</span>
+    <span style="font-size:10px;color:#374151;letter-spacing:0.15em;font-family:'Courier New',monospace;">animeAI</span>
   </div>
 
 </div>
