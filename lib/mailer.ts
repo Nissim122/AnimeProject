@@ -139,9 +139,9 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const seasonNum = idx >= 0 ? idx + 1 : null
     const titleLine = seasonNum ? `${item.hebrewTitle} - עונה ${seasonNum}` : item.hebrewTitle
 
-    const coverHtml = item.coverImage
-      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
-      : `<div style="width:90px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
+    const coverHtml = (item.coverImage && urlToCid.has(item.coverImage))
+      ? `<img src="cid:${urlToCid.get(item.coverImage)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:90px;background:#0d1117;"></div>`
 
     const episodesToShow = item.upcomingEpisodes?.length
       ? item.upcomingEpisodes
@@ -168,8 +168,8 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const titleLine = seasonNum ? `${item.hebrewTitle} - עונה ${seasonNum}` : item.hebrewTitle
     const dateVal = formatDateHe(item.startDate)
 
-    const coverHtml = item.coverImage
-      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+    const coverHtml = (item.coverImage && urlToCid.has(item.coverImage))
+      ? `<img src="cid:${urlToCid.get(item.coverImage)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
       : `<div style="width:90px;background:#1f2937;"></div>`
 
     return `
@@ -190,8 +190,8 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const seasonCtx = (a.currentSeasonNumber && a.totalSeasons)
       ? ` · עונה ${a.currentSeasonNumber}/${a.totalSeasons}`
       : ''
-    const coverHtml = a.coverImage
-      ? `<img src="${cidOrUrl(a.coverImage, urlToCid)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
+    const coverHtml = (a.coverImage && urlToCid.has(a.coverImage))
+      ? `<img src="cid:${urlToCid.get(a.coverImage)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
       : `<div style="width:76px;height:107px;background:#1f2937;"></div>`
     return `
     <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);overflow:hidden;display:flex;">
