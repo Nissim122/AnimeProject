@@ -6,12 +6,29 @@ import { sendNewEpisodeEmail } from '@/lib/mailer'
 
 export const maxDuration = 300
 
-async function runEpisodeCheck() {
-  const now = Math.floor(Date.now() / 1000)
-  const from = now - 25 * 3600
-  const to = now
+function jerusalemMidnightUnix(dateStr: string): number {
+  // Find Jerusalem UTC offset by probing noon UTC (returns e.g. "15" for UTC+3)
+  const probe = new Date(`${dateStr}T12:00:00Z`)
+  const israelHour = parseInt(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hour12: false }).format(probe),
+    10
+  )
+  const offsetHours = israelHour - 12
+  return Math.floor(new Date(`${dateStr}T00:00:00Z`).getTime() / 1000) - offsetHours * 3600
+}
 
-  // Fetch all globally aired episodes in the past 25 hours
+async function runEpisodeCheck() {
+  // Build "yesterday" date range in Asia/Jerusalem timezone
+  const nowDate = new Date()
+  const todayStr = nowDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) // YYYY-MM-DD
+  const [y, m, d] = todayStr.split('-').map(Number)
+  const yesterdayStr = new Date(Date.UTC(y, m - 1, d - 1))
+    .toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })
+
+  const from = jerusalemMidnightUnix(yesterdayStr) // 00:00 yesterday Israel time
+  const to   = jerusalemMidnightUnix(todayStr)     // 00:00 today Israel time (= end of yesterday)
+
+  // Fetch all globally aired episodes during yesterday (Israel date)
   let aired
   try {
     aired = await withRateLimit(() => getAiringScheduleInRange(from, to))
