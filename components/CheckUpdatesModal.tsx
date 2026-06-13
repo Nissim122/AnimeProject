@@ -73,10 +73,10 @@ function isUpcoming(info: AnimeSeasonInfo | undefined): boolean {
   return info.next !== null && info.next.status !== 'RELEASING' && !isCurrentMonth(info.next.startDate)
 }
 
-const GROUP_META: Record<Group, { label: string; icon: string; color: string }> = {
-  releasing: { label: 'בשידור כעת',  icon: '🟢', color: 'text-pink-400'  },
-  upcoming:  { label: 'הוכרזה עונה', icon: '📅', color: 'text-amber-400' },
-  watching:  { label: 'צופה',        icon: '📺', color: 'text-blue-400'  },
+const GROUP_META: Record<Group, { label: string; hex: string; border: string; bg: string }> = {
+  releasing: { label: 'בשידור כעת',  hex: '#e0176b', border: 'border-[rgba(224,23,107,0.2)]',  bg: 'bg-[rgba(224,23,107,0.04)]'  },
+  upcoming:  { label: 'הוכרזה עונה', hex: '#fbbf24', border: 'border-[rgba(251,191,36,0.2)]',  bg: 'bg-[rgba(251,191,36,0.04)]'  },
+  watching:  { label: 'צופה',        hex: '#2db3cd', border: 'border-[rgba(33,150,176,0.2)]',   bg: 'bg-[rgba(33,150,176,0.04)]'  },
 }
 
 const GROUP_ORDER: Group[] = ['releasing', 'upcoming', 'watching']
@@ -222,42 +222,59 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                     startDateToSortKey(seasonInfo?.[b.anilistId]?.next?.startDate)
                   )
                 : rawItems
-              const { label, icon, color } = GROUP_META[g]
+              const { label, hex, border, bg } = GROUP_META[g]
               return (
                 <section key={g}>
-                  <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 flex items-center gap-1.5 ${color}`}>
-                    {icon} {label}
-                    <span className="rounded-full px-2 py-0.5 bg-gray-800">{items.length}</span>
-                  </h3>
+                  {/* Section header — matches email sectionHdr */}
+                  <div className="flex items-center gap-3 py-3">
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, ${hex}44, transparent)` }} />
+                    <span className="text-[11px] font-extrabold tracking-widest whitespace-nowrap" style={{ color: hex }}>
+                      {label}
+                      <span className="ml-2 opacity-60">({items.length})</span>
+                    </span>
+                    <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${hex}44, transparent)` }} />
+                  </div>
+
                   <ul className="flex flex-col gap-2">
                     {items.map((item) => {
                       const info = seasonInfo?.[item.anilistId]
+                      const episodes = g === 'releasing'
+                        ? (airingMap[item.anilistId]?.upcoming?.slice(0, 3) ?? [])
+                        : []
                       return (
-                        <li key={item.anilistId} className="flex items-center gap-3 bg-gray-800/50 rounded-lg px-3 py-2">
-                          {item.coverImage && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={item.coverImage} alt="" className="w-8 h-11 object-cover rounded shrink-0" />
-                          )}
-                          <div className="flex flex-col gap-0.5 min-w-0">
-                            <span className="text-sm text-gray-100 truncate">{cleanSeriesTitle(item.title)}</span>
-                            {g === 'watching' && info?.available && (
-                              <span className="text-xs text-blue-400 truncate">📺 {info.available.title.romaji}</span>
+                        <li key={item.anilistId} className={`flex overflow-hidden rounded-[14px] border ${border} ${bg} min-h-[90px]`}>
+                          {/* Cover image — 72px wide, full height */}
+                          <div className="w-[72px] shrink-0 self-stretch overflow-hidden bg-[#0d1117]">
+                            {item.coverImage && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={item.coverImage} alt="" className="w-full h-full object-cover" />
                             )}
-                            {g === 'releasing' && (
-                              <>
-                                <span className="text-xs text-green-400">🟢 משודר כעת</span>
-                                {airingMap[item.anilistId]?.upcoming?.slice(0, 3).map((ep) => {
-                                  const { label, color } = formatAiringDate(ep.airingAt)
-                                  return (
-                                    <span key={ep.episode} className={`text-xs ${color}`}>
-                                      פרק {ep.episode} — {label}
-                                    </span>
-                                  )
-                                })}
-                              </>
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0 px-3 py-3 flex flex-col justify-center gap-1">
+                            <span className="text-[14px] font-bold text-[#f1f5f9] leading-snug">
+                              {cleanSeriesTitle(item.title)}
+                            </span>
+                            {g === 'releasing' && episodes.length > 0 && episodes.map((ep) => {
+                              const { label: epLabel, color: epColor } = formatAiringDate(ep.airingAt)
+                              return (
+                                <span key={ep.episode} className={`text-[11px] ${epColor}`}>
+                                  פרק {ep.episode} — {epLabel}
+                                </span>
+                              )
+                            })}
+                            {g === 'releasing' && episodes.length === 0 && (
+                              <span className="text-[11px] text-gray-500">טוען לוח שידורים...</span>
                             )}
                             {g === 'upcoming' && info?.next && (
-                              <span className="text-xs text-amber-400">📅 {formatDate(info.next.startDate)}</span>
+                              <span className="text-[11px] text-amber-400">
+                                {formatDate(info.next.startDate)}
+                              </span>
+                            )}
+                            {g === 'watching' && info?.available && (
+                              <span className="text-[11px] text-[#2db3cd] truncate">
+                                📺 {info.available.title.romaji}
+                              </span>
                             )}
                           </div>
                         </li>
