@@ -1,1 +1,8 @@
-# pre-commit hook intentionally empty
+#!/bin/sh
+# Run only the tests that cover staged files.
+# vitest related <files...> traces the module graph and runs only affected test suites.
+STAGED=$(git diff --cached --name-only | tr '\n' ' ')
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+npx vitest related $STAGED --run

@@ -42,6 +42,7 @@ EMAIL_PASS=...                 # App Password של Gmail (לא סיסמה רגי
 NOTIFY_EMAIL=...@gmail.com     # לאן שולחים את ההתראות
 ADMIN_SECRET=...               # סוד ל-HMAC של קישורי אישור/דחייה (חובה)
 ADMIN_EMAIL=...@gmail.com      # כתובת הנהלים שמקבלת בקשות אישור (ברירת מחדל: nisimelec77@gmail.com)
+CRON_SECRET=...                # סוד ל-cron jobs — מוגדר ע"י Vercel אוטומטית (ב-local dev אפשר להשאיר ריק)
 ```
 
 - אם `EMAIL_USER` / `EMAIL_PASS` / `NOTIFY_EMAIL` חסרים — המייל נדלג בשקט (warning בלבד), האפליקציה ממשיכה לעבוד.
@@ -49,6 +50,9 @@ ADMIN_EMAIL=...@gmail.com      # כתובת הנהלים שמקבלת בקשות
   - `generateApprovalToken` ב-`pending/page.tsx` זורק שגיאה (עוטופה ב-`try/catch` בשורה 88 של הדף)
   - `verifyToken` בשניהם `approve/route.ts` ו-`deny/route.ts` מחזיר `false` ו-logs שגיאה
   - כתוצאה: קישורי האישור/דחייה בעמוד pending לא יעבדו, המשתמש לא יקבל מייל אישור, וקישורי אישור מ-מייל יחזירו "אימות נכשל"
+- **`CRON_SECRET`** (חדש) — מגן על cron endpoints (`/api/check-updates` ו-`/api/check-episode-releases`):
+  - ב-Vercel: מוגדר אוטומטית, Vercel מוסיף header `Authorization: Bearer <CRON_SECRET>` לכל בקשת cron
+  - ב-local dev: אם לא מוגדר → בדיקה תעבור (ללא הגנה), פיתוח לא יישבר
 
 ---
 
@@ -198,21 +202,29 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
   - `notified` = כמה users קיבלו מיילים בהצלחה
   - `errors` = כמה עיבודים נכשלו
 
-### `POST /api/check-updates`
-**קבלת פרמטרים:**
-- `sendEmails` (default: `true`) — אם `false` → check-only mode בלא שליחת מיילים
-- `userOnly` (default: `false`) — אם `true` → רץ רק עבור המשתמש המחובר, דורש `sendEmails: true`
-- ללא `sendEmails` ו-user logged-in → check-only mode עבור משתמש יחיד
+### `POST /api/check-updates` + `GET /api/check-updates`
+**הגנת Cron:**
+- `GET` ו-`POST` עם `sendEmails: true` דורשים `CRON_SECRET`
+- בדיקה: header `Authorization: Bearer <CRON_SECRET>` — Vercel מוסיף אוטומטית לכל בקשת cron
+- אם `CRON_SECRET` לא מוגדר בסביבה: בדיקה מחליפה והפונקציה מתבצעת (לא מונעת)
+- אחרת: מחזיר 401 אם ה-secret לא תואם
 
-**מצב 1 — Check Only (ללא מיילים):**
+**קבלת פרמטרים (POST בלבד):**
+- `sendEmails` (default: `true`) — אם `false` → check-only mode בלא שליחת מיילים
+- `userOnly` (default: `false`) — אם `true` → רץ רק עבור המשתמש המחובר, דורש `sendEmails: true` + Clerk auth
+
+**מצב 1 — Check Only (ללא מיילים, דורש Clerk auth):**
+- `POST` ללא body או עם `sendEmails: false`
 - מחזיר `{ checked, errors, releasingAnimes, availableSequels, pendingNotifications, availableUnwatched }`
 - משמש לכפתור "בדוק עדכונים" בממשק לתצוגת מצב בלבד
 
-**מצב 2 — Update (עם מיילים) — עבור משתמש יחיד:**
+**מצב 2 — Update (עם מיילים) — עבור משתמש יחיד (דורש Clerk auth):**
+- `POST { sendEmails: true, userOnly: true }`
 - קורא לפונקציה `runUpdateCheckForUser(userId, toEmail)` עם email מ-Clerk
 - מחזיר `{ checked, notified, errors, notifications }`
 
-**מצב 3 — Update (עם מיילים) — עבור כל המשתמשים (Cron):**
+**מצב 3 — Update (עם מיילים) — עבור כל המשתמשים (Cron — דורש CRON_SECRET):**
+- `POST { sendEmails: true }` או `GET`
 - קורא לפונקציה `runUpdateCheck()`
 - איטרציה על כל users ב-`trackedAnime`, fetching email מ-Clerk
 
