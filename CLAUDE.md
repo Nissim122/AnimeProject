@@ -372,6 +372,17 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 
 כל המיילים בסגנון dark theme עם CSS inline.
 
+**תמונות — הטמעה בתור attachments (עדכון חדש):**
+- **בעיה:** Gmail חוסם תמונות חיצוניות מ-AniList CDN — התמונות לא נטענות עבור משתמשים רבים.
+- **פתרון:** כל תמונה מורדת server-side לפני שליחת המייל, צמודה כ-inline attachment עם CID ייחודי (לדוגמה: `cover0@anime`, `cover1@anime`), והתג `<img>` משתמש ב-`cid:` במקום URL חיצוני.
+- **תהליך:**
+  - פונקציה `fetchImageAttachments(urls)` מקבלת array של URLs, מורידה כל תמונה עם timeout 5 שניות, וממפה URL → CID.
+  - פונקציה `cidOrUrl(url, urlToCid)` מחזירה `cid:xxx` אם URL מורד בהצלחה, או את ה-URL המקורי כ-fallback.
+  - בכל פונקציית מייל (`sendConsolidatedMonthlyEmail`, `sendUpdatesEmail`, `sendNewEpisodeEmail`): תחילה מורידים את כל התמונות, ולאחר מכן משתמשים ב-`cidOrUrl()` בכל תג `<img>`.
+  - המייל נשלח עם שדה `attachments` המכיל את כל ה-inline attachments (type: `inline`, disposition: `inline`).
+- **יתרונות:** תמונות מוטמעות ישירות בגוף המייל, אינן תלויות בחיבור חיצוני או CDN, תואמות לכל קליינטי מייל.
+- **fallback:** אם תמונה לא מורדת (timeout או שגיאה) — השימוש ה-fallback ב-URL המקורי מאפשר למייל להיותloss-less (לפחות יחסית).
+
 **אבטחה — HTML Escaping:**
 - פונקציה `escHtml()` מחליפה תווים מסוכנים (`& < > " '`) בentities בטוחות (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`)
 - משמשת ב-`sendApprovalRequestEmail` ו-`sendUserApprovedEmail` ל-escape של `userName` ו-`userEmail` לפני הכנסה ל-HTML

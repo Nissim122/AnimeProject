@@ -136,57 +136,28 @@ export async function sendConsolidatedMonthlyEmail(params: {
   const releasingCards = releasing.map(item => {
     const idx = item.seasons.findIndex(s => s.id === item.sequelId)
     const seasonNum = idx >= 0 ? idx + 1 : null
-
-    const badge = seasonNum
-      ? `<span style="display:inline-block;background:rgba(224,23,107,0.1);border:1px solid rgba(224,23,107,0.28);color:#e0176b;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;">▶ AIRING · עונה ${seasonNum}</span>`
-      : `<span style="display:inline-block;background:rgba(224,23,107,0.1);border:1px solid rgba(224,23,107,0.28);color:#e0176b;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;">▶ בשידור</span>`
+    const titleLine = seasonNum ? `${item.hebrewTitle} - עונה ${seasonNum}` : item.hebrewTitle
 
     const coverHtml = item.coverImage
-      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
-      : `<div style="width:76px;height:107px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
-
-    const aired = item.nextAiringEpisode
-      ? item.nextAiringEpisode.episode - 1
-      : item.sequelEpisodeCount
-    const total_ = item.sequelEpisodeCount
-    const hasEps = aired != null && total_ != null && total_ > 0
-    const pct = hasEps ? Math.min(100, Math.round((aired / total_) * 100)) : 0
-
-    const progressHtml = hasEps ? `
-      <div style="margin-top:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-          <span style="font-size:11px;color:#64748b;">${aired}<span style="color:#374151;"> / ${total_} פרקים</span></span>
-          <span style="font-size:10px;color:#374151;font-family:'Courier New',monospace;">${pct}%</span>
-        </div>
-        <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;direction:ltr;">
-          <div style="width:${pct || 2}%;height:100%;background:linear-gradient(to right,#8a0d42,#e0176b);border-radius:2px;"></div>
-        </div>
-      </div>` : (aired != null && aired > 0) ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">${aired} פרקים</div>` : ''
+      ? `<img src="${cidOrUrl(item.coverImage, urlToCid)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:90px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
 
     const episodesToShow = item.upcomingEpisodes?.length
       ? item.upcomingEpisodes
       : item.nextAiringEpisode
         ? [item.nextAiringEpisode]
         : []
-    const nextHtml = episodesToShow.length ? `
-      <div style="margin-top:8px;">
-        <div style="font-size:10px;color:#4b5563;margin-bottom:3px;letter-spacing:0.06em;">פרקים קרובים</div>
-        ${episodesToShow.map(ep => `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:5px 8px;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.1);border-radius:6px;"><div style="width:4px;height:4px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div><span style="font-size:11px;color:#64748b;">פרק <strong style="color:#4ade80;">${ep.episode}</strong> · ${formatAiringDate(ep.airingAt)}</span></div>`).join('')}
-      </div>` : ''
-
-    const dotsHtml = item.seasons.length > 1 ? `
-      <div style="display:flex;gap:3px;margin-top:10px;flex-wrap:wrap;">${buildSeasonDots(item.seasons, item.sequelId)}</div>` : ''
+    const episodeRows = episodesToShow.map(ep =>
+      `<div style="font-size:12px;color:#94a3b8;margin-top:5px;">פרק ${ep.episode} - ${formatAiringDate(ep.airingAt)}</div>`
+    ).join('')
 
     return `
-    <div class="rc-wrap card" style="margin:0 12px 10px;background:#111827;border-radius:14px;border:1px solid rgba(224,23,107,0.15);overflow:hidden;display:flex;">
-      <div class="rc-cover" style="width:76px;height:107px;flex-shrink:0;overflow:hidden;align-self:flex-start;">${coverHtml}</div>
-      <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 12px;min-height:107px;box-sizing:border-box;">
-        ${badge}
-        <div class="rc-title" style="font-size:16px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
-        ${nextHtml}
-        ${progressHtml}
-        ${dotsHtml}
+    <div class="rc-wrap card" style="margin:0 12px 10px;background:#111827;border-radius:14px;border:1px solid rgba(224,23,107,0.15);overflow:hidden;display:flex;min-height:110px;">
+      <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 14px;">
+        <div class="rc-title" style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${titleLine}</div>
+        <div style="margin-top:6px;">${episodeRows}</div>
       </div>
+      <div class="rc-cover" style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
     </div>`
   }).join('')
 
