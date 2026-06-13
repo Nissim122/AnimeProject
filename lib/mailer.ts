@@ -2,6 +2,15 @@ import nodemailer from 'nodemailer'
 import type { AnimeResult } from './anilist'
 
 
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function getBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
@@ -393,6 +402,8 @@ export async function sendApprovalRequestEmail(params: {
   }
 
   const { toAdmin, userEmail, userName, adminUrl, approveUrl, denyUrl } = params
+  const safeUserName = escHtml(userName || '')
+  const safeUserEmail = escHtml(userEmail)
 
   const actionButtons = approveUrl && denyUrl
     ? `<div style="display:flex;gap:12px;margin-top:8px;">
@@ -405,7 +416,7 @@ export async function sendApprovalRequestEmail(params: {
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
     to: toAdmin,
-    subject: `🔔 בקשת גישה חדשה — ${userName || userEmail}`,
+    subject: `🔔 בקשת גישה חדשה — ${userName || userEmail}`,  // subjects are plain text, no escaping needed
     html: `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -417,11 +428,11 @@ export async function sendApprovalRequestEmail(params: {
   <div style="background:#13131f;border:1px solid rgba(224,23,107,0.2);border-radius:16px;padding:20px 18px;margin-bottom:24px;">
     <div style="margin-bottom:10px;">
       <span style="font-size:12px;color:#888;">שם:</span>
-      <span style="font-size:15px;color:#d1ddf9;font-weight:700;margin-right:8px;">${userName || '—'}</span>
+      <span style="font-size:15px;color:#d1ddf9;font-weight:700;margin-right:8px;">${safeUserName || '—'}</span>
     </div>
     <div>
       <span style="font-size:12px;color:#888;">מייל:</span>
-      <span style="font-size:15px;color:#e0176b;font-weight:700;margin-right:8px;">${userEmail}</span>
+      <span style="font-size:15px;color:#e0176b;font-weight:700;margin-right:8px;">${safeUserEmail}</span>
     </div>
   </div>
 
@@ -446,6 +457,7 @@ export async function sendUserApprovedEmail(params: {
   }
 
   const { userEmail, userName } = params
+  const safeUserName = escHtml(userName || '')
   const appUrl = getBaseUrl()
 
   await transport.sendMail({
@@ -465,7 +477,7 @@ export async function sendUserApprovedEmail(params: {
     <div style="font-size:48px;margin-bottom:16px;">✅</div>
     <h2 style="color:#4ade80;font-size:20px;margin:0 0 12px;">הגישה אושרה!</h2>
     <p style="color:rgba(255,255,255,0.55);font-size:14px;line-height:1.6;margin:0 0 24px;">
-      ${userName ? `שלום ${userName}, ` : ''}הבקשה שלך אושרה ועכשיו יש לך גישה מלאה ל-Anime Tracker.
+      ${safeUserName ? `שלום ${safeUserName}, ` : ''}הבקשה שלך אושרה ועכשיו יש לך גישה מלאה ל-Anime Tracker.
     </p>
     <a href="${appUrl}" style="display:inline-block;padding:14px 28px;background:linear-gradient(90deg,#e0176b,#8a0d42);color:#fff;font-weight:700;font-size:15px;border-radius:12px;text-decoration:none;">כניסה לאפליקציה ↗</a>
   </div>

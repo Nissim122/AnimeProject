@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "husky"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.4.1",
@@ -25,6 +26,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.20",
+    "husky": "^9.1.7",
     "playwright": "^1.60.0",
     "postcss": "^8.4.47",
     "prisma": "^6.0.0",

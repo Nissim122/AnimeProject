@@ -343,6 +343,12 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 
 כל המיילים בסגנון dark theme עם CSS inline.
 
+**אבטחה — HTML Escaping:**
+- פונקציה `escHtml()` מחליפה תווים מסוכנים (`& < > " '`) בentities בטוחות (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`)
+- משמשת ב-`sendApprovalRequestEmail` ו-`sendUserApprovedEmail` ל-escape של `userName` ו-`userEmail` לפני הכנסה ל-HTML
+- מונעת HTML injection אם שם משתמש מכיל תגים או סקריפטים (לדוגמה: `</span><a href="evil.com">` יוצג כ-`&lt;/span&gt;&lt;a href=&quot;evil.com&quot;&gt;`)
+- **הערה:** שורות הנושא (subjects) הן טקסט רגיל ולא דורשות escaping
+
 **הערה:** `sendNewEpisodeEmail` נשלח מ-`check-episode-releases` כ-part מepisode detection אוטומטי (דרך cron או external trigger).
 
 ---
