@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/check-episode-releases",
-      "schedule": "0 7 * * *"
+      "schedule": "0 7,19 * * *"
     }
   ]
 }
