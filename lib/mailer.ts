@@ -281,7 +281,7 @@ function formatDateHe(d: { year: number | null; month: number | null; day: numbe
 export async function sendUpdatesEmail(params: {
   watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }>
   releasing: Array<{ parentTitle: string; coverImage?: string; upcomingEpisodes?: { episode: number; airingAt: number }[] }>
-  upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null } }>
+  upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null }; seasonNumber?: number | null; existingSeasonCount?: number; episodeCount?: number | null }>
   toEmail: string
 }): Promise<boolean> {
   const transport = createTransport()
@@ -345,12 +345,17 @@ export async function sendUpdatesEmail(params: {
 
   // Upcoming cards — yellow border
   const upcomingCards = upcoming.map(i => {
+    const titleLine = i.seasonNumber ? `${i.parentTitle} - עונה ${i.seasonNumber}` : i.parentTitle
     return `
     <div style="display:flex;overflow:hidden;border-radius:14px;border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.04);min-height:90px;margin:0 12px 8px;">
       <div style="width:90px;flex-shrink:0;align-self:stretch;overflow:hidden;background:#0d1117;">${coverCell(i.coverImage, '#1f2937')}</div>
       <div style="flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;">
-        <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;">${i.parentTitle}</div>
-        <div style="font-size:12px;font-weight:600;color:#fcd34d;margin-top:2px;">📅 ${formatDateHe(i.startDate)}</div>
+        <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;">${titleLine}</div>
+        <div style="margin-top:6px;">
+          ${(i.existingSeasonCount ?? 0) > 0 ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">${i.existingSeasonCount} עונות קיימות</div>` : ''}
+          ${i.episodeCount ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">${i.episodeCount} פרקים</div>` : ''}
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#fcd34d;margin-top:4px;">📅 ${formatDateHe(i.startDate)}</div>
       </div>
     </div>`
   }).join('')

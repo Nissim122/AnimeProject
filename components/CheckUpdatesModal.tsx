@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { AnimeSeasonInfo } from '@/app/(app)/page'
-import type { RelationNode } from '@/lib/anilist'
+import type { RelationNode, AnimeResult } from '@/lib/anilist'
 import { cleanSeriesTitle } from '@/lib/titleUtils'
 
 interface AiringEp {
@@ -85,6 +85,7 @@ const GROUP_ORDER: Group[] = ['releasing', 'upcoming', 'watching']
 export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Props) {
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'nothing' | 'error'>('idle')
   const [airingMap, setAiringMap] = useState<Record<number, AiringScheduleData | null>>({})
+  const [seasonsMap, setSeasonsMap] = useState<Record<number, AnimeResult[] | null>>({}) // null = failed, undefined key = loading
 
   useEffect(() => {
     const releasingItems = tracked.filter((item) => {
@@ -113,13 +114,40 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    const upcomingItems = tracked.filter((item) => {
+      const info = seasonInfo?.[item.anilistId]
+      return isUpcoming(info)
+    })
+    if (upcomingItems.length === 0) return
+
+    const controllers: AbortController[] = []
+    upcomingItems.forEach((item) => {
+      const info = seasonInfo![item.anilistId]
+      const nextId = info.next!.id
+      const ctrl = new AbortController()
+      controllers.push(ctrl)
+      fetch(`/api/seasons?id=${nextId}`, { signal: ctrl.signal })
+        .then((r) => r.json())
+        .then((data: { seasons: AnimeResult[] }) =>
+          setSeasonsMap((prev) => ({ ...prev, [item.anilistId]: data.seasons }))
+        )
+        .catch((err) => {
+          if (err?.name === 'AbortError') return
+          setSeasonsMap((prev) => ({ ...prev, [item.anilistId]: null }))
+        })
+    })
+    return () => controllers.forEach((c) => c.abort())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function handleSendEmail() {
     if (emailState === 'sending') return
     setEmailState('sending')
 
     const watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }> = []
     const releasing: Array<{ parentTitle: string; coverImage?: string; upcomingEpisodes?: AiringEp[] }> = []
-    const upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null } }> = []
+    const upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null }; seasonNumber?: number | null; existingSeasonCount?: number; episodeCount?: number | null }> = []
 
     for (const item of tracked) {
       const info = seasonInfo?.[item.anilistId]
@@ -133,7 +161,12 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
             upcomingEpisodes: airingMap[item.anilistId]?.upcoming?.slice(0, 3),
           })
         } else if (isUpcoming(info) && info.next) {
-          upcoming.push({ parentTitle: title, coverImage: cover, startDate: info.next.startDate })
+          const seasons = seasonsMap[item.anilistId]
+          const idx = seasons ? seasons.findIndex(s => s.id === info!.next!.id) : -1
+          const seasonNumber = idx >= 0 ? idx + 1 : null
+          const existingSeasonCount = idx > 0 ? idx : 0
+          const episodeCount = (seasons && idx >= 0) ? seasons[idx]?.episodes : null
+          upcoming.push({ parentTitle: title, coverImage: cover, startDate: info.next.startDate, seasonNumber, existingSeasonCount, episodeCount })
         }
       }
       if (item.watchStatus === 'watching') {
@@ -249,6 +282,15 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                       const episodes = g === 'releasing'
                         ? (airingMap[item.anilistId]?.upcoming?.slice(0, 3) ?? [])
                         : []
+                      const seasons = g === 'upcoming' ? seasonsMap[item.anilistId] : undefined
+                      const nextId = info?.next?.id
+                      const seasonIdx = (seasons && nextId != null) ? seasons.findIndex(s => s.id === nextId) : -1
+                      const seasonNum = seasonIdx >= 0 ? seasonIdx + 1 : null
+                      const existingSeasonCount = seasonIdx > 0 ? seasonIdx : 0
+                      const episodeCount = (seasons && seasonIdx >= 0) ? seasons[seasonIdx]?.episodes : null
+                      const displayTitle = (g === 'upcoming' && seasonNum)
+                        ? `${cleanSeriesTitle(item.title)} - עונה ${seasonNum}`
+                        : cleanSeriesTitle(item.title)
                       return (
                         <li key={item.anilistId} className={`flex overflow-hidden rounded-[14px] border ${border} ${bg} min-h-[90px]`}>
                           {/* Cover image — 72px wide, full height */}
@@ -261,7 +303,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                           {/* Content */}
                           <div className="flex-1 min-w-0 px-3 py-3 flex flex-col justify-center gap-1.5">
                             <span className="text-[14px] font-bold text-white leading-snug">
-                              {cleanSeriesTitle(item.title)}
+                              {displayTitle}
                             </span>
                             {g === 'releasing' && episodes.length > 0 && episodes.map((ep) => {
                               const { label: epLabel, color: epColor } = formatAiringDate(ep.airingAt)
@@ -275,9 +317,17 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                               <span className="text-[12px] text-gray-400">טוען לוח שידורים...</span>
                             )}
                             {g === 'upcoming' && info?.next && (
-                              <span className="text-[12px] font-semibold text-amber-300">
-                                📅 {formatDate(info.next.startDate)}
-                              </span>
+                              <>
+                                {existingSeasonCount > 0 && (
+                                  <span className="text-[12px] text-gray-400">{existingSeasonCount} עונות קיימות</span>
+                                )}
+                                {episodeCount != null && (
+                                  <span className="text-[12px] text-gray-400">{episodeCount} פרקים</span>
+                                )}
+                                <span className="text-[12px] font-semibold text-amber-300">
+                                  📅 {formatDate(info.next.startDate)}
+                                </span>
+                              </>
                             )}
                             {g === 'watching' && info?.available && (
                               <span className="text-[12px] font-medium text-[#2db3cd] truncate">
