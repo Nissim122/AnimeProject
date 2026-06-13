@@ -377,11 +377,10 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 - **פתרון:** כל תמונה מורדת server-side לפני שליחת המייל, צמודה כ-inline attachment עם CID ייחודי (לדוגמה: `cover0@anime`, `cover1@anime`), והתג `<img>` משתמש ב-`cid:` במקום URL חיצוני.
 - **תהליך:**
   - פונקציה `fetchImageAttachments(urls)` מקבלת array של URLs, מורידה כל תמונה עם timeout 5 שניות, וממפה URL → CID.
-  - פונקציה `cidOrUrl(url, urlToCid)` מחזירה `cid:xxx` אם URL מורד בהצלחה, או את ה-URL המקורי כ-fallback.
-  - בכל פונקציית מייל (`sendConsolidatedMonthlyEmail`, `sendUpdatesEmail`, `sendNewEpisodeEmail`): תחילה מורידים את כל התמונות, ולאחר מכן משתמשים ב-`cidOrUrl()` בכל תג `<img>`.
+  - בכל פונקציית מייל (`sendConsolidatedMonthlyEmail`, `sendUpdatesEmail`, `sendNewEpisodeEmail`): תחילה מורידים את כל התמונות, ולאחר מכן בדיקה: אם URL קיים במפה `urlToCid` → משתמשים ב-`<img src="cid:...">`; אחרת → מציגים `<div>` ריקה עם background כהה (placeholder).
   - המייל נשלח עם שדה `attachments` המכיל את כל ה-inline attachments (type: `inline`, disposition: `inline`).
 - **יתרונות:** תמונות מוטמעות ישירות בגוף המייל, אינן תלויות בחיבור חיצוני או CDN, תואמות לכל קליינטי מייל.
-- **fallback:** אם תמונה לא מורדת (timeout או שגיאה) — השימוש ה-fallback ב-URL המקורי מאפשר למייל להיותloss-less (לפחות יחסית).
+- **fallback:** אם תמונה לא מורדת (timeout או שגיאה) — מוצג `<div>` ריקה בצבע background כהה במקום תמונה שבורה.
 
 **אבטחה — HTML Escaping:**
 - פונקציה `escHtml()` מחליפה תווים מסוכנים (`& < > " '`) בentities בטוחות (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`)
