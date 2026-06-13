@@ -279,7 +279,7 @@ function formatDateHe(d: { year: number | null; month: number | null; day: numbe
 }
 
 export async function sendUpdatesEmail(params: {
-  watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }>
+  watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string; currentSeasonNum?: number | null; totalSeasons?: number | null }>
   releasing: Array<{ parentTitle: string; coverImage?: string; upcomingEpisodes?: { episode: number; airingAt: number }[] }>
   upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null }; seasonNumber?: number | null; existingSeasonCount?: number; episodeCount?: number | null }>
   toEmail: string
@@ -367,7 +367,8 @@ export async function sendUpdatesEmail(params: {
       <div style="width:90px;flex-shrink:0;align-self:stretch;overflow:hidden;background:#0d1117;">${coverCell(i.coverImage, '#1f2937')}</div>
       <div style="flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;">
         <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;">${i.parentTitle}</div>
-        ${i.sequelTitle ? `<div style="font-size:12px;font-weight:500;color:#2db3cd;margin-top:2px;">📺 ${i.sequelTitle}</div>` : ''}
+        ${i.currentSeasonNum != null ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">נמצא בעונה: ${i.currentSeasonNum}</div>` : ''}
+        ${(i.totalSeasons != null && i.totalSeasons > 1) ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">מספר עונות לאנימה: ${i.totalSeasons}</div>` : ''}
       </div>
     </div>`
   }).join('')

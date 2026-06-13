@@ -115,26 +115,30 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
   }, [])
 
   useEffect(() => {
-    const upcomingItems = tracked.filter((item) => {
+    // Build list of items needing seasons: upcoming (fetch next season id) + watching (fetch current id)
+    const toFetch: Array<{ anilistId: number; fetchId: number }> = []
+    for (const item of tracked) {
       const info = seasonInfo?.[item.anilistId]
-      return isUpcoming(info)
-    })
-    if (upcomingItems.length === 0) return
+      if (isUpcoming(info) && info?.next?.id) {
+        toFetch.push({ anilistId: item.anilistId, fetchId: info.next.id })
+      } else if (item.watchStatus === 'watching') {
+        toFetch.push({ anilistId: item.anilistId, fetchId: item.anilistId })
+      }
+    }
+    if (toFetch.length === 0) return
 
     const controllers: AbortController[] = []
-    upcomingItems.forEach((item) => {
-      const info = seasonInfo![item.anilistId]
-      const nextId = info.next!.id
+    toFetch.forEach(({ anilistId, fetchId }) => {
       const ctrl = new AbortController()
       controllers.push(ctrl)
-      fetch(`/api/seasons?id=${nextId}`, { signal: ctrl.signal })
+      fetch(`/api/seasons?id=${fetchId}`, { signal: ctrl.signal })
         .then((r) => r.json())
         .then((data: { seasons: AnimeResult[] }) =>
-          setSeasonsMap((prev) => ({ ...prev, [item.anilistId]: data.seasons }))
+          setSeasonsMap((prev) => ({ ...prev, [anilistId]: data.seasons }))
         )
         .catch((err) => {
           if (err?.name === 'AbortError') return
-          setSeasonsMap((prev) => ({ ...prev, [item.anilistId]: null }))
+          setSeasonsMap((prev) => ({ ...prev, [anilistId]: null }))
         })
     })
     return () => controllers.forEach((c) => c.abort())
@@ -145,7 +149,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
     if (emailState === 'sending') return
     setEmailState('sending')
 
-    const watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string }> = []
+    const watching:  Array<{ parentTitle: string; coverImage?: string; sequelTitle: string; currentSeasonNum?: number | null; totalSeasons?: number | null }> = []
     const releasing: Array<{ parentTitle: string; coverImage?: string; upcomingEpisodes?: AiringEp[] }> = []
     const upcoming:  Array<{ parentTitle: string; coverImage?: string; startDate: { year: number | null; month: number | null; day: number | null }; seasonNumber?: number | null; existingSeasonCount?: number; episodeCount?: number | null }> = []
 
@@ -170,10 +174,14 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
         }
       }
       if (item.watchStatus === 'watching') {
+        const watchSeasons = seasonsMap[item.anilistId]
+        const watchIdx = watchSeasons ? watchSeasons.findIndex(s => s.id === item.anilistId) : -1
         watching.push({
           parentTitle: title,
           coverImage: cover,
           sequelTitle: info?.available?.title.romaji ?? '',
+          currentSeasonNum: watchIdx >= 0 ? watchIdx + 1 : null,
+          totalSeasons: watchSeasons ? watchSeasons.length : null,
         })
       }
     }
@@ -329,11 +337,22 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                                 </span>
                               </>
                             )}
-                            {g === 'watching' && info?.available && (
-                              <span className="text-[12px] font-medium text-[#2db3cd] truncate">
-                                📺 {info.available.title.romaji}
-                              </span>
-                            )}
+                            {g === 'watching' && (() => {
+                              const watchSeasons = seasonsMap[item.anilistId]
+                              const currentIdx = watchSeasons ? watchSeasons.findIndex(s => s.id === item.anilistId) : -1
+                              const currentSeasonNum = currentIdx >= 0 ? currentIdx + 1 : null
+                              const totalSeasons = watchSeasons ? watchSeasons.length : null
+                              return (
+                                <>
+                                  {currentSeasonNum != null && (
+                                    <span className="text-[12px] text-gray-400">נמצא בעונה: {currentSeasonNum}</span>
+                                  )}
+                                  {totalSeasons != null && totalSeasons > 1 && (
+                                    <span className="text-[12px] text-gray-400">מספר עונות לאנימה: {totalSeasons}</span>
+                                  )}
+                                </>
+                              )
+                            })()}
                           </div>
                         </li>
                       )
