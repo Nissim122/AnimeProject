@@ -73,6 +73,7 @@ app/
     check-episode-releases/route.ts # GET — בדיקת פרקים שיצאו אתמול + שליחת מייל לכל users (ציבורי)
     test-episode-email/route.ts # GET — בדיקת שליחת מייל פרקים (test/debug endpoint)
     watchlist/route.ts       # GET / POST / DELETE — ניהול watchlist
+    onhold/route.ts          # GET / POST / PATCH / DELETE — ניהול רשימת "הושהה"
     airing-schedule/route.ts # GET ?id= — לוח שידורים לסדרה (פרקים עתידיים)
 
 components/
@@ -135,6 +136,18 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 | title | String | |
 | coverImage | String? | URL תמונה |
 | addedAt | DateTime | תאריך הוספה |
+
+### `OnHoldItem`
+| שדה | סוג | הערה |
+|---|---|---|
+| id | Int PK | |
+| userId | String FK | משתמש |
+| anilistId | Int | מזהה AniList |
+| title | String | כותרת |
+| coverImage | String? | URL תמונה |
+| note | String? | הערה אופציונלית |
+| addedAt | DateTime | תאריך הוספה |
+| unique | (userId, anilistId) | |
 
 ---
 
@@ -278,6 +291,30 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 
 ### `DELETE /api/watchlist?anilistId=`
 - מוחק מה-watchlist.
+
+### `GET /api/onhold`
+- מחזיר כל OnHoldItem עבור המשתמש המחובר, ממוין `addedAt DESC`.
+- דורש Clerk auth.
+
+### `POST /api/onhold`
+```json
+{ "anilistId": 123, "title": "...", "coverImage": "...", "note": "..." }
+```
+- מוסיף אנימה לרשימת "הושהה".
+- `coverImage` ו-`note` אופציונליים.
+- בודק אם כבר קיים → מחזיר existing.
+- דורש Clerk auth.
+
+### `PATCH /api/onhold`
+```json
+{ "anilistId": 123, "note": "..." }
+```
+- מעדכן את ה-`note` של פריט בהשהייה.
+- דורש Clerk auth.
+
+### `DELETE /api/onhold?anilistId=`
+- מוחק אנימה מרשימת "הושהה".
+- דורש Clerk auth.
 
 ### `GET /api/airing-schedule?id=`
 - מקבל AniList ID של עונה ספציפית.
