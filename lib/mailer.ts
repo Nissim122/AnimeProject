@@ -86,7 +86,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
     startDate: { year: number | null; month: number | null; day: number | null }
     seasons: AnimeResult[]
   }>
-  available?: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number; coverImage?: string }>
+  watching?: Array<{ hebrewTitle: string; englishTitle: string; coverImage?: string; currentSeasonNumber?: number; totalSeasons?: number }>
   toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()
@@ -96,12 +96,12 @@ export async function sendConsolidatedMonthlyEmail(params: {
     return false
   }
 
-  const { items, available } = params
-  const avail = available ?? []
+  const { items, watching } = params
+  const watchingItems = watching ?? []
 
   const { urlToCid, attachments: imgAttachments } = await fetchImageAttachments([
     ...items.map(i => i.coverImage),
-    ...avail.map(a => a.coverImage),
+    ...watchingItems.map(w => w.coverImage),
   ])
 
   const releasing = items.filter(i => i.status === 'RELEASING')
@@ -112,7 +112,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
         !d.year ? Number.MAX_SAFE_INTEGER : d.year * 10000 + (d.month ?? 12) * 100 + (d.day ?? 31)
       return key(a.startDate) - key(b.startDate)
     })
-  const total = releasing.length + announced.length + avail.length
+  const total = releasing.length + announced.length + watchingItems.length
 
   function formatAiringDate(ts: number): string {
     const d = new Date(ts * 1000)
@@ -186,19 +186,17 @@ export async function sendConsolidatedMonthlyEmail(params: {
     </div>`
   }).join('')
 
-  const availableCards = avail.map(a => {
-    const seasonCtx = (a.currentSeasonNumber && a.totalSeasons)
-      ? ` · עונה ${a.currentSeasonNumber}/${a.totalSeasons}`
-      : ''
-    const coverHtml = (a.coverImage && urlToCid.has(a.coverImage))
-      ? `<img src="cid:${urlToCid.get(a.coverImage)}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
-      : `<div style="width:76px;height:107px;background:#1f2937;"></div>`
+  const watchingCards = watchingItems.map(w => {
+    const coverHtml = (w.coverImage && urlToCid.has(w.coverImage))
+      ? `<img src="cid:${urlToCid.get(w.coverImage)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:90px;background:#1f2937;"></div>`
     return `
-    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);overflow:hidden;display:flex;">
-      <div style="width:76px;height:107px;flex-shrink:0;overflow:hidden;align-self:flex-start;">${coverHtml}</div>
-      <div style="flex:1;min-width:0;padding:14px;min-height:107px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;">
-        <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
-        <div style="font-size:11px;color:#4ade80;margin-top:4px;">כל הפרקים זמינים ✓</div>
+    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:14px;border:1px solid rgba(33,150,176,0.15);overflow:hidden;display:flex;min-height:110px;">
+      <div style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
+      <div style="flex:1;min-width:0;padding:14px;">
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${w.hebrewTitle}</div>
+        ${w.currentSeasonNumber != null ? `<div style="font-size:12px;color:#94a3b8;margin-top:6px;">נמצא בעונה: ${w.currentSeasonNumber}</div>` : ''}
+        ${w.totalSeasons != null ? `<div style="font-size:12px;color:#94a3b8;margin-top:4px;">מספר עונות לאנימה: ${w.totalSeasons}</div>` : ''}
       </div>
     </div>`
   }).join('')
@@ -206,12 +204,12 @@ export async function sendConsolidatedMonthlyEmail(params: {
   const subtitleParts: string[] = []
   if (releasing.length > 0) subtitleParts.push(`${releasing.length} בשידור`)
   if (announced.length > 0) subtitleParts.push(`${announced.length} הוכרזו`)
-  if (avail.length > 0) subtitleParts.push(`${avail.length} ממתין`)
+  if (watchingItems.length > 0) subtitleParts.push(`${watchingItems.length} צופה`)
 
   const pillsHtml = [
     releasing.length > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(224,23,107,0.09);border:1px solid rgba(224,23,107,0.2);border-radius:20px;"><div style="width:6px;height:6px;border-radius:50%;background:#e0176b;flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#e0176b;">${releasing.length} בשידור</span></div>` : '',
     announced.length > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.18);border-radius:20px;"><div style="width:6px;height:6px;border-radius:50%;background:#fbbf24;flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#fbbf24;">${announced.length} הוכרזו</span></div>` : '',
-    avail.length > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.18);border-radius:20px;"><div style="width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#4ade80;">${avail.length} ממתין</span></div>` : '',
+    watchingItems.length > 0 ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(33,150,176,0.07);border:1px solid rgba(33,150,176,0.18);border-radius:20px;"><div style="width:6px;height:6px;border-radius:50%;background:#2db3cd;flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#2db3cd;">${watchingItems.length} צופה</span></div>` : '',
   ].filter(Boolean).join('')
 
   function sectionHdr(color: string, label: string): string {
@@ -220,7 +218,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
 
   const releasingSection = releasing.length > 0 ? `${sectionHdr('#e0176b', 'בשידור כעת')}${releasingCards}` : ''
   const announcedSection = announced.length > 0 ? `${sectionHdr('#fbbf24', 'הוכרזה עונה')}${announcedCards}` : ''
-  const availableSection = avail.length > 0 ? `${sectionHdr('#4ade80', 'ממתין לצפייה')}${availableCards}` : ''
+  const watchingSection = watchingItems.length > 0 ? `${sectionHdr('#2db3cd', 'צופה')}${watchingCards}` : ''
 
   await transport.sendMail({
     from: `"Anime Tracker" <${process.env.EMAIL_USER}>`,
@@ -259,7 +257,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
 
   ${releasingSection}
   ${announcedSection}
-  ${availableSection}
+  ${watchingSection}
 
 
 </div>
