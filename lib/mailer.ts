@@ -306,39 +306,29 @@ export async function sendUpdatesEmail(params: {
       : `<div style="width:90px;background:${bg};"></div>`
   }
 
-  function sectionHdr(hex: string, label: string): string {
-    return `
-    <div style="display:flex;align-items:center;gap:10px;padding:20px 12px 10px;">
-      <div style="flex:1;height:1px;background:linear-gradient(to left,${hex}88,transparent);"></div>
-      <div style="display:flex;align-items:center;gap:6px;padding:0 4px;">
-        <div style="width:8px;height:8px;border-radius:50%;background:${hex};box-shadow:0 0 6px ${hex};flex-shrink:0;"></div>
-        <span style="font-size:13px;font-weight:900;color:${hex};white-space:nowrap;letter-spacing:0.05em;">${label}</span>
-      </div>
-      <div style="flex:1;height:1px;background:linear-gradient(to right,${hex}88,transparent);"></div>
-    </div>`
+  function sectionHdr(color: string, label: string): string {
+    return `<div class="section-hdr" style="padding:20px 20px 12px;display:flex;align-items:center;gap:10px;"><div style="flex:1;height:1px;background:linear-gradient(to left,${color}55,transparent);"></div><span style="font-size:14px;font-weight:800;color:${color};letter-spacing:0.1em;white-space:nowrap;padding:0 4px;">${label}</span><div style="flex:1;height:1px;background:linear-gradient(to right,${color}55,transparent);"></div></div>`
   }
 
-  function formatEpDate(airingAt: number): { label: string; color: string } {
-    const d = new Date(airingAt * 1000)
-    const now = new Date()
-    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
-    if (d.toDateString() === now.toDateString())       return { label: 'היום!', color: '#f472b6' }
-    if (d.toDateString() === tomorrow.toDateString())  return { label: 'מחר',  color: '#fbbf24' }
-    return { label: d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long', timeZone: 'Asia/Jerusalem' }), color: '#60a5fa' }
+  function formatAiringDate(ts: number): string {
+    const d = new Date(ts * 1000)
+    return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', timeZone: 'Asia/Jerusalem' })
   }
 
   // Releasing cards — pink border
   const releasingCards = releasing.map(i => {
-    const episodeRows = (i.upcomingEpisodes ?? []).map(ep => {
-      const { label, color } = formatEpDate(ep.airingAt)
-      return `<div style="font-size:12px;font-weight:500;color:${color};margin-top:4px;">פרק ${ep.episode} — ${label}</div>`
-    }).join('')
+    const coverHtml = (i.coverImage && updUrlToCid.has(i.coverImage))
+      ? `<img src="cid:${updUrlToCid.get(i.coverImage)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:90px;background:#0d1117;"></div>`
+    const episodeRows = (i.upcomingEpisodes ?? []).map(ep =>
+      `<div style="font-size:12px;color:#94a3b8;margin-top:5px;">פרק ${ep.episode} - ${formatAiringDate(ep.airingAt)}</div>`
+    ).join('')
     return `
-    <div style="display:flex;overflow:hidden;border-radius:14px;border:1px solid rgba(224,23,107,0.2);background:rgba(224,23,107,0.04);min-height:90px;margin:0 12px 8px;">
-      <div style="width:90px;flex-shrink:0;align-self:stretch;overflow:hidden;background:#0d1117;">${coverCell(i.coverImage)}</div>
-      <div style="flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;">
-        <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;">${i.parentTitle}</div>
-        ${episodeRows}
+    <div class="rc-wrap card" style="margin:0 12px 10px;background:#111827;border-radius:14px;border:1px solid rgba(224,23,107,0.15);overflow:hidden;display:flex;min-height:110px;">
+      <div class="rc-cover" style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
+      <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 14px;">
+        <div class="rc-title" style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${i.parentTitle}</div>
+        <div style="margin-top:6px;">${episodeRows}</div>
       </div>
     </div>`
   }).join('')
@@ -346,29 +336,35 @@ export async function sendUpdatesEmail(params: {
   // Upcoming cards — yellow border
   const upcomingCards = upcoming.map(i => {
     const titleLine = i.seasonNumber ? `${i.parentTitle} - עונה ${i.seasonNumber}` : i.parentTitle
+    const coverHtml = (i.coverImage && updUrlToCid.has(i.coverImage))
+      ? `<img src="cid:${updUrlToCid.get(i.coverImage)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:90px;background:#1f2937;"></div>`
     return `
-    <div style="display:flex;overflow:hidden;border-radius:14px;border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.04);min-height:90px;margin:0 12px 8px;">
-      <div style="width:90px;flex-shrink:0;align-self:stretch;overflow:hidden;background:#0d1117;">${coverCell(i.coverImage, '#1f2937')}</div>
-      <div style="flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;">
-        <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;">${titleLine}</div>
-        <div style="margin-top:6px;">
-          ${(i.existingSeasonCount ?? 0) > 0 ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">${i.existingSeasonCount} עונות קיימות</div>` : ''}
-          ${i.episodeCount ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">${i.episodeCount} פרקים</div>` : ''}
+    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:14px;border:1px solid rgba(251,191,36,0.15);overflow:hidden;display:flex;min-height:110px;">
+      <div style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
+      <div style="flex:1;min-width:0;padding:14px 14px 14px;">
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${titleLine}</div>
+        <div style="margin-top:8px;">
+          ${(i.existingSeasonCount ?? 0) > 0 ? `<div style="font-size:12px;color:#94a3b8;margin-top:5px;">${i.existingSeasonCount} עונות קיימות</div>` : ''}
+          ${i.episodeCount ? `<div style="font-size:12px;color:#94a3b8;margin-top:5px;">${i.episodeCount} פרקים קיימים</div>` : ''}
         </div>
-        <div style="font-size:12px;font-weight:600;color:#fcd34d;margin-top:4px;">📅 ${formatDateHe(i.startDate)}</div>
+        <div style="font-size:12px;color:#fbbf24;margin-top:10px;">${formatDateHe(i.startDate)}</div>
       </div>
     </div>`
   }).join('')
 
   // Watching cards — blue border
   const watchingCards = watching.map(i => {
+    const coverHtml = (i.coverImage && updUrlToCid.has(i.coverImage))
+      ? `<img src="cid:${updUrlToCid.get(i.coverImage)}" alt="" width="90" style="width:90px;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="width:90px;background:#1f2937;"></div>`
     return `
-    <div style="display:flex;overflow:hidden;border-radius:14px;border:1px solid rgba(33,150,176,0.2);background:rgba(33,150,176,0.04);min-height:90px;margin:0 12px 8px;">
-      <div style="width:90px;flex-shrink:0;align-self:stretch;overflow:hidden;background:#0d1117;">${coverCell(i.coverImage, '#1f2937')}</div>
-      <div style="flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;">
-        <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;">${i.parentTitle}</div>
-        ${i.currentSeasonNum != null ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">נמצא בעונה: ${i.currentSeasonNum}</div>` : ''}
-        ${(i.totalSeasons != null && i.totalSeasons > 1) ? `<div style="font-size:12px;color:#94a3b8;margin-top:3px;">מספר עונות לאנימה: ${i.totalSeasons}</div>` : ''}
+    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:14px;border:1px solid rgba(33,150,176,0.15);overflow:hidden;display:flex;min-height:110px;">
+      <div style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
+      <div style="flex:1;min-width:0;padding:14px;">
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${i.parentTitle}</div>
+        ${i.currentSeasonNum != null ? `<div style="font-size:12px;color:#94a3b8;margin-top:6px;">נמצא בעונה: ${i.currentSeasonNum}</div>` : ''}
+        ${(i.totalSeasons != null && i.totalSeasons > 1) ? `<div style="font-size:12px;color:#94a3b8;margin-top:4px;">מספר עונות לאנימה: ${i.totalSeasons}</div>` : ''}
       </div>
     </div>`
   }).join('')
@@ -389,25 +385,33 @@ export async function sendUpdatesEmail(params: {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  @media (max-width: 480px) {
+    .rc-wrap { flex-direction: column !important; }
+    .rc-cover { width: 100% !important; height: 170px !important; align-self: auto !important; overflow: hidden !important; }
+    .rc-cover img { width: 100% !important; height: 170px !important; object-fit: cover !important; }
+    .rc-body { padding: 12px 12px 10px !important; }
+    .rc-title { font-size: 14px !important; }
+    .card { margin-left: 8px !important; margin-right: 8px !important; }
+    .section-hdr { padding: 16px 12px 10px !important; }
+  }
+</style>
 </head>
 <body style="margin:0;padding:0;background:#070710;font-family:'Heebo',Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%;">
 <div style="max-width:480px;margin:0 auto;padding-bottom:32px;">
 
   <div style="padding:28px 20px 0;text-align:center;">
     <div style="font-size:10px;color:#e0176b;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px;font-family:'Courier New',monospace;">ANIME TRACKER</div>
-    <div style="font-size:28px;font-weight:900;color:#f1f5f9;line-height:1.1;">עדכונים</div>
+    <div style="font-size:30px;font-weight:900;color:#f1f5f9;line-height:1.1;">עדכונים</div>
   </div>
 
-  <div style="padding:14px 20px 4px;display:flex;gap:8px;flex-wrap:wrap;">${pills}</div>
+  <div style="padding:16px 20px 4px;display:flex;gap:8px;flex-wrap:wrap;">${pills}</div>
 
   ${releasing.length > 0 ? sectionHdr('#e0176b', 'בשידור כעת') + releasingCards : ''}
   ${upcoming.length  > 0 ? sectionHdr('#fbbf24', 'הוכרזה עונה') + upcomingCards  : ''}
   ${watching.length  > 0 ? sectionHdr('#2db3cd', 'צופה')        + watchingCards   : ''}
-
-  <div style="margin:20px 12px 0;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.05);text-align:center;">
-    <span style="font-size:10px;color:#374151;letter-spacing:0.15em;font-family:'Courier New',monospace;">ANIME TRACKER</span>
-  </div>
 
 </div>
 </body>
