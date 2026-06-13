@@ -101,8 +101,8 @@ export async function sendConsolidatedMonthlyEmail(params: {
       : `<span style="display:inline-block;background:rgba(224,23,107,0.1);border:1px solid rgba(224,23,107,0.28);color:#e0176b;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;">▶ בשידור</span>`
 
     const coverHtml = item.coverImage
-      ? `<img src="${item.coverImage}" alt="" width="76" style="width:76px;display:block;" />`
-      : `<div style="width:76px;min-height:107px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
+      ? `<img src="${item.coverImage}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
+      : `<div style="width:76px;height:107px;background:#0d1117;display:flex;align-items:center;justify-content:center;font-size:28px;">🎌</div>`
 
     const aired = item.nextAiringEpisode
       ? item.nextAiringEpisode.episode - 1
@@ -138,7 +138,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
 
     return `
     <div class="rc-wrap card" style="margin:0 12px 10px;background:#111827;border-radius:14px;border:1px solid rgba(224,23,107,0.15);overflow:hidden;display:flex;">
-      <div class="rc-cover" style="width:76px;flex-shrink:0;overflow:hidden;">${coverHtml}</div>
+      <div class="rc-cover" style="width:76px;height:107px;flex-shrink:0;overflow:hidden;align-self:flex-start;">${coverHtml}</div>
       <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 12px;min-height:107px;box-sizing:border-box;">
         ${badge}
         <div class="rc-title" style="font-size:16px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
@@ -155,11 +155,11 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const dateVal = formatDateHe(item.startDate)
     const hasTBA = dateVal === 'בקרוב'
     const coverHtml = item.coverImage
-      ? `<img src="${item.coverImage}" alt="" width="76" style="width:76px;display:block;" />`
-      : `<div style="width:76px;min-height:107px;background:#1f2937;"></div>`
+      ? `<img src="${item.coverImage}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
+      : `<div style="width:76px;height:107px;background:#1f2937;"></div>`
     return `
     <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(251,191,36,0.15);overflow:hidden;display:flex;">
-      <div style="width:76px;flex-shrink:0;overflow:hidden;">${coverHtml}</div>
+      <div style="width:76px;height:107px;flex-shrink:0;overflow:hidden;align-self:flex-start;">${coverHtml}</div>
       <div style="flex:1;min-width:0;padding:14px 14px 12px;min-height:107px;box-sizing:border-box;">
         ${seasonNum ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:2px 7px;border-radius:4px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">עונה ${seasonNum}</span>` : ''}
         <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
@@ -178,11 +178,11 @@ export async function sendConsolidatedMonthlyEmail(params: {
       ? ` · עונה ${a.currentSeasonNumber}/${a.totalSeasons}`
       : ''
     const coverHtml = a.coverImage
-      ? `<img src="${a.coverImage}" alt="" width="76" style="width:76px;display:block;" />`
-      : `<div style="width:76px;min-height:107px;background:#1f2937;"></div>`
+      ? `<img src="${a.coverImage}" alt="" width="76" height="107" style="width:76px;height:107px;object-fit:cover;display:block;" />`
+      : `<div style="width:76px;height:107px;background:#1f2937;"></div>`
     return `
     <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);overflow:hidden;display:flex;">
-      <div style="width:76px;flex-shrink:0;overflow:hidden;">${coverHtml}</div>
+      <div style="width:76px;height:107px;flex-shrink:0;overflow:hidden;align-self:flex-start;">${coverHtml}</div>
       <div style="flex:1;min-width:0;padding:14px;min-height:107px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;">
         <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
         <div style="font-size:11px;color:#4ade80;margin-top:4px;">כל הפרקים זמינים ✓</div>
@@ -223,7 +223,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
 <style>
   @media (max-width: 480px) {
     .rc-wrap { flex-direction: column !important; }
-    .rc-cover { width: 100% !important; overflow: hidden !important; }
+    .rc-cover { width: 100% !important; height: 170px !important; align-self: auto !important; overflow: hidden !important; }
     .rc-cover img { width: 100% !important; height: 170px !important; object-fit: cover !important; }
     .rc-body { padding: 12px 12px 10px !important; }
     .rc-title { font-size: 14px !important; }
