@@ -261,10 +261,6 @@ export async function sendConsolidatedMonthlyEmail(params: {
   ${announcedSection}
   ${availableSection}
 
-  <div style="margin:20px 12px 0;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
-    <span style="font-size:11px;color:#374151;">AniList API</span>
-    <span style="font-size:10px;color:#374151;letter-spacing:0.15em;font-family:'Courier New',monospace;">ANIME TRACKER</span>
-  </div>
 
 </div>
 </body>
