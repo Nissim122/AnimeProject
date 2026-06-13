@@ -104,7 +104,10 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
         .then((data: AiringScheduleData) =>
           setAiringMap((prev) => ({ ...prev, [item.anilistId]: data }))
         )
-        .catch(() => {})
+        .catch((err) => {
+          if (err?.name === 'AbortError') return
+          setAiringMap((prev) => ({ ...prev, [item.anilistId]: null }))
+        })
     })
     return () => controllers.forEach((c) => c.abort())
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,7 +266,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                                 </span>
                               )
                             })}
-                            {g === 'releasing' && episodes.length === 0 && (
+                            {g === 'releasing' && episodes.length === 0 && airingMap[item.anilistId] === undefined && (
                               <span className="text-[11px] text-gray-500">טוען לוח שידורים...</span>
                             )}
                             {g === 'upcoming' && info?.next && (
