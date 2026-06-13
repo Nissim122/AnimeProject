@@ -46,7 +46,7 @@ export async function sendConsolidatedMonthlyEmail(params: {
     startDate: { year: number | null; month: number | null; day: number | null }
     seasons: AnimeResult[]
   }>
-  available?: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number }>
+  available?: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number; coverImage?: string }>
   toEmail?: string
 }): Promise<boolean> {
   const transport = createTransport()
@@ -169,10 +169,16 @@ export async function sendConsolidatedMonthlyEmail(params: {
     const seasonCtx = (a.currentSeasonNumber && a.totalSeasons)
       ? ` · עונה ${a.currentSeasonNumber}/${a.totalSeasons}`
       : ''
+    const coverHtml = a.coverImage
+      ? `<img src="${a.coverImage}" alt="" style="width:48px;height:68px;object-fit:cover;border-radius:6px;flex-shrink:0;" />`
+      : `<div style="width:48px;height:68px;background:#1f2937;border-radius:6px;flex-shrink:0;"></div>`
     return `
-    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);padding:13px 14px;">
-      <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
-      <div style="font-size:11px;color:#4b5563;margin-top:3px;">המשך של <span style="color:#64748b;">${a.parentTitle}</span>${seasonCtx} · כל הפרקים זמינים</div>
+    <div class="card" style="margin:0 12px 8px;background:#111827;border-radius:12px;border:1px solid rgba(74,222,128,0.15);padding:13px 14px;display:flex;align-items:center;gap:12px;">
+      ${coverHtml}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.sequelTitle}</div>
+        <div style="font-size:11px;color:#4b5563;margin-top:3px;">המשך של <span style="color:#64748b;">${a.parentTitle}</span>${seasonCtx} · כל הפרקים זמינים</div>
+      </div>
     </div>`
   }).join('')
 

@@ -24,7 +24,7 @@ export interface CheckOnlyResult {
   releasingAnimes: Array<{ id: number; title: string; coverImage?: string }>
   availableSequels: Array<{ parentTitle: string; sequelTitle: string; sequelId: number }>
   pendingNotifications: PendingNotification[]
-  availableUnwatched: Array<{ parentTitle: string; sequelTitle: string; sequelId: number }>
+  availableUnwatched: Array<{ parentTitle: string; sequelTitle: string; sequelId: number; coverImage?: string }>
 }
 
 export interface UpdateResult {
@@ -111,17 +111,17 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
           if (!seenSequelIds.has(s.id)) { seenSequelIds.add(s.id); allSequels.push(s) }
         }
 
-        const collectAvailable = (sequels: RelationNode[], label: string) => {
+        const collectAvailable = (sequels: RelationNode[], label: string, cover?: string | null) => {
           for (const s of sequels) {
             if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
               seenAvailableIds.add(s.id)
-              availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id })
+              availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id, coverImage: cover ?? undefined })
               availableSequels.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id })
             }
           }
         }
 
-        collectAvailable(directSequels, anime.title)
+        collectAvailable(directSequels, anime.title, anime.coverImage)
 
         for (const knownId of knownIds) {
           await delay(700)
@@ -129,7 +129,7 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
           for (const s of sequels) {
             if (!seenSequelIds.has(s.id)) { seenSequelIds.add(s.id); allSequels.push(s) }
           }
-          collectAvailable(sequels, anime.title)
+          collectAvailable(sequels, anime.title, anime.coverImage)
         }
 
         for (const sequel of allSequels) {
@@ -206,7 +206,7 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
       consolidatedItems.push({
         hebrewTitle, englishTitle,
         sequelTitle: item.sequelTitle,
-        coverImage: sequelEntry?.coverImage?.large ?? item.animeCoverImage,
+        coverImage: item.animeCoverImage ?? sequelEntry?.coverImage?.large,
         status: item.status,
         nextAiringEpisode: sequelEntry?.nextAiringEpisode ?? null,
         sequelEpisodeCount: sequelEntry?.episodes ?? null,
@@ -222,7 +222,7 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
     }
   }
 
-  const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number }> = []
+  const enrichedAvailable: Array<{ parentTitle: string; sequelTitle: string; currentSeasonNumber?: number; totalSeasons?: number; anilistId?: number; coverImage?: string }> = []
   for (const item of data.availableUnwatched) {
     try {
       const seasons = await getSeasons(item.sequelId)
@@ -233,9 +233,10 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
         currentSeasonNumber: sequelIndex > 0 ? sequelIndex : undefined,
         totalSeasons: seasons.length > 0 ? seasons.length : undefined,
         anilistId: item.sequelId,
+        coverImage: item.coverImage,
       })
     } catch {
-      enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle, anilistId: item.sequelId })
+      enrichedAvailable.push({ parentTitle: item.parentTitle, sequelTitle: item.sequelTitle, anilistId: item.sequelId, coverImage: item.coverImage })
     }
   }
 

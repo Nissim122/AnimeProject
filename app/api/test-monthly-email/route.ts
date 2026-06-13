@@ -54,6 +54,7 @@ const DUMMY_AVAILABLE = [
     currentSeasonNumber: 4,
     totalSeasons: 4,
     anilistId: 110277,
+    coverImage: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx110277-Ca8bMbfNEJOf.jpg',
   },
 ]
 
