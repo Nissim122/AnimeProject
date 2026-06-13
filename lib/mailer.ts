@@ -153,11 +153,11 @@ export async function sendConsolidatedMonthlyEmail(params: {
 
     return `
     <div class="rc-wrap card" style="margin:0 12px 10px;background:#111827;border-radius:14px;border:1px solid rgba(224,23,107,0.15);overflow:hidden;display:flex;min-height:110px;">
+      <div class="rc-cover" style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
       <div class="rc-body" style="flex:1;min-width:0;padding:14px 14px 14px;">
         <div class="rc-title" style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${titleLine}</div>
         <div style="margin-top:6px;">${episodeRows}</div>
       </div>
-      <div class="rc-cover" style="width:90px;flex-shrink:0;overflow:hidden;align-self:stretch;">${coverHtml}</div>
     </div>`
   }).join('')
 
