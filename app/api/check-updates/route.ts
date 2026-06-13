@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { getAnimeSequels, getAnimeStatusWithSequels, batchGetAnimeStatus, getAllSeasons, delay, withRateLimit, RelationNode } from '@/lib/anilist'
+import { getAnimeSequels, getAnimeStatusWithSequels, batchGetAnimeStatus, getAllSeasons, getAnimeAiringSchedule, delay, withRateLimit, RelationNode } from '@/lib/anilist'
 import { sendConsolidatedMonthlyEmail } from '@/lib/mailer'
 import { translateToHebrew } from '@/lib/translate'
 
@@ -24,7 +24,7 @@ export interface CheckOnlyResult {
   releasingAnimes: Array<{ id: number; title: string; coverImage?: string }>
   availableSequels: Array<{ parentTitle: string; sequelTitle: string; sequelId: number }>
   pendingNotifications: PendingNotification[]
-  availableUnwatched: Array<{ parentTitle: string; sequelTitle: string; sequelId: number; coverImage?: string }>
+  availableUnwatched: Array<{ parentTitle: string; sequelTitle: string; sequelId: number; coverImage?: string; parentAnilistId?: number }>
 }
 
 export interface UpdateResult {
@@ -111,17 +111,17 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
           if (!seenSequelIds.has(s.id)) { seenSequelIds.add(s.id); allSequels.push(s) }
         }
 
-        const collectAvailable = (sequels: RelationNode[], label: string, cover?: string | null) => {
+        const collectAvailable = (sequels: RelationNode[], label: string, cover?: string | null, parentId?: number) => {
           for (const s of sequels) {
             if (s.status === 'FINISHED' && !trackedIdsSet.has(s.id) && !seenAvailableIds.has(s.id)) {
               seenAvailableIds.add(s.id)
-              availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id, coverImage: cover ?? undefined })
+              availableUnwatched.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id, coverImage: cover ?? undefined, parentAnilistId: parentId })
               availableSequels.push({ parentTitle: label, sequelTitle: s.title.romaji, sequelId: s.id })
             }
           }
         }
 
-        collectAvailable(directSequels, anime.title, anime.coverImage)
+        collectAvailable(directSequels, anime.title, anime.coverImage, anime.anilistId)
 
         for (const knownId of knownIds) {
           await delay(700)
@@ -129,7 +129,7 @@ async function _collectCheckDataForUser(userId: string): Promise<CheckOnlyResult
           for (const s of sequels) {
             if (!seenSequelIds.has(s.id)) { seenSequelIds.add(s.id); allSequels.push(s) }
           }
-          collectAvailable(sequels, anime.title, anime.coverImage)
+          collectAvailable(sequels, anime.title, anime.coverImage, anime.anilistId)
         }
 
         for (const sequel of allSequels) {
@@ -189,7 +189,8 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
   type ConsolidatedItem = {
     hebrewTitle: string; englishTitle: string; sequelTitle: string; coverImage?: string
     status: string; nextAiringEpisode?: { episode: number; airingAt: number } | null
-    sequelEpisodeCount?: number | null; totalSeasons?: number; sequelId: number
+    upcomingEpisodes?: { episode: number; airingAt: number }[]
+    sequelEpisodeCount?: number | null; totalSeasons?: number; existingSeasonCount?: number; sequelId: number
     startDate: { year: number | null; month: number | null; day: number | null }
     seasons: Awaited<ReturnType<typeof getAllSeasons>>
   }
@@ -203,14 +204,30 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
       const sequelBaseTitle = sequelEntry?.title.english ?? sequelEntry?.title.romaji ?? item.sequelTitle
       const hebrewTitle = await translateToHebrew(sequelBaseTitle).catch(() => sequelBaseTitle)
       const englishTitle = sequelEntry?.title.english ?? sequelEntry?.title.romaji ?? item.sequelTitle
+      const sequelIdx = allSeasons.findIndex((s) => s.id === item.sequelId)
+      const existingSeasonCount = sequelIdx > 0 ? sequelIdx : 0
+
+      let upcomingEpisodes: { episode: number; airingAt: number }[] | undefined
+      if (item.status === 'RELEASING') {
+        try {
+          const schedule = await getAnimeAiringSchedule(item.sequelId)
+          upcomingEpisodes = schedule.upcoming.slice(0, 3)
+          if (!upcomingEpisodes.length && schedule.nextAiringEpisode) {
+            upcomingEpisodes = [schedule.nextAiringEpisode]
+          }
+        } catch { /* ignore */ }
+      }
+
       consolidatedItems.push({
         hebrewTitle, englishTitle,
         sequelTitle: item.sequelTitle,
         coverImage: item.animeCoverImage ?? sequelEntry?.coverImage?.large,
         status: item.status,
         nextAiringEpisode: sequelEntry?.nextAiringEpisode ?? null,
+        upcomingEpisodes,
         sequelEpisodeCount: sequelEntry?.episodes ?? null,
         totalSeasons: allSeasons.length,
+        existingSeasonCount,
         sequelId: item.sequelId,
         startDate: item.startDate,
         seasons: allSeasons,
@@ -226,11 +243,13 @@ async function runUpdateCheckForUser(userId: string, toEmail: string): Promise<U
   for (const item of data.availableUnwatched) {
     try {
       const seasons = await getSeasons(item.sequelId)
-      const sequelIndex = seasons.findIndex((s) => s.id === item.sequelId)
+      const parentIdx = item.parentAnilistId
+        ? seasons.findIndex((s) => s.id === item.parentAnilistId)
+        : -1
       enrichedAvailable.push({
         parentTitle: item.parentTitle,
         sequelTitle: item.sequelTitle,
-        currentSeasonNumber: sequelIndex > 0 ? sequelIndex : undefined,
+        currentSeasonNumber: parentIdx >= 0 ? parentIdx + 1 : undefined,
         totalSeasons: seasons.length > 0 ? seasons.length : undefined,
         anilistId: item.sequelId,
         coverImage: item.coverImage,

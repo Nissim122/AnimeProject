@@ -40,8 +40,10 @@ export async function sendConsolidatedMonthlyEmail(params: {
     coverImage?: string
     status: string
     nextAiringEpisode?: { episode: number; airingAt: number } | null
+    upcomingEpisodes?: { episode: number; airingAt: number }[]
     sequelEpisodeCount?: number | null
     totalSeasons?: number
+    existingSeasonCount?: number
     sequelId: number
     startDate: { year: number | null; month: number | null; day: number | null }
     seasons: AnimeResult[]
@@ -120,10 +122,15 @@ export async function sendConsolidatedMonthlyEmail(params: {
         </div>
       </div>` : (aired != null && aired > 0) ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">${aired} פרקים</div>` : ''
 
-    const nextHtml = item.nextAiringEpisode ? `
-      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding:7px 10px;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.12);border-radius:8px;">
-        <div style="width:5px;height:5px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div>
-        <span style="font-size:12px;color:#64748b;">פרק <strong style="color:#4ade80;">${item.nextAiringEpisode.episode}</strong> · ${formatAiringDate(item.nextAiringEpisode.airingAt)}</span>
+    const episodesToShow = item.upcomingEpisodes?.length
+      ? item.upcomingEpisodes
+      : item.nextAiringEpisode
+        ? [item.nextAiringEpisode]
+        : []
+    const nextHtml = episodesToShow.length ? `
+      <div style="margin-top:8px;">
+        <div style="font-size:10px;color:#4b5563;margin-bottom:3px;letter-spacing:0.06em;">פרקים קרובים</div>
+        ${episodesToShow.map(ep => `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:5px 8px;background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.1);border-radius:6px;"><div style="width:4px;height:4px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div><span style="font-size:11px;color:#64748b;">פרק <strong style="color:#4ade80;">${ep.episode}</strong> · ${formatAiringDate(ep.airingAt)}</span></div>`).join('')}
       </div>` : ''
 
     const dotsHtml = item.seasons.length > 1 ? `
@@ -146,8 +153,8 @@ export async function sendConsolidatedMonthlyEmail(params: {
   const announcedCards = announced.map(item => {
     const idx = item.seasons.findIndex(s => s.id === item.sequelId)
     const seasonNum = idx >= 0 ? idx + 1 : null
-    const dateVal = formatMonthYear(item.startDate.year, item.startDate.month)
-    const hasTBA = dateVal === 'TBA'
+    const dateVal = formatDateHe(item.startDate)
+    const hasTBA = dateVal === 'בקרוב'
     const coverHtml = item.coverImage
       ? `<img src="${item.coverImage}" alt="" width="76" style="width:76px;display:block;" />`
       : `<div style="width:76px;min-height:107px;background:#1f2937;"></div>`
@@ -158,11 +165,12 @@ export async function sendConsolidatedMonthlyEmail(params: {
         ${seasonNum ? `<span style="display:inline-block;font-size:9px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:2px 7px;border-radius:4px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">עונה ${seasonNum}</span>` : ''}
         <div style="font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;">${item.hebrewTitle}</div>
         ${item.englishTitle && item.englishTitle !== item.hebrewTitle ? `<div style="font-size:10px;color:#374151;font-family:'Courier New',monospace;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.englishTitle}</div>` : ''}
-        <div style="margin-top:10px;display:flex;align-items:baseline;gap:6px;">
-          <span style="font-size:${hasTBA ? '12px' : '20px'};font-weight:800;color:${hasTBA ? '#4b5563' : '#fbbf24'};line-height:1.1;">${dateVal}</span>
-          <span style="font-size:9px;color:#4b5563;">${hasTBA ? 'TBA' : 'פרסום'}</span>
+        ${(item.existingSeasonCount ?? 0) > 0 ? `<div style="font-size:11px;color:#4b5563;margin-top:8px;">${item.existingSeasonCount} עונות קיימות</div>` : ''}
+        <div style="margin-top:8px;padding:6px 8px;background:rgba(251,191,36,0.06);border-radius:6px;border:1px solid rgba(251,191,36,0.12);">
+          <div style="font-size:9px;color:#4b5563;margin-bottom:2px;letter-spacing:0.06em;">${hasTBA ? 'TBA' : 'תאריך פרסום'}</div>
+          <div style="font-size:13px;font-weight:700;color:${hasTBA ? '#4b5563' : '#fbbf24'};">${dateVal}</div>
         </div>
-        ${item.sequelEpisodeCount ? `<div style="margin-top:6px;font-size:11px;color:#4b5563;">${item.sequelEpisodeCount} פרקים צפויים</div>` : ''}
+        ${item.sequelEpisodeCount ? `<div style="margin-top:5px;font-size:11px;color:#4b5563;">${item.sequelEpisodeCount} פרקים צפויים</div>` : ''}
       </div>
     </div>`
   }).join('')
