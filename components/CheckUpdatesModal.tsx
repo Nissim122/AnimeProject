@@ -233,7 +233,7 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
                     <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, ${hex}88, transparent)` }} />
                     <div className="flex items-center gap-2 px-1">
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: hex, boxShadow: `0 0 6px ${hex}` }} />
-                      <span className="text-[13px] font-black tracking-wide whitespace-nowrap" style={{ color: hex }}>
+                      <span className="text-[26px] font-black tracking-wide whitespace-nowrap" style={{ color: hex }}>
                         {label}
                       </span>
                       <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${hex}22`, color: hex }}>
