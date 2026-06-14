@@ -115,13 +115,12 @@ export default function CheckUpdatesModal({ tracked, seasonInfo, onClose }: Prop
   }, [])
 
   useEffect(() => {
-    // Build list of items needing seasons: upcoming (fetch next season id) + watching (fetch current id)
+    // Always fetch from item.anilistId so the current season appears in results (BFS finds sequels forward).
+    // Using next.id as starting point can miss the current season if AniList lacks a PREQUEL back-link.
     const toFetch: Array<{ anilistId: number; fetchId: number }> = []
     for (const item of tracked) {
       const info = seasonInfo?.[item.anilistId]
-      if (isUpcoming(info) && info?.next?.id) {
-        toFetch.push({ anilistId: item.anilistId, fetchId: info.next.id })
-      } else if (item.watchStatus === 'watching') {
+      if ((isUpcoming(info) && info?.next?.id) || item.watchStatus === 'watching') {
         toFetch.push({ anilistId: item.anilistId, fetchId: item.anilistId })
       }
     }
