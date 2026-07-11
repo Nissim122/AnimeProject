@@ -67,12 +67,16 @@ function isCurrentMonth(startDate?: RelationNode['startDate']): boolean {
 
 export function categorize(info: AnimeSeasonInfo | undefined, watchStatus?: string): Category {
   if (!info || info.error) return 'error'
+  // Explicit "I'm actively watching this" beats any computed season signal (available/releasing/
+  // upcoming) — otherwise an in-progress show whose current season is airing (or whose next season
+  // already dropped) silently vanishes from "צופה" into another section. The season info itself is
+  // never lost: AnimeCard still renders the available/next badge regardless of category.
+  if (watchStatus === 'watching') return 'watching'
   if (info.available !== null) return 'available'
   if (info.next !== null) {
     if (info.next.status === 'RELEASING' || isCurrentMonth(info.next.startDate)) return 'releasing'
     return 'upcoming'
   }
-  if (watchStatus === 'watching') return 'watching'
   return 'completed'
 }
 

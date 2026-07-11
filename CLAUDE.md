@@ -377,7 +377,7 @@ server.js                    # Custom server עם cron יומי ב-09:00 (ירו
 ### רשימת מעוקבות (TrackedList)
 - גריד רספונסיבי: 2 עמודות → 5
 - 6 קטגוריות (סדר תצוגה): `available` (סגול, 🆕 "עונה חדשה זמינה") → `releasing` (ירוק, 🟢) → `watching` (כחול בהיר, 📺 "צופה") → `upcoming` (כתום, 📅 "הוכרזה עונה") → `completed` (אפור, ✅) → `error` (אדום, ⚠️)
-- `categorize()`: `info.available !== null` → `available` (יש עונה שכבר יצאה ולא במעקב — **לא** תלוי ב-`watchStatus`); אחרת `info.next !== null` → `releasing`/`upcoming` לפי סטטוס; אחרת `watchStatus === 'watching'` → `watching`; אחרת `completed`
+- `categorize()` — סדר עדיפויות: `info.error`/חסר מידע → `error`; **`watchStatus === 'watching'` → `watching` (מנצח הכל — גם `available` וגם `next` releasing/upcoming)**; אחרת `info.available !== null` → `available`; אחרת `info.next !== null` → `releasing`/`upcoming` לפי סטטוס; אחרת `completed`. הצגת עונה זמינה/הבאה על הכרטיס עצמו (`🆕`/`NextSeasonBadge`) לא תלויה בקטגוריה — תמיד מוצגת אם קיימת, גם כשהקטגוריה היא `watching`.
 - הודעת ריק אם אין פריטים; אזהרה כתומה אם `seasonInfo` לא נטען
 
 ### WatchListView

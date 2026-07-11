@@ -53,9 +53,22 @@ describe('categorize', () => {
     expect(categorize(info, 'completed')).toBe('available')
   })
 
-  it('returns "available" (not "watching") when an available sequel exists and watchStatus is "watching" — regression for the Golden Kamuy bug', () => {
+  it('returns "watching" (not "available") when watchStatus is "watching", even if an available sequel exists', () => {
     const info = makeInfo({ available: makeRelation({ id: 166521 }) })
-    expect(categorize(info, 'watching')).toBe('available')
+    expect(categorize(info, 'watching')).toBe('watching')
+  })
+
+  it('returns "watching" (not "releasing") when watchStatus is "watching" and the tracked season itself is RELEASING — regression for the Re:Zero S4 desync', () => {
+    // Real case: item's own season is still airing (next === itself, status RELEASING) while the
+    // user has explicitly marked it "watching". Before the precedence fix this silently dropped out
+    // of the "צופה" section into "releasing", while CheckUpdatesModal kept showing it under both.
+    const info = makeInfo({ next: makeRelation({ id: 189046, status: 'RELEASING' }) })
+    expect(categorize(info, 'watching')).toBe('watching')
+  })
+
+  it('returns "watching" (not "upcoming") when watchStatus is "watching" and a future season is announced', () => {
+    const info = makeInfo({ next: makeRelation({ status: 'NOT_YET_RELEASED', startDate: { year: 2099, month: 1, day: 1 } }) })
+    expect(categorize(info, 'watching')).toBe('watching')
   })
 
   it('returns "releasing" when the next season status is RELEASING', () => {
