@@ -15,11 +15,12 @@ interface TrackedItem {
   trackedAt: string
 }
 
-export type Category = 'watching' | 'releasing' | 'upcoming' | 'completed' | 'error'
+export type Category = 'available' | 'watching' | 'releasing' | 'upcoming' | 'completed' | 'error'
 
-const CATEGORY_ORDER: Category[] = ['watching', 'releasing', 'upcoming', 'completed', 'error']
+const CATEGORY_ORDER: Category[] = ['available', 'releasing', 'watching', 'upcoming', 'completed', 'error']
 
 const CATEGORY_META: Record<Category, { label: string; icon: string; headerColor: string; borderColor: string }> = {
+  available: { label: 'עונה חדשה זמינה',     icon: '🆕', headerColor: 'text-purple-400', borderColor: 'border-purple-500' },
   watching:  { label: 'צופה',                icon: '📺', headerColor: 'text-[#d1ddf9]',  borderColor: 'border-[#d1ddf9]/40' },
   releasing: { label: 'יוצאים פרקים חדשים', icon: '🟢', headerColor: 'text-green-400',  borderColor: 'border-green-500'  },
   upcoming:  { label: 'הוכרזה עונה',         icon: '📅', headerColor: 'text-amber-400',  borderColor: 'border-amber-500'  },
@@ -66,7 +67,7 @@ function isCurrentMonth(startDate?: RelationNode['startDate']): boolean {
 
 function categorize(info: AnimeSeasonInfo | undefined, watchStatus?: string): Category {
   if (!info || info.error) return 'error'
-  if (info.available !== null) return 'watching'
+  if (info.available !== null) return 'available'
   if (info.next !== null) {
     if (info.next.status === 'RELEASING' || isCurrentMonth(info.next.startDate)) return 'releasing'
     return 'upcoming'
@@ -165,6 +166,11 @@ function AnimeCard({
             בשידור
           </span>
         )}
+        {category === 'available' && !busy && (
+          <span className="absolute top-2 right-2 bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold z-10">
+            זמין
+          </span>
+        )}
         {category === 'error' && !busy && (
           <span className="absolute top-2 right-2 bg-red-700 text-white text-xs px-1.5 py-0.5 rounded-full font-bold z-10">
             שגיאה
@@ -189,8 +195,8 @@ function AnimeCard({
           {new Date(item.trackedAt).toLocaleDateString('he-IL')}
         </p>
         {availableSequel ? (
-          <p className="text-[#d1ddf9] text-xs font-medium leading-tight line-clamp-2">
-            📺 {availableSequel.title.romaji}
+          <p className="text-purple-400 text-xs font-medium leading-tight line-clamp-2">
+            🆕 {availableSequel.title.romaji}
           </p>
         ) : (
           nextSequel && <NextSeasonBadge sequel={nextSequel} />
