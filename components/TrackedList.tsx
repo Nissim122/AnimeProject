@@ -65,7 +65,7 @@ function isCurrentMonth(startDate?: RelationNode['startDate']): boolean {
   return startDate.year === now.getFullYear() && startDate.month === (now.getMonth() + 1)
 }
 
-function categorize(info: AnimeSeasonInfo | undefined, watchStatus?: string): Category {
+export function categorize(info: AnimeSeasonInfo | undefined, watchStatus?: string): Category {
   if (!info || info.error) return 'error'
   if (info.available !== null) return 'available'
   if (info.next !== null) {

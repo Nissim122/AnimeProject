@@ -113,6 +113,13 @@ export default defineConfig({
           include: ['__tests__/admin-approve.test.ts', '__tests__/admin-deny.test.ts'],
         },
       },
+
+      // ─── components/TrackedList — categorize() ────────────────────────────
+      // Category bucketing logic (available/watching/releasing/upcoming/completed/error)
+      {
+        resolve: { alias },
+        test: { name: 'components-tracked-list', environment: 'node', include: ['__tests__/TrackedList.test.ts'] },
+      },
     ],
   },
 })
