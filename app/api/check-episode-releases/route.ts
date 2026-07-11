@@ -22,11 +22,11 @@ async function runEpisodeCheck() {
   const nowDate = new Date()
   const todayStr = nowDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) // YYYY-MM-DD
   const [y, m, d] = todayStr.split('-').map(Number)
-  const tomorrowStr = new Date(Date.UTC(y, m - 1, d + 1))
+  const yesterdayStr = new Date(Date.UTC(y, m - 1, d - 1))
     .toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })
 
-  const from = jerusalemMidnightUnix(todayStr)     // 00:00 today Israel time
-  const to   = jerusalemMidnightUnix(tomorrowStr)  // 00:00 tomorrow Israel time (= end of today)
+  const from = jerusalemMidnightUnix(yesterdayStr) // 00:00 yesterday Israel time
+  const to   = jerusalemMidnightUnix(todayStr)     // 00:00 today Israel time (= end of yesterday)
 
   // Fetch all globally aired episodes during yesterday (Israel date)
   let aired
